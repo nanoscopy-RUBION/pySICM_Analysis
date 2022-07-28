@@ -31,7 +31,7 @@ def fit_approach_curve(z,U,t,difference=0,varargin):
     h_old=math.inf
     h=0
     counter=1
-    all_h = []
+    all_h = np.array([])
     
     # The first fit
     
@@ -41,27 +41,29 @@ def fit_approach_curve(z,U,t,difference=0,varargin):
         h_old = h
         counter=counter+1
             
-        h = fitres.C/(t-1) + fitres.h
-        ind = np.argwhere(z >= h)
-        if h_old !=h:
-            all_h = [all_h, h_old]
+        h = fitres.C/(t-1) + fitres.h;
+        ind = find(z >= h);
+        if(h_old ~=h)
+            all_h = [all_h h_old];
         [fitres, gfitg]= fit(z(ind), U(ind), appCurve, 'StartPoint',[sC, sh, sU0], 'Lower',[lC, lh, lU0], 'Upper',[uC, uh, uU0]);
 
-    while abs(h-h_old) > difference and isempty(find(all_h==h,1)):
-        h_old = h
+    while abs(h-h_old) > difference && isempty(find(all_h==h,1))
+        h_old = h;
         counter=counter+1
             
-        h = fitres.C/(t-1) + fitres.h
-        ind = np.argwhere(z >= h)
-        if(h_old !=h):
-            all_h = [all_h h_old]
+        h = fitres.C/(t-1) + fitres.h;
+        ind = find(z >= h);
+        if(h_old ~=h)
+            all_h = [all_h h_old];
+        end
         [fitres, gfitg]= fit(z(ind), U(ind), appCurve, 'StartPoint',[sC, sh, sU0], 'Lower',[lC, lh, lU0], 'Upper',[uC, uh, uU0]);
         #https://www.mathworks.com/help/curvefit/fit.html
+
+    end
     
     f=fitres
     g=gfitg
-    if ~isempty(find(all_h==h,1))
-    if .size() == 0
+    if np.sum(np.equal(all_h,h)) == 0:
         repeats = -counter
     else:
         repeats = +counter
@@ -285,7 +287,7 @@ lowerlimit = p25 - 1.5 * (p75 - p25)
 
 no_outliers = flat(flat >= lowerlimit and flat <= upperlimit) #Determine how Matlab performs implicit indexing
 #Need numpy arrays for above
-r = rmse(no_outliers(:));
+r = rmse(no_outliers(:)); #Consider whether to use least squares instead
 #r =sqrt(mean_squared_error(y_actual, y_predicted))
 tmp = flat
 tmp[tmp<lowerlimit or tmp > upperlimit] = np.NaN
