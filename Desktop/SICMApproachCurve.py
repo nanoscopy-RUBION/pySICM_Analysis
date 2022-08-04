@@ -287,7 +287,7 @@ lowerlimit = p25 - 1.5 * (p75 - p25)
 
 no_outliers = flat(flat >= lowerlimit and flat <= upperlimit) #Determine how Matlab performs implicit indexing
 #Need numpy arrays for above
-r = rmse(no_outliers(:)); #Consider whether to use least squares instead
+r = rmse(no_outliers([:]); #Consider whether to use least squares instead
 #r =sqrt(mean_squared_error(y_actual, y_predicted))
 tmp = flat
 tmp[tmp<lowerlimit or tmp > upperlimit] = np.NaN

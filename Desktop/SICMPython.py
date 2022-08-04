@@ -60,8 +60,8 @@ def fit_approach_curve(z,U,t,difference=0,varargin):
     
     f=fitres
     g=gfitg
-    if ~isempty(find(all_h==h,1))
-    if .size() == 0
+    #if ~isempty(find(all_h==h,1))
+    if np.sum(np.equal(all_h,h)) == 0:
         repeats = -counter
     else:
         repeats = +counter

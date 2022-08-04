@@ -259,11 +259,11 @@ class SICMScan(SICM.importer):
         starttime = NaN; # Start time of the scan in arbitrary time units
         endtime = NaN; # End time of the scan in arbitrary time units
         duration = NaN; # Scan duration
-        info = struct();
+        info = struct()
         ROIs = {}; # A collection of regions of interest.
-        UnitX = '';
-        UnitY = '';
-        UnitZ = '';
+        UnitX = ''
+        UnitY = ''
+        UnitZ = ''
         
     end
     properties (SetAccess = protected, GetAccess = public, SetObservable)
