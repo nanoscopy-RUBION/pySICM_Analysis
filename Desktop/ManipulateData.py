@@ -1,5 +1,7 @@
 import numpy as np
 from scipy.interpolate import griddata
+from skimage.draw import disk
+import scipy.optimize
 
 def subtract_minimum(data):
     return data-np.min(data)
@@ -10,39 +12,169 @@ def subtract_minimum(data):
 #Helper function to 
 
 def filter_median_temporal(data,l=1):
+    """
+    Filter Median Temporal 
+    Sets each pixel equal to the median of itself, the l pixel measurements immediately before, and the l pixel 
+    measurements immediately afterwards (2l+1 pixels in total). Pixels with less than l pixels before or after them
+    will use the available pixels and will not attempt to find addition pixels after the 0th or n-1th index in an array
+    of length n.
+    :param data: This is the Z data that is to be smoothed. It can either be as a single array or in an ndarray.
+    :param l: This is the number of measurements on either side (taken either immediately before or after) used to 
+    adjust each pixel. 
+    :returns: new Z data adjusted using the described method. The existing object is not modified.
+    """
     shape = data.shape
-    flattened = data.flatten()
+    flattened = data.flatten('F')
     z = np.zeros(len(flattened))
-    #print(z.shape)
-    #y = np.zeros(data.size()[0]-2*l,)
     for i in np.arange(0,len(flattened)):
-        z[i] = np.median(flattened[np.max([i-l,0]):np.min([i+(l+1),len(flattened)])]) #May need to be i+2. Test this!
-    #for i in l
-    return z.reshape(shape)
+        z[i] = np.median(flattened[np.max([i-l,0]):np.min([i+(l+1),len(flattened)])])
+    return z.reshape(shape,order='F')
 def filter_average_temporal(data,l=1):
+    """
+    Filter Average Temporal 
+    Sets each pixel equal to the average of itself, the l pixel measurements immediately before, and the l pixel 
+    measurements immediately afterwards (2l+1 pixels in total). Pixels with less than l pixels before or after them
+    will use the available pixels and will not attempt to find addition pixels after the 0th or n-1th index in an array
+    of length n.
+    :param data: This is the Z data that is to be smoothed. It can either be as a single array or in an ndarray.
+    :param l: This is the number of measurements on either side (taken either immediately before or after) used to 
+    adjust each pixel. 
+    :returns: new Z data adjusted using the described method. The existing object is not modified.
+    """
     shape = data.shape
-    flattened = data.flatten()
+    flattened = data.flatten('F')
     z = np.zeros(len(flattened))
-    #print(z.shape)
-    #y = np.zeros(data.size()[0]-2*l,)
     for i in np.arange(0,len(flattened)):
-        z[i] = np.mean(flattened[np.max([i-l,0]):np.min([i+(l+1),len(flattened)])]) #May need to be i+2. Test this!
-    #for i in l
-    return z.reshape(shape)
-def filter_median_spatial():
-    return 1
-def filter_average_spatial():
-    return 1
+        z[i] = np.mean(flattened[np.max([i-l,0]):np.min([i+(l+1),len(flattened)])])
+    return z.reshape(shape,order='F')
+
+def filter_median_spatial(data,l=1):
+    shape = data.shape
+    print(np.median(data[disk((4,6),l+1,shape=shape)]))
+    z = np.array([[np.median(data[disk((i,j),l+1,shape=shape)]) for i in np.arange(shape[0])]for j in np.arange(shape[1])])
+    return z
+def filter_average_spatial(data,l=1):
+    shape = data.shape
+    z = np.array([[np.median(data[disk((i,j),l+1,shape=shape)]) for i in np.arange(shape[0])]for j in np.arange(shape[1])])
+    return z
 def apply_default_scale():
     return 1
-#def crop(data,gui_ob):
 
-#    return data[,]
+
+
+def fitting_objective(real,pred):
+    retVal = 0
+    for i in real.shape[0]:
+        retVal += np.abs(real[i] - pred[i])
+    print("Retval is " + str(retVal))
+    return retVal
+
+def crop(data,dims):
+    #TODO Fix bug where pressing "Restore View" while cropped will prevent proper limits when crop is removed
+    #Fixed, but different bug. Look at the interactions
+    ret_data = [i[dims[0,0]:dims[0,1],dims[1,0]:dims[1,1]] for i in data]
+    return ret_data
 
 #def transpose_z():
 
-def level_plane():
-    return
+'''def level_plane(view_ob,guess = [0,0,0]):
+
+    def helper_plane(guess,objective=True):
+        real = view_ob.get_z_data()
+        pred = [guess[0]*view_ob.get_x_data()+guess[1]*view_ob.get_y_data()+guess[2]*view_ob.get_z_data() for i in view_ob.get_data().transpose()]
+        if objective:
+            print(np.sum(np.abs(real-pred)))
+            return np.sum(np.abs(real-pred))
+        return real-pred
+    opt = scipy.optimize.minimize(helper_plane,guess)
+    if opt.success:
+        retVals = helper_plane(opt.x,objective=False)
+        return retVals
+    return view_ob.get_z_data()
+
+def level_plane(view_ob,guess = [0,0,0]):
+
+    def helper_plane(guess,objective=True):
+        real = view_ob.get_z_data()
+        pred = [guess[0]*view_ob.get_x_data()+guess[1]*view_ob.get_y_data()+guess[2]*view_ob.get_z_data() for i in view_ob.get_data().transpose()]
+        if objective:
+            print(np.sum(np.abs(real-pred)))
+            return np.sum(np.abs(real-pred))
+        return real-pred
+    opt = scipy.optimize.minimize(helper_plane,guess)
+    if opt.success:
+        retVals = helper_plane(opt.x,objective=False)
+        return retVals
+    return view_ob.get_z_data()'''
+
+
+def level_data(view_ob,method='plane'):
+    full_x = view_ob.get_x_data()
+    full_y = view_ob.get_y_data()
+    real_z = view_ob.get_z_data().flatten('F')
+    real_x = view_ob.get_x_data().flatten('F')
+    real_y = view_ob.get_y_data().flatten('F')
+    if method == 'plane' or method == 'linewise' or method == 'linewise_mean' or method == 'linewise_y':
+        eq = np.array([np.ones(real_z.shape[0]), real_x, real_y]).transpose()
+    elif method == '2Dpoly':
+        eq = np.array([np.ones(real_z.shape[0]), real_x, real_y, real_x**2, + (real_x**2)*real_y, + (real_x**2)*(real_y**2),(real_y**2)*real_x,(real_y**2), real_x*real_y]).transpose()
+    elif method == 'paraboloid':
+        eq = np.array([np.ones(real_z.shape[0]), np.reciprocal(real_x)**2, np.reciprocal(real_y)**2]).transpose()
+    coeff, r, rank, s = np.linalg.lstsq(eq, real_z,rcond=1)
+    print(coeff)
+    xy_coord = np.array([view_ob.get_x_data().flatten('F'), view_ob.get_y_data().flatten('F')]).transpose()
+    if method == 'plane' or method == 'linewise' or method == 'linewise_mean' or method == 'linewise_y':
+        pred_z = [coeff[0]+ coeff[1]*i[0]+coeff[2]*i[1] for i in xy_coord]
+    if method == '2Dpoly':
+        pred_z = [coeff[0] + coeff[1]*i[0]+coeff[2]*i[1] + coeff[3]*(i[0]**2) + coeff[4]*(i[0]**2)*i[1] + coeff[5]*(i[0]**2)*(i[1]**2) + coeff[6]*(i[1]**2) + coeff[7]*i[0]*(i[1]**2)+ coeff[8]*i[0]*i[1] for i in xy_coord]
+    if method == 'paraboloid':
+        pred_z = [coeff[0] + (1/(coeff[1]**2))*(i[0]**2) + (1/(coeff[2]**2))*(i[1]**2) for i in xy_coord]
+    adj_z = real_z - pred_z 
+    adj_z = adj_z.reshape(view_ob.get_z_data().shape,order='F')
+    '''if method == 'linewise':
+        #xz_coord = np.array([view_ob.get_x_data(), adj_z])#.transpose()
+        #adj_z = np.empty()
+        for i in adj_z.shape[0]:
+            temp = np.polyfit(real_x[i],adj_z[i],1)
+            adj_z.append()
+        #adj_z = [np.for i in xz_coord]
+        #coeff, r, rank, s = np.linalg.lstsq(eq, real_z,rcond=1)
+        #np.polyfit()'''
+    if method == 'linewise_mean':
+        adj_z = [i-np.mean(i) for i in pred_z]
+    if method == 'linewise_y':
+        pass
+    return adj_z
+
+'''def level_2D_poly(view_ob):
+    real_z = view_ob.get_z_data().flatten()
+    eq = np.array([np.ones(real_z.shape[0]), view_ob.get_x_data().flatten(), view_ob.get_y_data().flatten()]).transpose()
+    print(real_z)
+    print(eq.shape)
+    print(real_z.shape)
+    coeff, r, rank, s = np.linalg.lstsq(eq, real_z,rcond=1)
+    print(coeff)
+    print(coeff[0])
+    xy_coord = np.array([view_ob.get_x_data().flatten(), view_ob.get_y_data().flatten()]).transpose()
+    pred_z = [coeff[0]+ coeff[1]*i[0]+coeff[2]*i[1] for i in xy_coord]
+    adj_z = real_z - pred_z 
+    adj_z = adj_z.reshape(view_ob.get_z_data().shape)
+    return adj_z'''
+
+'''def level_plane(view_ob,guess = [0,0,0]):
+
+    def helper_plane(guess,objective=True):
+        real = view_ob.get_z_data()
+        pred = [guess[0]*view_ob.get_x_data()+guess[1]*view_ob.get_y_data()+guess[2]*view_ob.get_z_data() for i in view_ob.get_data().transpose()]
+        if objective:
+            print(np.sum(np.abs(real-pred)))
+            return np.sum(np.abs(real-pred))
+        return real-pred
+    opt = scipy.optimize.minimize(helper_plane,guess)
+    if opt.success:
+        retVals = helper_plane(opt.x,objective=False)
+        return retVals
+    return view_ob.get_z_data()'''
 
 def interpolate_cubic(view_ob):
     x = view_ob.get_x_data().flatten()

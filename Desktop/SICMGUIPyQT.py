@@ -2,24 +2,12 @@ import numpy as np
 import PyQt5 as pqt
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
-from ManipulateData import filter_average_temporal, filter_median_temporal, interpolate_cubic, interpolate_neighbor, subtract_minimum
+from ManipulateData import filter_average_temporal, filter_median_temporal, interpolate_cubic, interpolate_neighbor, level_data, subtract_minimum, filter_average_spatial, filter_median_spatial, crop
 from SICMViewerHelper import SICMDataFactory, ApproachCurve, ScanBackstepMode
 from matplotlib.backends.backend_qt5 import NavigationToolbar2QT
 from View import View
 import matplotlib.pyplot as plt
 from PyQt5.QtWidgets import QLineEdit, QLabel
-
-
-'''app = QApplication([])
-button = QPushButton('Click')
-def on_button_clicked():
-    alert = QMessageBox()
-    alert.setText('You clicked the button!')
-    alert.exec()
-
-button.clicked.connect(on_button_clicked)
-button.show()
-app.exec()'''
 
 import sys
 from os import listdir
@@ -53,6 +41,7 @@ class SecondaryWindow(QWidget):
     """
     This is a QWidget. It is used as a platform to create secondary
     windows for selecting or inputting options
+    CURRENTLY UNUSED
     """
     def __init__(self):
         super().__init__()
@@ -62,10 +51,22 @@ class SecondaryWindow(QWidget):
         self.setLayout(layout)
 
 class MainWindow(QtWidgets.QMainWindow):
-    """Main window of the application."""
+    """Main window of the application. This"""
+
+
+    #Variables used to 
     currentItem = None
     currentData = None
     currentView = None
+    current_x = None
+    current_y = None
+    old_x = None
+    old_y = None
+    clickCount = 0
+    #Variables used to preserve 
+    itemList = []
+    viewList = []
+    dataList = []
     def __init__(self):
         super().__init__()
 
@@ -74,6 +75,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.canvas = GraphCanvas()
         self.toolbar = NavigationToolbar2QT(self.canvas, self)
         self.toolbar.hide()
+        self.canvas.mousePressEvent = self.getPos
         self.init_ui()
 
     def init_ui(self):
@@ -126,12 +128,12 @@ class MainWindow(QtWidgets.QMainWindow):
         action_export_file = QAction('&To file', self)
         #action_export_file.triggered.connect(self.menu_action_export_file)
         action_export_bitmap = QAction('&As bitmap (png)', self)
-        #action_export_bitmap.triggered.connect(self.menu_action_export_bitmap)
+        action_export_bitmap.triggered.connect(self.menu_action_export_bitmap)
         action_export_vector = QAction('&as vector (pdf)', self)
         #action_export_vector.triggered.connect(self.menu_action_export_vector)
 
         export_menu = menubar.addMenu("&Export")
-        clipboard_menu = export_menu.addMenu('To clipboard')
+        clipboard_menu = export_menu.addMenu('As image')
         clipboard_menu.addAction(action_export_bitmap)
         clipboard_menu.addAction(action_export_vector)
         export_menu.addAction(action_export_file)
@@ -186,7 +188,7 @@ class MainWindow(QtWidgets.QMainWindow):
         view_menu.addAction(action_view_colormap)
 
         action_data_crop = QAction('&Crop', self)
-        #action_data_crop.triggered.connect(self.menu_action_data_crop)
+        action_data_crop.triggered.connect(self.menu_action_data_crop)
         action_data_default = QAction('&Apply default scale', self)
         #action_data_default.triggered.connect(self.menu_action_data_default)
         action_data_minimum = QAction('&Subtract minimum', self)
@@ -197,10 +199,14 @@ class MainWindow(QtWidgets.QMainWindow):
         action_data_median.triggered.connect(self.menu_action_data_median)
         action_data_average = QAction('&Temporal Average', self)
         action_data_average.triggered.connect(self.menu_action_data_average)
+        action_data_smedian = QAction('&Spatial Median', self)
+        action_data_smedian.triggered.connect(self.menu_action_data_smedian)
+        action_data_saverage = QAction('&Spatial Average', self)
+        action_data_saverage.triggered.connect(self.menu_action_data_saverage)
         action_data_plane = QAction('&Plane', self)
-        #action_data_plane.triggered.connect(self.menu_action_data_plane)
+        action_data_plane.triggered.connect(self.menu_action_data_plane)
         action_data_paraboloid = QAction('&Paraboloid', self)
-        #action_data_paraboloid.triggered.connect(self.menu_action_data_paraboloid)
+        action_data_paraboloid.triggered.connect(self.menu_action_data_paraboloid)
         action_data_line = QAction('&Linewise', self)
         #action_data_line.triggered.connect(self.menu_action_data_line)
         action_data_linemean = QAction('&Linewise (mean)', self)
@@ -208,7 +214,7 @@ class MainWindow(QtWidgets.QMainWindow):
         action_data_liney = QAction('&Linewise Y', self)
         #action_data_liney.triggered.connect(self.menu_action_data_liney)
         action_data_poly = QAction('&polyXX', self)
-        #action_data_poly.triggered.connect(self.menu_action_data_poly)
+        action_data_poly.triggered.connect(self.menu_action_data_poly)
         action_data_splines = QAction('&by cubic splines', self)
         action_data_splines.triggered.connect(self.menu_action_data_splines)
         action_data_neighbor = QAction('&by nearest neighbor', self)
@@ -225,6 +231,8 @@ class MainWindow(QtWidgets.QMainWindow):
         filter_menu = data_menu.addMenu('Filter')
         filter_menu.addAction(action_data_median)
         filter_menu.addAction(action_data_average)
+        filter_menu.addAction(action_data_smedian)
+        filter_menu.addAction(action_data_saverage)
         flatten_menu = data_menu.addMenu('Leveling')
         flatten_menu.addAction(action_data_plane)
         flatten_menu.addAction(action_data_paraboloid)
@@ -265,15 +273,21 @@ class MainWindow(QtWidgets.QMainWindow):
             self.statusBar().showMessage("No files imported.")
 
     def update_plots(self,view_data,sicm_data):
+        """
+        Update Plots
+        Redraws plots on the canvas of the MainWindow gui (the right side of the window). 
+        If the data is from an approach curve, a single 2D plot will be displayed.
+        If the data is from a backstep scan, a 3D plot . Plotting data and details are based upon the 
+        :param _view_data: View object which contains the data and display settings for the graph
+        :param sicm_data: TODO: rewrite so unnecessary
+        """
         plt.close('all')
         self.canvas.figure.clear()
         if isinstance(sicm_data, ScanBackstepMode):
             self.canvas.axes = self.canvas.figure.add_subplot(2,1,2)
             view_data.make_plot(self.canvas.axes)
             self.canvas.axes = self.canvas.figure.add_subplot(2,1,1, projection='3d')
-            #print(sicm_data.plot().shape())
-            #print(view_data.get_data().shape())
-            self.canvas.axes.plot_surface(*view_data.get_data(), cmap=matplotlib.cm.YlGnBu_r)
+            self.canvas.axes.plot_surface(*view_data.get_data(),cmap=matplotlib.cm.YlGnBu_r)
             #self.canvas.axes.plot_surface(*sicm_data.plot(), cmap=matplotlib.cm.YlGnBu_r)
             #self.canvas.axes.imshow(sicm_data.z, cmap=matplotlib.cm.YlGnBu_r)
             #Call view object and use plot/imshow rather than 
@@ -299,7 +313,14 @@ class MainWindow(QtWidgets.QMainWindow):
         return filenames
 
     def add_files_to_list(self, files):
-        """TODO add doc string"""
+        """
+        Add files to list
+        Sets each pixel equal to the median of itself, the l pixel measurements immediately before, and the l pixel 
+        measurements immediately afterwards (2l+1 pixels in total). Pixels with less than l pixels before or after them
+        will use the available pixels and will not attempt to find addition pixels after the 0th or n-1th index in an array
+        of length n.
+        :param files: 
+        """
         self.list_widget.addItems(files)
         if len(files) > 1:
             message_end = " files."
@@ -321,17 +342,24 @@ class MainWindow(QtWidgets.QMainWindow):
     def item_changed_event(self, item):
         """Updates the figure canvas when list selection has changed.
         """
+
+        #self.currentItem = item
         #plt.close('all')
-        self.currentItem = item
         #self.canvas.figure.clear()
         if item:
             self.currentItem = item
+            if self.currentItem not in self.itemList:
+                self.itemList.append(item)
+                sicm_data = SICMDataFactory().get_sicm_data(item.text())
+                self.currentData = sicm_data
+                data_view = View(sicm_data)
+                self.currentView = data_view
+                self.viewList.append(self.currentView)
+                self.dataList.append(self.currentData)
+            else:
+                self.currentView = self.viewList[self.itemList.index(self.currentItem)]
+                self.currentData = self.dataList[self.itemList.index(self.currentItem)]
             self.canvas.axes.set_title(item.text())
-            sicm_data = SICMDataFactory().get_sicm_data(item.text())
-            self.currentData = sicm_data
-            #
-            data_view = View(sicm_data)
-            self.currentView = data_view
             #print(data_view.get_data())
             #test.show_plot()
             #test.make_plot(self.canvas)
@@ -341,15 +369,26 @@ class MainWindow(QtWidgets.QMainWindow):
             #temp = test.get_plot()
             #test.show_plot()
             #
-            self.update_plots(data_view,sicm_data)
+            self.update_plots(self.currentView,self.currentData)
 
+    def getPos(self , event):
+        x = event.pos().x()
+        y = event.pos().y()
+        self.old_x = self.current_x
+        self.old_y = self.current_y
+        self.current_x = x
+        self.current_y = y
+        self.clickCount +=1
+
+    def menu_action_export_bitmap(self):
+        self.currentView.make_plot(self.canvas.axes,save=True)
     def menu_action_plot_zoom(self):
         self.toolbar.zoom()
     def menu_action_plot_pan(self):
         self.toolbar.pan()
 
     def menu_action_plot_reset(self):
-        #print(self.currentItem)
+        #print(self.currentItem)1
         #print(self.list_widget.selectedItems)
         #self.item_changed_event(self.currentItem)#self.list_widget.selectedItems)
         self.update_plots(self.currentView,self.currentData)
@@ -392,6 +431,17 @@ class MainWindow(QtWidgets.QMainWindow):
         self.currentView.restore()
         self.update_plots(self.currentView,self.currentData)
     
+    def menu_action_data_crop(self):
+        xlimits, success = QtWidgets.QInputDialog.getText(
+             self, 'X Crop Dimensions', 'Please enter the desired x dimensions separated by a space')
+        xlimits = [int(f) for f in xlimits.split()]
+        ylimits, success = QtWidgets.QInputDialog.getText(
+             self, 'Y Crop Dimensions', 'Please enter the desired y dimensions separated by a space')
+        ylimits = [int(f) for f in ylimits.split()]
+        limits = np.array((xlimits,ylimits))
+        self.currentView.set_data(crop(self.currentView.get_data(),limits))
+        self.update_plots(self.currentView,self.currentData)
+
     def menu_action_data_minimum(self):
         self.currentView.set_z_data(subtract_minimum(self.currentView.get_z_data()))
         self.currentView.make_plot(self.canvas.axes)
@@ -410,7 +460,42 @@ class MainWindow(QtWidgets.QMainWindow):
        self.currentView.set_z_data(filter_median_temporal(self.currentView.get_z_data(),int(pixels)))
        self.currentView.make_plot(self.canvas.axes)
        self.update_plots(self.currentView,self.currentData)
+
+    def menu_action_data_saverage(self):
+       pixels, success = QtWidgets.QInputDialog.getText(
+            self, 'Smoothing Pixels (Average)', 'Please enter the number of pixels around the center to use')
+       self.currentView.set_z_data(filter_average_spatial(self.currentView.get_z_data(),int(pixels)))
+       self.currentView.make_plot(self.canvas.axes)
+       self.update_plots(self.currentView,self.currentData)
+    def menu_action_data_smedian(self):
+       pixels, success = QtWidgets.QInputDialog.getText(
+            self, 'Smoothing Pixels (Median)', 'Please enter the number of pixels around the center to use')
+       self.currentView.set_z_data(filter_median_spatial(self.currentView.get_z_data(),int(pixels)))
+       self.currentView.make_plot(self.canvas.axes)
+       self.update_plots(self.currentView,self.currentData)
     
+    def menu_action_data_plane(self):
+        test = level_data(self.currentView,method='plane').transpose()
+        #print(test)
+        #print(test.shape)
+        self.currentView.set_z_data(test)
+        self.update_plots(self.currentView,self.currentData)
+        self.currentView.make_plot(self.canvas.axes)
+    
+    def menu_action_data_paraboloid(self):
+        test = level_data(self.currentView,method='paraboloid').transpose()
+        #print(test)
+        #print(test.shape)
+        self.currentView.set_z_data(test)
+        self.update_plots(self.currentView,self.currentData)
+        self.currentView.make_plot(self.canvas.axes)
+    def menu_action_data_poly(self):
+        test = level_data(self.currentView,method='2Dpoly').transpose()
+        #print(test)
+        #print(test.shape)
+        self.currentView.set_z_data(test)
+        self.update_plots(self.currentView,self.currentData)
+        self.currentView.make_plot(self.canvas.axes)
     def menu_action_data_splines(self):
         #TODO Determine intended usage of this 
         #self.currentView.set_z_data(interpolate_cubic(self.currentView).T)
@@ -434,6 +519,14 @@ class MainWindow(QtWidgets.QMainWindow):
         self.currentView.reset_data()
         self.update_plots(self.currentView,self.currentData)
         self.currentView.make_plot(self.canvas.axes)
+    def get_current_x(self):
+        return self.current_x
+    def get_current_y(self):
+        return self.current_y
+    def get_old_x(self):
+        return self.old_x
+    def get_old_y(self):
+        return self.old_y
     #def item_activated_event(self):#,item):
         #self.currentItem = item
         #print(self.list_widget.selectedItems)
