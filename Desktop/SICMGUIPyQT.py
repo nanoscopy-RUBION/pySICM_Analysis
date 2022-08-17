@@ -2,7 +2,7 @@ import numpy as np
 import PyQt5 as pqt
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
-from ManipulateData import filter_average_temporal, filter_median_temporal, interpolate_cubic, interpolate_neighbor, level_data, subtract_minimum, filter_average_spatial, filter_median_spatial, crop
+from ManipulateData import filter_average_temporal, filter_median_temporal, interpolate_cubic, level_data, subtract_minimum, filter_average_spatial, filter_median_spatial, crop
 from SICMViewerHelper import SICMDataFactory, ApproachCurve, ScanBackstepMode
 from matplotlib.backends.backend_qt5 import NavigationToolbar2QT
 from View import View
@@ -130,7 +130,7 @@ class MainWindow(QtWidgets.QMainWindow):
         action_export_bitmap = QAction('&As bitmap (png)', self)
         action_export_bitmap.triggered.connect(self.menu_action_export_bitmap)
         action_export_vector = QAction('&as vector (pdf)', self)
-        #action_export_vector.triggered.connect(self.menu_action_export_vector)
+        action_export_vector.triggered.connect(self.menu_action_export_vector)
 
         export_menu = menubar.addMenu("&Export")
         clipboard_menu = export_menu.addMenu('As image')
@@ -158,8 +158,8 @@ class MainWindow(QtWidgets.QMainWindow):
         action_view_content = QAction('&Hide axis content', self)
         action_view_content.setCheckable(True)
         action_view_content.triggered.connect(self.menu_action_view_content)
-        action_view_axes = QAction('&Hide axes when updated', self)
-        action_view_axes.setCheckable(True)
+        #action_view_axes = QAction('&Hide axes when updated', self)
+        #action_view_axes.setCheckable(True)
         #action_view_axes.triggered.connect(self.menu_action_view_axes)
         action_view_restore = QAction('&Restore view', self)
         action_view_restore.triggered.connect(self.menu_action_view_restore)
@@ -167,25 +167,25 @@ class MainWindow(QtWidgets.QMainWindow):
         #action_view_mode.triggered.connect(self.menu_action_view_mode)
         action_view_ratio = QAction('&Aspect ratio', self)
         action_view_ratio.triggered.connect(self.menu_action_view_ratio)
-        action_view_surface = QAction('&Interpolate surface', self)
+        #action_view_surface = QAction('&Interpolate surface', self)
         #action_view_surface.triggered.connect(self.menu_action_view_surface)
         action_view_xlimits = QAction('&Adjust x limits', self)
         action_view_xlimits.triggered.connect(self.menu_action_view_xlimits)
         action_view_ylimits = QAction('&Adjust y limits', self)
         action_view_ylimits.triggered.connect(self.menu_action_view_ylimits)
-        action_view_colormap = QAction('&Colormap', self)
-        action_view_colormap.triggered.connect(self.menu_action_view_colormap)
+        #action_view_colormap = QAction('&Colormap', self)
+        #action_view_colormap.triggered.connect(self.menu_action_view_colormap)
 
         view_menu = menubar.addMenu("&View")
         view_menu.addAction(action_view_content)
-        view_menu.addAction(action_view_axes)
+        #view_menu.addAction(action_view_axes)
         view_menu.addAction(action_view_restore)
         #view_menu.addAction(action_view_mode)
         view_menu.addAction(action_view_ratio)
-        view_menu.addAction(action_view_surface)
+        #view_menu.addAction(action_view_surface)
         view_menu.addAction(action_view_xlimits)
         view_menu.addAction(action_view_ylimits)
-        view_menu.addAction(action_view_colormap)
+        #view_menu.addAction(action_view_colormap)
 
         action_data_crop = QAction('&Crop', self)
         action_data_crop.triggered.connect(self.menu_action_data_crop)
@@ -382,6 +382,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def menu_action_export_bitmap(self):
         self.currentView.make_plot(self.canvas.axes,save=True)
+    def menu_action_export_vector(self):
+        self.currentView.make_plot(self.canvas.axes,save=True,saveType='pdf')
     def menu_action_plot_zoom(self):
         self.toolbar.zoom()
     def menu_action_plot_pan(self):
@@ -504,15 +506,35 @@ class MainWindow(QtWidgets.QMainWindow):
         #interpolate_cubic(self.currentView)
         #print(f)
         #plt.imshow(interpolate_cubic(self.currentView).T, extent=(0,1,0,1))
-        test = interpolate_cubic(self.currentView).T
+        pixels, success = QtWidgets.QInputDialog.getText(
+            self, 'Interpolation (Cubic Spline)', 'Please enter the number of pixels interpolate per')
+        new_z,new_x,new_y = interpolate_cubic(self.currentView,int(pixels),method='cubic')#.T
         #print(test)
         #print(test.shape)
-        self.currentView.set_z_data(test)
+        self.currentView.set_x_data(new_x)
+        self.currentView.set_y_data(new_y)
+        self.currentView.set_z_data(new_z)
         self.update_plots(self.currentView,self.currentData)
         self.currentView.make_plot(self.canvas.axes)
         return
     def menu_action_data_neighbor(self):
-        #interpolate_neighbor()
+        #TODO Determine intended usage of this 
+        #self.currentView.set_z_data(interpolate_cubic(self.currentView).T)
+        #self.update_plots(self.currentView,self.currentData)
+        #self.currentView.make_plot(self.canvas.axes)
+        #interpolate_cubic(self.currentView)
+        #print(f)
+        #plt.imshow(interpolate_cubic(self.currentView).T, extent=(0,1,0,1))
+        pixels, success = QtWidgets.QInputDialog.getText(
+            self, 'Interpolation (Cubic Spline)', 'Please enter the number of pixels interpolate per')
+        new_z,new_x,new_y = interpolate_cubic(self.currentView,int(pixels),method='nearest')#.T
+        #print(test)
+        #print(test.shape)
+        self.currentView.set_x_data(new_x)
+        self.currentView.set_y_data(new_y)
+        self.currentView.set_z_data(new_z)
+        self.update_plots(self.currentView,self.currentData)
+        self.currentView.make_plot(self.canvas.axes)
         return
     
     def menu_action_data_reset(self):

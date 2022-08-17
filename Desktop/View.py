@@ -32,16 +32,6 @@ class View:
             self.x_data,self.z_data = data.plot()
             self.x_data = np.array(self.x_data)
             self.z_data = np.array(self.z_data)
-        
-
-        #self.plot = plt.plot(*self.sicm_data.plot())
-        #plt.show()
-        #if self.mode == ''
-        #self.sicm_data = factory_data
-        #if isinstance(self.sicm_data,ScanBackstepMode):
-            #self.plot = plt.imshow(*self.sicm_data.plot())
-        #else:#if isinstance(self.sicm_data, ):
-            #self.plot = plt.plot(*self.sicm_data.plot())
     
     def get_plot(self):
         """
@@ -109,7 +99,7 @@ class View:
             #plt.figure(img)
             plt.imsave('Test.'+saveType,self.get_z_data())
             #plt.savefig("TestSaveFig.png")
-            img.savefig('TestSaveFig.'+saveType)
+            #img.savefig('TestSaveFig.'+saveType)
         plt.draw()
     def show_plot(self):
         #This does not work, should be deleted
@@ -124,7 +114,6 @@ class View:
         if aspect == 'equal' or aspect == 'auto':
             self.aspectRatio = aspect
             return 1
-        #if isinstance(aspect, float) or isinstance(aspect, int):
         try: 
             aspect = float(aspect)
             self.aspectRatio = aspect

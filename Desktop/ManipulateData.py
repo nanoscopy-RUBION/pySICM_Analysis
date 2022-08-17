@@ -72,7 +72,7 @@ def fitting_objective(real,pred):
 def crop(data,dims):
     #TODO Fix bug where pressing "Restore View" while cropped will prevent proper limits when crop is removed
     #Fixed, but different bug. Look at the interactions
-    ret_data = [i[dims[0,0]:dims[0,1],dims[1,0]:dims[1,1]] for i in data]
+    ret_data = [i[dims[1,0]:dims[1,1],dims[0,0]:dims[0,1]] for i in data]
     return ret_data
 
 #def transpose_z():
@@ -109,11 +109,22 @@ def level_plane(view_ob,guess = [0,0,0]):
 
 
 def level_data(view_ob,method='plane'):
+    """
+    Level Data
+    This method is intended to correct for a variety of possible shapes that . 
+
+    :param view_ob: View object which contains the data 
+    :returns: An adjusted NDArray of z-data which corresponds to the original data with the specified geometry subtracted.
+    This NDArray will be the 
+    """
     full_x = view_ob.get_x_data()
     full_y = view_ob.get_y_data()
     real_z = view_ob.get_z_data().flatten('F')
     real_x = view_ob.get_x_data().flatten('F')
-    real_y = view_ob.get_y_data().flatten('F')
+    real_y = view_ob.get_y_data().flatten('F') 
+    #In the below methods, each array is a . 
+    #Each array is a 
+    #For example, the general equation of a plane can be stated as z = ax + by + c
     if method == 'plane' or method == 'linewise' or method == 'linewise_mean' or method == 'linewise_y':
         eq = np.array([np.ones(real_z.shape[0]), real_x, real_y]).transpose()
     elif method == '2Dpoly':
@@ -123,14 +134,17 @@ def level_data(view_ob,method='plane'):
     coeff, r, rank, s = np.linalg.lstsq(eq, real_z,rcond=1)
     print(coeff)
     xy_coord = np.array([view_ob.get_x_data().flatten('F'), view_ob.get_y_data().flatten('F')]).transpose()
+    #The coefficients calculated above are then used to create a . This will be 
     if method == 'plane' or method == 'linewise' or method == 'linewise_mean' or method == 'linewise_y':
         pred_z = [coeff[0]+ coeff[1]*i[0]+coeff[2]*i[1] for i in xy_coord]
     if method == '2Dpoly':
         pred_z = [coeff[0] + coeff[1]*i[0]+coeff[2]*i[1] + coeff[3]*(i[0]**2) + coeff[4]*(i[0]**2)*i[1] + coeff[5]*(i[0]**2)*(i[1]**2) + coeff[6]*(i[1]**2) + coeff[7]*i[0]*(i[1]**2)+ coeff[8]*i[0]*i[1] for i in xy_coord]
     if method == 'paraboloid':
+        #pred_z = [coeff[0] + ((coeff[1]**2))/(i[0]**2) + ((coeff[2]**2))/(i[1]**2) for i in xy_coord]
         pred_z = [coeff[0] + (1/(coeff[1]**2))*(i[0]**2) + (1/(coeff[2]**2))*(i[1]**2) for i in xy_coord]
+    print(pred_z[:10])
     adj_z = real_z - pred_z 
-    adj_z = adj_z.reshape(view_ob.get_z_data().shape,order='F')
+    adj_z = adj_z.reshape(view_ob.get_z_data().shape,order='F').transpose()
     '''if method == 'linewise':
         #xz_coord = np.array([view_ob.get_x_data(), adj_z])#.transpose()
         #adj_z = np.empty()
@@ -176,18 +190,40 @@ def level_data(view_ob,method='plane'):
         return retVals
     return view_ob.get_z_data()'''
 
-def interpolate_cubic(view_ob):
-    x = view_ob.get_x_data().flatten()
-    y = view_ob.get_y_data().flatten()
+def interpolate_cubic(view_ob,num_points,method='nearest'):
+    """
+    Interpolate Cubic
+    Sets x-axis limits for the visual display of the data. This does not crop the data and the rest can still be viewed by panning.
+    Will check to ensure the values are floats but does not check that the lower bound is first.
+
+    :param lims: List containing two floats which define the lower and upper bound of the y-axis, respectively
+    :returns: 1 upon successful setting and 0 upon failure
+    """
+    x = view_ob.get_x_data()#.flatten()
+    y = view_ob.get_y_data()#.flatten()
     z = view_ob.get_z_data().flatten()
-    grid_x, grid_y = np.mgrid[0:1:len(x), 0:1:len(y)]
-    rng = np.random.default_rng()
-    points = np.array((x,y)).T#np.insert(x, np.arange(len(y)), y)
-    print(points.shape)
-    inter = griddata(points, z, (grid_x, grid_y), method='cubic')
-    return inter
-def interpolate_neighbor(view_ob):
+    #grid_x, grid_y = np.mgrid[0:len(x):1/num_points, 0:len(y):1/num_points]
+    grid_x_new,grid_y_new = np.mgrid[0:x.shape[0]:1/num_points, 0:x.shape[1]:1/(num_points+1)]
+    #rng = np.random.default_rng()
+    #points = np.array((x,y)).T#np.insert(x, np.arange(len(y)), y)
+    grid_x_old,grid_y_old = np.mgrid[0:x.shape[0],0:x.shape[1]]
+    grid_x_old = grid_x_old.flatten()
+    grid_y_old = grid_y_old.flatten()
+    #print(grid_x_new.shape)
+    #print(z.shape)
+    #print(grid_x_old.shape)
+    inter = griddata((grid_x_old,grid_y_old), z, (grid_x_new,grid_y_new), method=method) #(grid_x,grid_y)
+    return [inter,grid_x_new,grid_y_new]
+'''def interpolate_neighbor(view_ob):
+    """
+    Interpolate Neighbor
+    Sets x-axis limits for the visual display of the data. This does not crop the data and the rest can still be viewed by panning.
+    Will check to ensure the values are floats but does not check that the lower bound is first.
+
+    :param lims: List containing two floats which define the lower and upper bound of the y-axis, respectively
+    :returns: 1 upon successful setting and 0 upon failure
+    """
     grid_x, grid_y = np.mgrid[0:1:100j, 0:1:200j]
     points = np.concatenate((view_ob.get_x_data().flatten(),view_ob.get_y_data().flatten()),axis=1)
     inter = griddata(points, view_ob.get_z_data().flatten(), (grid_x, grid_y), method='nearest')
-    return inter
+    return inter'''
