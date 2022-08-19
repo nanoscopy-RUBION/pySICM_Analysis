@@ -1,7 +1,5 @@
 import numpy as np
-import PyQt5 as pqt
 from PyQt5.QtWidgets import *
-from PyQt5.QtGui import *
 from ManipulateData import filter_average_temporal, filter_median_temporal, interpolate_cubic, level_data, \
     subtract_minimum, filter_average_spatial, filter_median_spatial, crop
 from SICMViewerHelper import SICMDataFactory, ApproachCurve, ScanBackstepMode
@@ -91,55 +89,39 @@ class MainWindow(QtWidgets.QMainWindow):
         # self.list_widget.itemSelectionChanged.connect(self.item_activated_event)
         action_exit = QtWidgets.QAction(QIcon('exit.png'), '&Exit', self)
         action_exit.triggered.connect(QtWidgets.qApp.quit)
-        action_import = QtWidgets.QAction(QIcon('open.png'), '&Import', self)
-        action_import.triggered.connect(self.menu_action_import)
         action_clear = QtWidgets.QAction('&Clear', self)
         action_clear.triggered.connect(self.menu_action_clear)
 
         self.statusBar()
         menubar = self.menuBar()
         file_menu = menubar.addMenu("&File")
-        file_menu.addAction(action_clear)
-        file_menu.addAction(action_import)
-        file_menu.addAction(action_exit)
 
         layout.addWidget(self.list_widget, 2)
         layout.addWidget(self.canvas, 3)
         self.central_widget.setLayout(layout)
-
-        # action_exit = QAction(QIcon('exit.png'), '&Exit', self)
-        # action_exit.triggered.connect(qApp.quit)
-        # action_import = QAction(QIcon('open.png'), '&Import', self)
-        # action_import.triggered.connect(self.menu_action_import)
-        # action_clear = QAction('&Clear', self)
-        # action_clear.triggered.connect(self.menu_action_clear)
-
-        # file_menu = menubar.addMenu("&File")
-        # file_menu.addAction(action_clear)
-        # file_menu.addAction(action_import)
-        # file_menu.addAction(action_exit)
 
         action_import_single = QAction('&Import Files', self)
         action_import_single.triggered.connect(self.menu_action_import)
         action_import_multiple = QAction('&Import Directory', self)
         action_import_multiple.triggered.connect(self.menu_action_import_directory)
 
-        import_menu = menubar.addMenu("&Import")
-        import_menu.addAction(action_import_single)
-        import_menu.addAction(action_import_multiple)
-
-        action_export_file = QAction('&To file', self)
-        # action_export_file.triggered.connect(self.menu_action_export_file)
+        action_export_file = QAction('&Export to file', self)
+        action_export_file.triggered.connect(self.menu_action_export_file)
         action_export_bitmap = QAction('&As bitmap (png)', self)
         action_export_bitmap.triggered.connect(self.menu_action_export_bitmap)
         action_export_vector = QAction('&as vector (pdf)', self)
         action_export_vector.triggered.connect(self.menu_action_export_vector)
 
-        export_menu = menubar.addMenu("&Export")
-        clipboard_menu = export_menu.addMenu('As image')
+        file_menu.addAction(action_clear)
+        file_menu.addSeparator()
+        file_menu.addAction(action_import_single)
+        file_menu.addAction(action_import_multiple)
+        clipboard_menu = file_menu.addMenu('Export as image')
         clipboard_menu.addAction(action_export_bitmap)
         clipboard_menu.addAction(action_export_vector)
-        export_menu.addAction(action_export_file)
+        file_menu.addAction(action_export_file)
+        file_menu.addSeparator()
+        file_menu.addAction(action_exit)
 
         action_plot_rotate = QAction('&Rotate', self)  # TODO implement as checkbox
         # action_plot_rotate.triggered.connect(self.menu_action_plot_rotate)
@@ -276,9 +258,15 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             self.statusBar().showMessage("No files imported.")
 
+    def menu_action_export_file(self):
+        """TODO implementation
+        Exports the current view object as ... file.
+        Need to think about the file format. .sicm might not be
+        suitable after manipulating the data """
+        print("TODO: Export to file")
+
     def update_plots(self, view_data, sicm_data):
         """
-        Update Plots
         Redraws plots on the canvas of the MainWindow gui (the right side of the window). 
         If the data is from an approach curve, a single 2D plot will be displayed.
         If the data is from a backstep scan, a 3D plot . Plotting data and details are based upon the
@@ -292,7 +280,9 @@ class MainWindow(QtWidgets.QMainWindow):
             self.canvas.axes = self.canvas.figure.add_subplot(2, 1, 2)
             view_data.make_plot(self.canvas.axes)
             self.canvas.axes = self.canvas.figure.add_subplot(2, 1, 1, projection='3d')
+
             self.canvas.axes.plot_surface(*view_data.get_data(), cmap=matplotlib.cm.YlGnBu_r)
+            # view_data.make_plot(self.canvas.axes)
             # self.canvas.axes.plot_surface(*sicm_data.plot(), cmap=matplotlib.cm.YlGnBu_r)
             # self.canvas.axes.imshow(sicm_data.z, cmap=matplotlib.cm.YlGnBu_r)
             # Call view object and use plot/imshow rather than
@@ -411,11 +401,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def menu_action_view_colormap(self):
         color_window = SecondaryWindow()
-        SecondaryWindow
+        #SecondaryWindow
 
     def menu_action_view_content(self):
-        """
-
+        """Shows or hides axes in figures.
         """
         self.currentView.toggle_axes()
         self.update_plots(self.currentView, self.currentData)
