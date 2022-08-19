@@ -1,29 +1,25 @@
-import numpy as np
-from PyQt5.QtWidgets import *
-from ManipulateData import filter_average_temporal, filter_median_temporal, interpolate_cubic, level_data, \
-    subtract_minimum, filter_average_spatial, filter_median_spatial, crop
-from SICMViewerHelper import SICMDataFactory, ApproachCurve, ScanBackstepMode
-from matplotlib.backends.backend_qt5 import NavigationToolbar2QT
-from View import View
-import matplotlib.pyplot as plt
-from PyQt5.QtWidgets import QLineEdit, QLabel
+"""
+TODO add module documentation
+"""
+import traceback
 
+import numpy as np
 import sys
 from os import listdir
 from os.path import isfile, join
 
-"""
-TODO add documentation
-"""
+from PyQt5 import QtWidgets
+from PyQt5.QtWidgets import QFileDialog, QHBoxLayout, QListWidget, QLabel, QAction, QWidget, QVBoxLayout, QApplication
+from PyQt5.QtGui import QIcon
+
+from ManipulateData import filter_average_temporal, filter_median_temporal, interpolate_cubic, level_data, \
+    subtract_minimum, filter_average_spatial, filter_median_spatial, crop
+from SICMViewerHelper import SICMDataFactory, ApproachCurve, ScanBackstepMode
+from View import View
 
 import matplotlib
-
-from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QFileDialog, QHBoxLayout, QListWidget
-from PyQt5.QtGui import QIcon
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
-
 matplotlib.use('Qt5Agg')
 TITLE = "pySICM Viewer (2022_05_20_1)"
 
@@ -53,7 +49,7 @@ class SecondaryWindow(QWidget):
 
 
 class MainWindow(QtWidgets.QMainWindow):
-    """Main window of the application. This"""
+    """Main window of the application."""
 
     # Variables used to
     currentItem = None
@@ -71,22 +67,22 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def __init__(self):
         super().__init__()
-
         self.central_widget = QtWidgets.QWidget(self)
         self.list_widget = QListWidget(self)
         self.canvas = GraphCanvas()
-        self.toolbar = NavigationToolbar2QT(self.canvas, self)
-        self.toolbar.hide()
-        self.canvas.mousePressEvent = self.getPos
         self.init_ui()
+
+        # for testing click events
+        self.last_change = None
+        self.X = None
+        self.Y = None
+
 
     def init_ui(self):
         self.setCentralWidget(self.central_widget)
         layout = QHBoxLayout()
 
         self.list_widget.currentItemChanged.connect(self.item_changed_event)
-        # self.list_widget.itemActivated.connect(self.item_activated_event)
-        # self.list_widget.itemSelectionChanged.connect(self.item_activated_event)
         action_exit = QtWidgets.QAction(QIcon('exit.png'), '&Exit', self)
         action_exit.triggered.connect(QtWidgets.qApp.quit)
         action_clear = QtWidgets.QAction('&Clear', self)
@@ -123,20 +119,22 @@ class MainWindow(QtWidgets.QMainWindow):
         file_menu.addSeparator()
         file_menu.addAction(action_exit)
 
-        action_plot_rotate = QAction('&Rotate', self)  # TODO implement as checkbox
-        # action_plot_rotate.triggered.connect(self.menu_action_plot_rotate)
-        action_plot_rotate.setCheckable(True)
-        action_plot_pan = QAction('&Pan', self)
-        action_plot_pan.triggered.connect(self.menu_action_plot_pan)
-        action_plot_zoom = QAction('&Zoom', self)
-        action_plot_zoom.triggered.connect(self.menu_action_plot_zoom)
+        # the following menu items are not necessary for interacting with
+        # the 3D plot. Maybe in the future there is some use for these
+        #action_plot_rotate = QAction('&Rotate', self)
+        ## action_plot_rotate.triggered.connect(self.menu_action_plot_rotate)
+        #action_plot_rotate.setCheckable(True)
+        #action_plot_pan = QAction('&Pan', self)
+        #action_plot_pan.triggered.connect(self.menu_action_plot_pan)
+        #action_plot_zoom = QAction('&Zoom', self)
+        #action_plot_zoom.triggered.connect(self.menu_action_plot_zoom)
         action_plot_reset = QAction('&Reset', self)
         action_plot_reset.triggered.connect(self.menu_action_plot_reset)
 
         plot_menu = menubar.addMenu("&Plot interaction")
-        plot_menu.addAction(action_plot_rotate)
-        plot_menu.addAction(action_plot_pan)
-        plot_menu.addAction(action_plot_zoom)
+        #plot_menu.addAction(action_plot_rotate)
+        #plot_menu.addAction(action_plot_pan)
+        #plot_menu.addAction(action_plot_zoom)
         plot_menu.addAction(action_plot_reset)
 
         self.action_view_content = QAction('&Show axis content', self)
@@ -162,8 +160,12 @@ class MainWindow(QtWidgets.QMainWindow):
         # action_view_colormap = QAction('&Colormap', self)
         # action_view_colormap.triggered.connect(self.menu_action_view_colormap)
 
+        action_store_angles = QAction('Store viewing angles', self)
+        action_store_angles.triggered.connect(self.store_viewing_angles)
+
         view_menu = menubar.addMenu("&View")
         view_menu.addAction(self.action_view_content)
+        view_menu.addAction(action_store_angles)
         # view_menu.addAction(action_view_axes)
         view_menu.addAction(action_view_restore)
         # view_menu.addAction(action_view_mode)
@@ -243,6 +245,10 @@ class MainWindow(QtWidgets.QMainWindow):
         properties_menu = menubar.addMenu("&Properties")
 
         about_menu = menubar.addMenu("&About")
+        action_about = QAction('click test', self)
+        action_about.triggered.connect(self.about)
+        about_menu.addAction(action_about)
+
 
         self.setGeometry(700, 350, 800, 800)
         self.setWindowTitle('Submenu')
@@ -274,24 +280,30 @@ class MainWindow(QtWidgets.QMainWindow):
         :param view_data: View object which contains the data and display settings for the graph
         :param sicm_data: TODO: rewrite so unnecessary
         """
-        plt.close('all')
         self.canvas.figure.clear()
         if isinstance(sicm_data, ScanBackstepMode):
-            self.canvas.axes = self.canvas.figure.add_subplot(2, 1, 2)
-            view_data.make_plot(self.canvas.axes)
-            self.canvas.axes = self.canvas.figure.add_subplot(2, 1, 1, projection='3d')
 
+            self.canvas.axes = self.canvas.figure.add_subplot(2, 1, 1, projection='3d')
             self.canvas.axes.plot_surface(*view_data.get_data(), cmap=matplotlib.cm.YlGnBu_r)
-            # view_data.make_plot(self.canvas.axes)
-            # self.canvas.axes.plot_surface(*sicm_data.plot(), cmap=matplotlib.cm.YlGnBu_r)
-            # self.canvas.axes.imshow(sicm_data.z, cmap=matplotlib.cm.YlGnBu_r)
-            # Call view object and use plot/imshow rather than
+
+            #self.canvas.figure.get_axes()[0].azim = self.currentView.azim
+            #self.canvas.figure.get_axes()[0].elev = self.currentView.elev
+            self.canvas.figure.get_axes()[0].proj_type = 'ortho'
+            self.canvas.axes.axis(view_data.axis_shown)
+
+
+            self.canvas.axes = self.canvas.figure.add_subplot(2, 1, 2)
+            self.canvas.axes.imshow(view_data.z_data, cmap=matplotlib.cm.YlGnBu_r)
+            self.canvas.axes.axis(view_data.axis_shown)
+
         if isinstance(sicm_data, ApproachCurve):
             self.canvas.axes = self.canvas.figure.add_subplot(111)
-            view_data.make_plot(self.canvas.axes)
-            # self.canvas.axes.plot(*sicm_data.plot())
+            self.canvas.axes.plot(*view_data.get_data())
+            self.canvas.axes.axis(view_data.axis_shown)
+
         self.canvas.figure.tight_layout()
         self.canvas.draw()
+
 
     def import_files_dialog(self):
         """Opens a directory to import all .sicm files (Does not search subdirectories)."""
@@ -309,7 +321,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def add_files_to_list(self, files):
         """
-        Add files to list
         Sets each pixel equal to the median of itself, the l pixel measurements immediately before, and the l pixel 
         measurements immediately afterwards (2l+1 pixels in total). Pixels with less than l pixels before or after them
         will use the available pixels and will not attempt to find addition pixels after the 0th or n-1th index in an array
@@ -337,10 +348,6 @@ class MainWindow(QtWidgets.QMainWindow):
     def item_changed_event(self, item):
         """Updates the figure canvas when list selection has changed.
         """
-
-        # self.currentItem = item
-        # plt.close('all')
-        # self.canvas.figure.clear()
         if item:
             self.action_view_content.setEnabled(True)
             self.currentItem = item
@@ -356,17 +363,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.currentView = self.viewList[self.itemList.index(self.currentItem)]
                 self.currentData = self.dataList[self.itemList.index(self.currentItem)]
             self.action_view_content.setChecked(self.currentView.axis_shown)
-            self.canvas.axes.set_title(item.text())
+            #self.canvas.axes.set_title(item.text())
 
-            # print(data_view.get_data())
-            # test.show_plot()
-            # test.make_plot(self.canvas)
-            # data_view.set_xlims([2,8])
-            # test.make_plot(self.canvas)
-            # test.show_plot()
-            # temp = test.get_plot()
-            # test.show_plot()
-            #
             self.update_plots(self.currentView, self.currentData)
 
         else:
@@ -441,8 +439,14 @@ class MainWindow(QtWidgets.QMainWindow):
             return 0
 
     def menu_action_view_restore(self):
-        self.currentView.restore()
-        self.update_plots(self.currentView, self.currentData)
+        try:
+            self.currentView.restore()
+            self.update_plots(self.currentView, self.currentData)
+        except Exception as e:
+            print(f'No view to restore')
+            print(str(e))
+            print(traceback.format_exc())
+            print(sys.exc_info()[2])
 
     def menu_action_data_crop(self):
         xlimits, success = QtWidgets.QInputDialog.getText(
@@ -578,27 +582,46 @@ class MainWindow(QtWidgets.QMainWindow):
     # self.list_widget.clear()
     # self.statusBar().showMessage("Files removed from the list.")
 
+    def store_viewing_angles(self):
+        try:
+            azim = self.canvas.figure.get_axes()[0].azim
+            elev = self.canvas.figure.get_axes()[0].elev
+            self.currentView.set_viewing_angels(azim, elev)
+        except Exception as e:
+            print(str(e))
+            self.currentView.set_viewing_angels()
 
-# class Example(QMainWindow):
+    def about(self):
+        if len(self.canvas.figure.get_axes()) > 1:
+            self.cid = self.canvas.figure.canvas.mpl_connect('button_press_event', self.onclick)
 
-# def __init__(self):
-# super().__init__()
+    def onclick(self, event):
 
-# self.initUI()
+        axes = event.canvas.figure.get_axes()[0]
+        if event.inaxes == axes:
+            print("oben")
+        else:
+            print("unten")
+            print("x: %s, y: %s" % (event.xdata, event.ydata))
+            x = int(event.xdata + 0.5)
+            y = int(event.ydata + 0.5)
+            if not self.last_change:
+                self.X = x
+                self.Y = y
+                self.last_change = self.currentView.z_data[y, x]
+                self.currentView.z_data[y, x] = 0.0
+                self.update_plots(self.currentView, self.currentData)
+            else:
+                print("Last: %s" % self.last_change)
+                self.currentView.z_data[self.Y, self.X] = self.last_change
+                self.last_change = self.currentView.z_data[y, x]
+                self.currentView.z_data[y, x] = 0.0
+                self.X = x
+                self.Y = y
+                self.update_plots(self.currentView, self.currentData)
+                print(self.X, self.Y)
+            print(self.currentView.z_data[x, y])
 
-# def initUI(self):
-
-# menubar = self.menuBar()
-# fileMenu = menubar.addMenu('File')
-
-# impMenu = QMenu('Import', self)
-# impAct = QAction('Import mail', self)
-# impMenu.addAction(impAct)
-
-# newAct = QAction('New', self)
-
-# fileMenu.addAction(newAct)
-# fileMenu.addMenu(impMenu)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

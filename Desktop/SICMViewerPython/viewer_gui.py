@@ -107,9 +107,11 @@ class MainWindow(QtWidgets.QMainWindow):
             sicm_data = SICMDataFactory().get_sicm_data(item.text())
             if isinstance(sicm_data, ScanBackstepMode):
                 self.canvas.axes = self.canvas.figure.add_subplot(2,1,1, projection='3d')
+                #self.canvas.axes.axis(False) This command switches off the axis
                 self.canvas.axes.plot_surface(*sicm_data.plot(), cmap=matplotlib.cm.YlGnBu_r)
                 self.canvas.axes = self.canvas.figure.add_subplot(2,1,2)
                 self.canvas.axes.imshow(sicm_data.z, cmap=matplotlib.cm.YlGnBu_r)
+                #self.canvas.axes.axis(False) A call for each subplot is necessary
             if isinstance(sicm_data, ApproachCurve):
                 self.canvas.axes = self.canvas.figure.add_subplot(111)
                 self.canvas.axes.plot(*sicm_data.plot())
