@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from SICMViewerHelper import SICMDataFactory, ApproachCurve, ScanBackstepMode
 import numpy as np
 
+DEFAULT_COLOR_MAP = matplotlib.cm.YlGnBu_r
 
 class View:
     """
@@ -13,7 +14,7 @@ class View:
     ylims = None
     xlims = None
     aspectRatio = 'auto'
-    axis_shown = True
+
     sicm_data = None
     x_data = None
     z_data = None
@@ -27,12 +28,16 @@ class View:
     def __init__(self, data):
         self.sicm_data = data
         self.mode = data.scan_mode
-        self.color_map = matplotlib.cm.YlGnBu_r
+        self.axes_shown = True
+        self.color_bar_shown = True
+        self.color_map = DEFAULT_COLOR_MAP
+        self.data_manipulations = []
+
         if isinstance(self.sicm_data, ScanBackstepMode):
             self.x_data, self.y_data, self.z_data = data.plot()
             self.x_data = np.array(self.x_data)
             self.y_data = np.array(self.y_data)
-            self.z_data = np.array(self.z_data)
+            self.z_data = np.array(self.z_data) - np.min(self.z_data)
             self.azim = -60.0
             self.elev = 30.0
         if isinstance(self.sicm_data, ApproachCurve):
@@ -40,17 +45,17 @@ class View:
             self.x_data = np.array(self.x_data)
             self.z_data = np.array(self.z_data)
 
-    def get_unmodified_data(self):
+    def get_raw_data(self):
         """
         Returns the underlying data from the SICMFactory class used to build the class. Notably, this data is NOT
-        modified by data manipulation. To obtain the manipulated data, use get_data instead.
+        modified by data manipulation. To obtain the manipulated data, use get_modified_data instead.
 
         :returns: Unmodified data extracted from imported file. For approach curves
         x and z are returned; for data from backstep mode scans x, y, and z.
         """
         return self.sicm_data.plot()
 
-    def get_current_data(self):
+    def get_modified_data(self):
         """Returns modified data for plotting.
 
         :return: Manipulated data, e.g. filtered data. For approach curves
@@ -105,7 +110,7 @@ class View:
         if isinstance(self.sicm_data, ScanBackstepMode):
             img = gui.axes.imshow(self.get_z_data(), cmap=matplotlib.cm.YlGnBu_r, aspect='auto')
         else:
-            img = gui.axes.plot(*self.get_current_data())
+            img = gui.axes.plot(*self.get_modified_data())
         if not self.default_xlim:
             self.default_xlim = gui.axes.get_xlim()
         if not self.default_ylim:
@@ -117,7 +122,7 @@ class View:
         if self.ylims:
             gui.axes.set_ylim(self.ylims)
         gui.axes.set_aspect(self.aspectRatio)
-        gui.axes.axis(self.axis_shown)
+        gui.axes.axis(self.axes_shown)
 
         if save:
             plt.imsave('Test.' + saveType, self.get_z_data())
@@ -139,10 +144,19 @@ class View:
         """
         Changes the state of the axis for the 2D plot, hiding it if it is displayed and displaying it if it is hidden
         """
-        self.axis_shown = not self.axis_shown
+        self.axes_shown = not self.axes_shown
 
-    def show_axis(self):
-        return self.axis_shown
+    def toggle_color_bar(self):
+        """
+        Changes the state of the axis for the 2D plot, hiding it if it is displayed and displaying it if it is hidden
+        """
+        self.color_bar_shown = not self.color_bar_shown
+
+    def show_axes(self):
+        return self.axes_shown
+
+    def show_color_bar(self):
+        return self.color_bar_shown
 
     def set_xlims(self, lims):
         """
@@ -182,19 +196,19 @@ class View:
         Does NOT reset any changes to the data being displayed in the graph. The 'reset_data' function in the View package
         should be used for that purpose.
         """
-        self.axis_shown = True
+        self.axes_shown = True
         # print(self.default_xlim)
         # print(self.default_ylim)
-        self.set_xlims(self.default_xlim)
-        self.set_ylims(self.default_ylim)
-        self.set_aspect("auto")
+        #self.set_xlims(self.default_xlim)
+        #self.set_ylims(self.default_ylim)
+        #self.set_aspect("auto")
         self.change_color_map()
-        self.set_viewing_angels()
+        self.set_viewing_angles()
 
-    def change_color_map(self):
-        return 1
+    def change_color_map(self, color_map=DEFAULT_COLOR_MAP):
+        self.color_map = color_map
 
-    def set_viewing_angels(self, azim=-60.0, elev=30.0):
+    def set_viewing_angles(self, azim=-60.0, elev=30.0):
         """
         Sets the two viewing angles for a 3D plot.
 
@@ -207,3 +221,4 @@ class View:
     def reset_data(self):
         """Restores the original sicm data."""
         self.set_data(self.sicm_data.plot())
+        self.data_manipulations = []

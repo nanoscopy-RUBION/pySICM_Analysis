@@ -1,19 +1,25 @@
 import numpy as np
 from scipy.interpolate import griddata
 from skimage.draw import disk
-import scipy.optimize
 
+
+# Simple Manipulations
+# ______________________________________
 def subtract_minimum(data):
-    return data-np.min(data)
+    """Subtracts the minimum of a data set
+    from all data points."""
+    return data - np.min(data)
 
-#def z_to_temporal(data):
 
-#def temporal_to_z(data,shape):
-#Helper function to 
+def transpose_data(data):
+    """Transposes the z array."""
+    return data.transpose()
 
-def filter_median_temporal(data,l=1):
+
+# Filter Manipulations
+# ______________________________________
+def filter_median_temporal(data, l=1):
     """
-    Filter Median Temporal 
     Sets each pixel equal to the median of itself, the l pixel measurements immediately before, and the l pixel 
     measurements immediately afterwards (2l+1 pixels in total). Pixels with less than l pixels before or after them
     will use the available pixels and will not attempt to find addition pixels after the 0th or n-1th index in an array
@@ -75,7 +81,6 @@ def crop(data,dims):
     ret_data = [i[dims[1,0]:dims[1,1],dims[0,0]:dims[0,1]] for i in data]
     return ret_data
 
-#def transpose_z():
 
 '''def level_plane(view_ob,guess = [0,0,0]):
 
@@ -108,43 +113,54 @@ def level_plane(view_ob,guess = [0,0,0]):
     return view_ob.get_z_data()'''
 
 
-def level_data(view_ob,method='plane'):
+def level_data(view_ob, method='plane'):
     """
-    Level Data
     This method is intended to correct for a variety of possible shapes that . 
 
-    :param view_ob: View object which contains the data 
+    :param view_ob: View object which contains the data
+    :param method: TODO
     :returns: An adjusted NDArray of z-data which corresponds to the original data with the specified geometry subtracted.
     This NDArray will be the 
     """
-    full_x = view_ob.get_x_data()
-    full_y = view_ob.get_y_data()
+    # reshape data to vector
     real_z = view_ob.get_z_data().flatten('F')
     real_x = view_ob.get_x_data().flatten('F')
-    real_y = view_ob.get_y_data().flatten('F') 
-    #In the below methods, each array is a . 
-    #Each array is a 
-    #For example, the general equation of a plane can be stated as z = ax + by + c
+    real_y = view_ob.get_y_data().flatten('F')
+
     if method == 'plane' or method == 'linewise' or method == 'linewise_mean' or method == 'linewise_y':
         eq = np.array([np.ones(real_z.shape[0]), real_x, real_y]).transpose()
     elif method == '2Dpoly':
         eq = np.array([np.ones(real_z.shape[0]), real_x, real_y, real_x**2, + (real_x**2)*real_y, + (real_x**2)*(real_y**2),(real_y**2)*real_x,(real_y**2), real_x*real_y]).transpose()
     elif method == 'paraboloid':
         eq = np.array([np.ones(real_z.shape[0]), np.reciprocal(real_x)**2, np.reciprocal(real_y)**2]).transpose()
-    coeff, r, rank, s = np.linalg.lstsq(eq, real_z,rcond=1)
-    print(coeff)
+    coeff, r, rank, s = np.linalg.lstsq(eq, real_z, rcond=1)
+
     xy_coord = np.array([view_ob.get_x_data().flatten('F'), view_ob.get_y_data().flatten('F')]).transpose()
-    #The coefficients calculated above are then used to create a . This will be 
+
+    # The coefficients calculated above are then used to create a . This will be
     if method == 'plane' or method == 'linewise' or method == 'linewise_mean' or method == 'linewise_y':
-        pred_z = [coeff[0]+ coeff[1]*i[0]+coeff[2]*i[1] for i in xy_coord]
+        pred_z = [coeff[0] + coeff[1]*i[0]+coeff[2]*i[1] for i in xy_coord]
     if method == '2Dpoly':
         pred_z = [coeff[0] + coeff[1]*i[0]+coeff[2]*i[1] + coeff[3]*(i[0]**2) + coeff[4]*(i[0]**2)*i[1] + coeff[5]*(i[0]**2)*(i[1]**2) + coeff[6]*(i[1]**2) + coeff[7]*i[0]*(i[1]**2)+ coeff[8]*i[0]*i[1] for i in xy_coord]
     if method == 'paraboloid':
         #pred_z = [coeff[0] + ((coeff[1]**2))/(i[0]**2) + ((coeff[2]**2))/(i[1]**2) for i in xy_coord]
         pred_z = [coeff[0] + (1/(coeff[1]**2))*(i[0]**2) + (1/(coeff[2]**2))*(i[1]**2) for i in xy_coord]
-    print(pred_z[:10])
-    adj_z = real_z - pred_z 
-    adj_z = adj_z.reshape(view_ob.get_z_data().shape,order='F').transpose()
+
+    adj_z = real_z - pred_z
+
+    print("max: %s  min: %s" % (np.max(adj_z), np.min(adj_z)))
+    # this mask is used to exclude all data points which are larger than the 25th percentile
+    mask = np.where(adj_z > np.percentile(adj_z, 25))
+
+
+    # fit without outliers
+    coeff, r, rank, s = np.linalg.lstsq(eq[mask[0]], adj_z[mask[0]], rcond=1)
+
+
+    if method == 'plane' or method == 'linewise' or method == 'linewise_mean' or method == 'linewise_y':
+        pred_z = [coeff[0] + coeff[1]*i[0]+coeff[2]*i[1] for i in xy_coord]
+    adj_z = adj_z - pred_z
+    adj_z = adj_z.reshape(view_ob.get_z_data().shape, order='F').transpose()
     '''if method == 'linewise':
         #xz_coord = np.array([view_ob.get_x_data(), adj_z])#.transpose()
         #adj_z = np.empty()
@@ -158,7 +174,10 @@ def level_data(view_ob,method='plane'):
         adj_z = [i-np.mean(i) for i in pred_z]
     if method == 'linewise_y':
         pass
+    print("max: %s  min: %s" % (np.max(adj_z), np.min(adj_z)))
     return adj_z
+
+
 
 '''def level_2D_poly(view_ob):
     real_z = view_ob.get_z_data().flatten()
