@@ -41,7 +41,7 @@ class SICMdata:
         self.settings: dict
 
     def plot(self):
-        """TODO add doc string"""
+        """Returns data used for plotting."""
         pass
 
 
@@ -54,7 +54,6 @@ class ApproachCurve(SICMdata):
         self.z = np.array(data)
 
     def plot(self):
-        """TODO add doc string"""
         return self.x, self.z
 
     def get_tip_openeing_diameter(self):
@@ -76,7 +75,6 @@ class ScanBackstepMode(SICMdata):
         self.x, self.y = np.meshgrid(range(x_px), range(y_px))
 
     def plot(self):
-        """TODO add doc string"""
         return self.x, self.y, self.z
 
 

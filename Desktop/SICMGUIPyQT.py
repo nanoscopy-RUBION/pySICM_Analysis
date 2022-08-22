@@ -21,7 +21,7 @@ import matplotlib
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 matplotlib.use('Qt5Agg')
-TITLE = "pySICM Viewer (2022_05_20_1)"
+TITLE = "pySICM Analyzer (2022_08_22_1)"
 
 
 class GraphCanvas(FigureCanvasQTAgg):
@@ -249,9 +249,8 @@ class MainWindow(QtWidgets.QMainWindow):
         action_about.triggered.connect(self.about)
         about_menu.addAction(action_about)
 
-
         self.setGeometry(700, 350, 800, 800)
-        self.setWindowTitle('Submenu')
+        self.setWindowTitle(TITLE)
         self.statusBar().showMessage('Ready')
         self.setMinimumSize(300, 300)
         self.show()
@@ -269,6 +268,8 @@ class MainWindow(QtWidgets.QMainWindow):
         Exports the current view object as ... file.
         Need to think about the file format. .sicm might not be
         suitable after manipulating the data """
+        # json to store metadata
+
         print("TODO: Export to file")
 
     def update_plots(self, view_data, sicm_data):
@@ -284,7 +285,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if isinstance(sicm_data, ScanBackstepMode):
 
             self.canvas.axes = self.canvas.figure.add_subplot(2, 1, 1, projection='3d')
-            self.canvas.axes.plot_surface(*view_data.get_data(), cmap=matplotlib.cm.YlGnBu_r)
+            self.canvas.axes.plot_surface(*view_data.get_current_data(), cmap=view_data.color_map)
 
             #self.canvas.figure.get_axes()[0].azim = self.currentView.azim
             #self.canvas.figure.get_axes()[0].elev = self.currentView.elev
@@ -293,12 +294,12 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
             self.canvas.axes = self.canvas.figure.add_subplot(2, 1, 2)
-            self.canvas.axes.imshow(view_data.z_data, cmap=matplotlib.cm.YlGnBu_r)
+            self.canvas.axes.imshow(view_data.z_data, cmap=view_data.color_map)
             self.canvas.axes.axis(view_data.axis_shown)
 
         if isinstance(sicm_data, ApproachCurve):
             self.canvas.axes = self.canvas.figure.add_subplot(111)
-            self.canvas.axes.plot(*view_data.get_data())
+            self.canvas.axes.plot(*view_data.get_current_data())
             self.canvas.axes.axis(view_data.axis_shown)
 
         self.canvas.figure.tight_layout()
@@ -456,7 +457,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self, 'Y Crop Dimensions', 'Please enter the desired y dimensions separated by a space')
         ylimits = [int(f) for f in ylimits.split()]
         limits = np.array((xlimits, ylimits))
-        self.currentView.set_data(crop(self.currentView.get_data(), limits))
+        self.currentView.set_data(crop(self.currentView.get_current_data(), limits))
         self.update_plots(self.currentView, self.currentData)
 
     def menu_action_data_minimum(self):

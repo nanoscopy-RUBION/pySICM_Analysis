@@ -22,10 +22,12 @@ class View:
     default_ylim = None
     azim = None
     elev = None
+    color_map = None
 
     def __init__(self, data):
         self.sicm_data = data
         self.mode = data.scan_mode
+        self.color_map = matplotlib.cm.YlGnBu_r
         if isinstance(self.sicm_data, ScanBackstepMode):
             self.x_data, self.y_data, self.z_data = data.plot()
             self.x_data = np.array(self.x_data)
@@ -33,27 +35,30 @@ class View:
             self.z_data = np.array(self.z_data)
             self.azim = -60.0
             self.elev = 30.0
-        else:
+        if isinstance(self.sicm_data, ApproachCurve):
             self.x_data, self.z_data = data.plot()
             self.x_data = np.array(self.x_data)
             self.z_data = np.array(self.z_data)
 
-    def get_plot(self):
+    def get_unmodified_data(self):
         """
         Returns the underlying data from the SICMFactory class used to build the class. Notably, this data is NOT
         modified by data manipulation. To obtain the manipulated data, use get_data instead.
 
-        :returns: Unmodified copy of data extracted from imported file.
+        :returns: Unmodified data extracted from imported file. For approach curves
+        x and z are returned; for data from backstep mode scans x, y, and z.
         """
-        pass
-        #return self.plot
+        return self.sicm_data.plot()
 
-    def get_data(self):
+    def get_current_data(self):
+        """Returns modified data for plotting.
+
+        :return: Manipulated data, e.g. filtered data. For approach curves
+        x and z are returned; for data from backstep mode scans x, y, and z.
+        """
         if isinstance(self.sicm_data, ScanBackstepMode):
-            #return np.array([self.x_data, self.y_data, self.z_data])
             return self.x_data, self.y_data, self.z_data
-        else:  # if isinstance(self.sicm_data, ):
-            #return [self.x_data, self.z_data]
+        else:
             return self.x_data, self.z_data
 
     def get_x_data(self):
@@ -100,7 +105,7 @@ class View:
         if isinstance(self.sicm_data, ScanBackstepMode):
             img = gui.axes.imshow(self.get_z_data(), cmap=matplotlib.cm.YlGnBu_r, aspect='auto')
         else:
-            img = gui.axes.plot(*self.get_data())
+            img = gui.axes.plot(*self.get_current_data())
         if not self.default_xlim:
             self.default_xlim = gui.axes.get_xlim()
         if not self.default_ylim:
