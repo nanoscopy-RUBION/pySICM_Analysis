@@ -35,6 +35,8 @@ def filter_median_temporal(data, l=1):
     for i in np.arange(0,len(flattened)):
         z[i] = np.median(flattened[np.max([i-l,0]):np.min([i+(l+1),len(flattened)])])
     return z.reshape(shape,order='F')
+
+
 def filter_average_temporal(data,l=1):
     """
     Filter Average Temporal 
@@ -208,6 +210,7 @@ def level_data(view_ob, method='plane'):
         retVals = helper_plane(opt.x,objective=False)
         return retVals
     return view_ob.get_z_data()'''
+
 
 def interpolate_cubic(view_ob,num_points,method='nearest'):
     """

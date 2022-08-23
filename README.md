@@ -1,1 +1,36 @@
 # pySICM Analysis
+
+# To Do
+- General:
+  - improved separation of logic from GUI 
+  - optimize splitter in main window
+  - add checkbox to list items
+  - clean up existing py files
+- New Functions:
+  - set ROIs 
+  - evalute roughnes from single/multiple ROIs
+- Export function
+  - Export 
+- ApproachCurve analysis
+- Reorganize View class
+  - add fields to store more view options
+  - aspect ratio
+  - axis limits
+- Data manipulations:
+  - add filters
+  - add more level/flatten functions
+  - interpolation
+  - crop
+- Batch mode:
+  - store a list of actions which can be applied to selected sicm measurements
+- Colormap window
+  - Select predefined colormaps from list
+  - Create custom colormaps
+- Show Line profile of selection
+  - Column/row
+  - custom line defined by drawing into the plot
+- Measurement of:
+  - Distance between two points
+  - Profile
+- Properties window
+- About window

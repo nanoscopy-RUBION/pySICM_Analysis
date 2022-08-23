@@ -1,29 +1,17 @@
 import matplotlib
 import matplotlib.pyplot as plt
-from SICMViewerHelper import SICMDataFactory, ApproachCurve, ScanBackstepMode
+from sicm_data import ApproachCurve, ScanBackstepMode
 import numpy as np
 
 DEFAULT_COLOR_MAP = matplotlib.cm.YlGnBu_r
 
+
 class View:
     """
-    Class which contains the data and viewing settings for SICM data. One instance of the view class is linked to each file imported.
+    This class contains the data and viewing settings for SICM data. One instance of the view class is linked to each file imported.
     This relationship starts when the item is first selected from the list. The relationship is preversed , although certain 
     features (such as rotation of )
     """
-    ylims = None
-    xlims = None
-    aspectRatio = 'auto'
-
-    sicm_data = None
-    x_data = None
-    z_data = None
-    y_data = None
-    default_xlim = None
-    default_ylim = None
-    azim = None
-    elev = None
-    color_map = None
 
     def __init__(self, data):
         self.sicm_data = data
@@ -64,6 +52,7 @@ class View:
         if isinstance(self.sicm_data, ScanBackstepMode):
             return self.x_data, self.y_data, self.z_data
         else:
+            print(self.x_data)
             return self.x_data, self.z_data
 
     def get_x_data(self):
@@ -126,7 +115,6 @@ class View:
 
         if save:
             plt.imsave('Test.' + saveType, self.get_z_data())
-
 
     def set_aspect(self, aspect):
 
