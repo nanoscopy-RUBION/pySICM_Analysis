@@ -1,6 +1,6 @@
 import matplotlib
 import matplotlib.pyplot as plt
-from sicm_data import ApproachCurve, ScanBackstepMode
+from pySICM_Analysis.sicm_data import ApproachCurve, ScanBackstepMode
 import numpy as np
 
 DEFAULT_COLOR_MAP = matplotlib.cm.YlGnBu_r
@@ -17,6 +17,7 @@ class View:
         self.sicm_data = data
         self.mode = data.scan_mode
         self.axes_shown = True
+        self.show_as_px = True
         self.color_bar_shown = True
         self.color_map = DEFAULT_COLOR_MAP
         self.data_manipulations = []
@@ -26,6 +27,7 @@ class View:
             self.x_data = np.array(self.x_data)
             self.y_data = np.array(self.y_data)
             self.z_data = np.array(self.z_data) - np.min(self.z_data)
+
             self.azim = -60.0
             self.elev = 30.0
         if isinstance(self.sicm_data, ApproachCurve):
@@ -52,7 +54,6 @@ class View:
         if isinstance(self.sicm_data, ScanBackstepMode):
             return self.x_data, self.y_data, self.z_data
         else:
-            print(self.x_data)
             return self.x_data, self.z_data
 
     def get_x_data(self):
@@ -82,40 +83,6 @@ class View:
     def get_ylim(self):
         return self.ylims
 
-    def make_plot(self, gui, save=False, saveType='png'):
-        """
-        Make plot is the core function used to create new instances of the . This must be called after changing view properties
-        or manipulating data, or the 
-
-        :param gui: This is the canvas access of the GUI upon which the plot will be displayed. In this program, it should generally
-        be the
-        :param save:
-        :param saveType:
-        """
-
-        # I think this function is the reason why you cannot rotate the 3D plot anymore.
-        # There is a draw() call at the end of this function and after update_plots in the GUI
-        #
-        if isinstance(self.sicm_data, ScanBackstepMode):
-            img = gui.axes.imshow(self.get_z_data(), cmap=matplotlib.cm.YlGnBu_r, aspect='auto')
-        else:
-            img = gui.axes.plot(*self.get_modified_data())
-        if not self.default_xlim:
-            self.default_xlim = gui.axes.get_xlim()
-        if not self.default_ylim:
-            self.default_ylim = gui.axes.get_ylim()
-
-        if self.xlims:
-            gui.axes.set_xlim(self.xlims)
-
-        if self.ylims:
-            gui.axes.set_ylim(self.ylims)
-        gui.axes.set_aspect(self.aspectRatio)
-        gui.axes.axis(self.axes_shown)
-
-        if save:
-            plt.imsave('Test.' + saveType, self.get_z_data())
-
     def set_aspect(self, aspect):
 
         if aspect == 'equal' or aspect == 'auto':
@@ -130,13 +97,13 @@ class View:
 
     def toggle_axes(self):
         """
-        Changes the state of the axis for the 2D plot, hiding it if it is displayed and displaying it if it is hidden
+        Changes the state of axis visibility.
         """
         self.axes_shown = not self.axes_shown
 
     def toggle_color_bar(self):
         """
-        Changes the state of the axis for the 2D plot, hiding it if it is displayed and displaying it if it is hidden
+        Switches colorbar on or off.
         """
         self.color_bar_shown = not self.color_bar_shown
 
@@ -210,3 +177,4 @@ class View:
         """Restores the original sicm data."""
         self.set_data(self.sicm_data.plot())
         self.data_manipulations = []
+

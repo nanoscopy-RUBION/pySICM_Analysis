@@ -77,11 +77,27 @@ def fitting_objective(real,pred):
     print("Retval is " + str(retVal))
     return retVal
 
-def crop(data,dims):
-    #TODO Fix bug where pressing "Restore View" while cropped will prevent proper limits when crop is removed
-    #Fixed, but different bug. Look at the interactions
-    ret_data = [i[dims[1,0]:dims[1,1],dims[0,0]:dims[0,1]] for i in data]
-    return ret_data
+def crop(view_ob, P1, P2):
+    """Reduces the view object's data to the area between
+    the points P1 and P2.
+    TODO some more comments?
+    """
+
+    width = abs(P1.x() - P2.x())+1
+    height = abs(P1.y() - P2.y())+1
+    if P1.x() < P2.x():
+        orig_x = P1.x()
+    else:
+        orig_x = P2.x()
+    if P1.y() < P2.y():
+        orig_y = P1.y()
+    else:
+        orig_y = P2.y()
+
+    view_ob.x_data, view_ob.y_data = np.meshgrid(range(orig_x, orig_x+width), range(orig_y, orig_y+height))
+    # For some reason the shape must be Y * X and not X * Y
+    view_ob.z_data = view_ob.z_data[orig_y:orig_y+height, orig_x:orig_x+width]
+
 
 
 '''def level_plane(view_ob,guess = [0,0,0]):

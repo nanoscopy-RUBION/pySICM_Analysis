@@ -2,13 +2,17 @@
 TODO add module documentation
 """
 from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QHBoxLayout, QListWidget, QLabel, QAction, QWidget, QVBoxLayout, QSplitter
+from PyQt5.QtCore import Qt, pyqtSignal
 
+from PyQt5.QtWidgets import QHBoxLayout, QListWidget, QLabel, QAction, QWidget, QVBoxLayout, QSplitter, QStyle, \
+    QActionGroup, QMainWindow
+
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 import matplotlib
+from matplotlib.figure import Figure
+
 matplotlib.use('Qt5Agg')
 
-TITLE = "pySICM Analyzer (2022_08_22_1)"
 
 
 class SecondaryWindow(QWidget):
@@ -18,20 +22,27 @@ class SecondaryWindow(QWidget):
     CURRENTLY UNUSED AND NOT WORKING..
     """
 
-    def __init__(self):
+    def __init__(self, parent=None):
         super().__init__()
-        layout = QVBoxLayout()
-        self.label = QLabel("Another Window")
-        layout.addWidget(self.label)
-        self.setLayout(layout)
+        self.layout = QVBoxLayout()
+        self.setLayout(self.layout)
+        print(self.parent())
+
+    def add_canvas(self, canvas):
+        self.canvas = canvas
+        self.toolbar = NavigationToolbar(self.canvas, self)
+        self.layout.addWidget(self.toolbar)
+        self.layout.addWidget(self.canvas)
 
 
-class MainWindow(QtWidgets.QMainWindow):
+
+class MainWindow(QMainWindow):
     """Main window of the application."""
 
     def __init__(self):
         super().__init__()
 
+        self.close_window = pyqtSignal()
         # for testing click events
         self.last_change = None
         self.X = None
@@ -43,7 +54,16 @@ class MainWindow(QtWidgets.QMainWindow):
         self.init_ui()
         self.set_menus_enabled(False)
 
+
+
     def init_ui(self):
+        pixmap = QStyle.SP_FileIcon
+        icon_files = self.style().standardIcon(pixmap)
+        pixmap = QStyle.SP_DriveFDIcon
+        icon_export = self.style().standardIcon(pixmap)
+        pixmap = QStyle.SP_DirOpenIcon
+        icon_directory = self.style().standardIcon(pixmap)
+
         self.setCentralWidget(self.central_widget)
         layout = QHBoxLayout()
         self.splitter = QSplitter(Qt.Horizontal)
@@ -57,9 +77,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.central_widget.setLayout(layout)
 
         self.action_clear = QtWidgets.QAction('&Clear', self)
-        self.action_import_files = QAction("&Import Files...", self)
-        self.action_import_directory = QAction('&Import Directory...', self)
-        self.action_export_file = QAction('&Export to file', self)
+        self.action_import_files = QAction(icon_files, "&Import Files...", self)
+        self.action_import_directory = QAction(icon_directory, '&Import Directory...', self)
+        self.action_export_file = QAction(icon_export, '&Export to file', self)
         self.action_export_bitmap = QAction('&As bitmap (png)', self)
         self.action_export_vector = QAction('&as vector (pdf)', self)
         self.action_exit = QtWidgets.QAction('&Exit', self)
@@ -68,7 +88,7 @@ class MainWindow(QtWidgets.QMainWindow):
         file_menu.addSeparator()
         file_menu.addAction(self.action_import_files)
         file_menu.addAction(self.action_import_directory)
-        clipboard_menu = file_menu.addMenu('Export as image')
+        clipboard_menu = file_menu.addMenu(icon_export, 'Export as image')
         clipboard_menu.addAction(self.action_export_bitmap)
         clipboard_menu.addAction(self.action_export_vector)
         file_menu.addAction(self.action_export_file)
@@ -86,9 +106,24 @@ class MainWindow(QtWidgets.QMainWindow):
         action_view_colormap = QAction('&Colormap', self)
         self.action_store_angles = QAction('Store viewing angles', self)
 
+        self.action_set_axis_labels_px = QAction("pixels", self)
+        self.action_set_axis_labels_px.setCheckable(True)
+
+        self.action_set_axis_labels_micron = QAction("µm", self)
+        self.action_set_axis_labels_micron.setCheckable(True)
 
         self.view_menu = menubar.addMenu("&View")
         self.view_menu.addAction(self.action_toggle_axes)
+        axis_label_menu = self.view_menu.addMenu('Set axis labels to...')
+        axis_label_menu.addAction(self.action_set_axis_labels_px)
+        axis_label_menu.addAction(self.action_set_axis_labels_micron)
+
+        action_group_axis_labels = QActionGroup(self)
+        action_group_axis_labels.addAction(self.action_set_axis_labels_px)
+        action_group_axis_labels.addAction(self.action_set_axis_labels_micron)
+        action_group_axis_labels.setExclusive(True)
+        self.action_set_axis_labels_px.setChecked(True)
+
         self.view_menu.addAction(self.action_store_angles)
         self.view_menu.addAction(action_view_ratio)
         # view_menu.addAction(action_view_surface)
@@ -149,12 +184,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.properties_menu = menubar.addMenu("&Properties")
 
         self.about_menu = menubar.addMenu("&About")
-        action_about = QAction('click test', self)
+        self.action_about = QAction('click test', self)
 
-        self.about_menu.addAction(action_about)
+        self.about_menu.addAction(self.action_about)
 
         self.setGeometry(700, 350, 800, 800)
-        self.setWindowTitle(TITLE)
         self.statusBar().showMessage('Ready')
         self.setMinimumSize(300, 300)
         self.show()
@@ -178,37 +212,4 @@ class MainWindow(QtWidgets.QMainWindow):
     def clear_list_widget(self):
         self.list_widget.clear()
 
-    def about(self):
-        w = SecondaryWindow()
-        w.show()
-        if len(self.canvas.figure.get_axes()) > 1:
-            self.cid = self.canvas.figure.canvas.mpl_connect('button_press_event', self.click_on_raster_image)
 
-    def click_on_raster_image(self, event):
-        """A test function for getting the correct pixel after clicking on it.
-
-        """
-        axes = event.canvas.figure.get_axes()[0]
-        if event.inaxes == axes:
-            print("oben")
-        else:
-            print("unten")
-            print("x: %s, y: %s" % (event.xdata, event.ydata))
-            x = int(event.xdata + 0.5)
-            y = int(event.ydata + 0.5)
-            if not self.last_change:
-                self.X = x
-                self.Y = y
-                self.last_change = self.currentView.z_data[y, x]
-                self.currentView.z_data[y, x] = 0.0
-                self.update_plots(self.currentView, self.currentData)
-            else:
-                print("Last: %s" % self.last_change)
-                self.currentView.z_data[self.Y, self.X] = self.last_change
-                self.last_change = self.currentView.z_data[y, x]
-                self.currentView.z_data[y, x] = 0.0
-                self.X = x
-                self.Y = y
-                self.update_plots(self.currentView, self.currentData)
-                print(self.X, self.Y)
-            print(self.currentView.z_data[x, y])

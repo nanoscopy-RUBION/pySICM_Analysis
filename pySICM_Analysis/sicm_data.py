@@ -14,6 +14,8 @@ MODE = ".mode"
 INFO = ".info"
 Xpx = "x-px"
 Ypx = "y-px"
+X_size = "x-Size"
+Y_size = "y-Size"
 
 
 @dataclass
@@ -36,9 +38,15 @@ class SICMdata:
         self.x: np.ndarray
         self.y: np.ndarray
         self.z: np.ndarray
+        self.x_size: int
+        self.y_size: int
+        self.z_size: int
         self.scan_mode: str
         self.info: dict
         self.settings: dict
+
+    def set_settings(self, settings: dict):
+        pass
 
     def plot(self):
         """Returns data used for plotting."""
@@ -67,12 +75,22 @@ class ScanBackstepMode(SICMdata):
     def __init__(self):
         super(ScanBackstepMode, self).__init__()
 
+    def set_settings(self, settings: dict):
+        self.x_px = int(settings[Xpx])
+        self.y_px = int(settings[Ypx])
+        try:
+            self.x_size = int(settings[X_size])
+            self.y_size = int(settings[Y_size])
+        except ValueError as e:
+            # there seem to be cases in which no x_size value is set in settings.json
+            print("No x_size or y_size value in settings.json.")
+            self.x_size = self.x_px
+            self.y_size = self.y_px
+
     def set_plot_values(self, data: list[int]):
         """Rearranges scan data for 3-dimensional plotting."""
-        x_px = int(self.settings[Xpx])
-        y_px = int(self.settings[Ypx])
-        self.z = np.reshape(data, (x_px, y_px))
-        self.x, self.y = np.meshgrid(range(x_px), range(y_px))
+        self.z = np.reshape(data, (self.x_px, self.y_px)) / 1000  # to have z data in µm
+        self.x, self.y = np.meshgrid(range(self.x_px), range(self.y_px))
 
     def plot(self):
         return self.x, self.y, self.z
@@ -85,7 +103,6 @@ class SICMDataFactory:
     def get_sicm_data(self, file_path: str):
         """Read all data from the tar-like .sicm-file format"""
         tar = tarfile.open(file_path, "r:gz")
-
         scan_mode = get_sicm_mode(tar)
         info = get_sicm_info(tar)
         settings = get_sicm_settings(tar)
@@ -97,7 +114,8 @@ class SICMDataFactory:
             sicm_data = ApproachCurve()
 
         sicm_data.scan_mode = scan_mode
-        sicm_data.settings = settings
+        sicm_data.set_settings(settings)
+
         sicm_data.info = info
         sicm_data.set_plot_values(data)
 

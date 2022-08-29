@@ -2,7 +2,6 @@
 
 # To Do
 - General:
-  - improved separation of logic from GUI 
   - optimize splitter in main window
   - add checkbox to list items
   - clean up existing py files

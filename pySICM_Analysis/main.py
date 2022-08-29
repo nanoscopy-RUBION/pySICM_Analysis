@@ -1,17 +1,26 @@
+import math
 import sys
+import time
 import traceback
 from os import listdir
 from os.path import join, isfile
 
 import numpy as np
+from PyQt5.QtCore import QPoint
+from PyQt5.QtGui import QIcon
 
 from PyQt5.QtWidgets import QApplication, QFileDialog
 
-from gui import MainWindow
-from graph_canvas import GraphCanvas
-from manipulate_data import transpose_data, subtract_minimum
-from sicm_data import SICMDataFactory, ApproachCurve
-from view import View
+from pySICM_Analysis.gui import MainWindow
+from pySICM_Analysis.graph_canvas import GraphCanvas
+from pySICM_Analysis.manipulate_data import transpose_data, subtract_minimum, crop
+from pySICM_Analysis.sicm_data import SICMDataFactory, ApproachCurve
+from pySICM_Analysis.view import View
+
+APP_NAME = "pySICM Analysis"
+APP_ICON_PATH = '../resources/pySICMsplash.png'
+TITLE = f"{APP_NAME} (ver. 2022-08-24)"
+DEFAULT_FILE_PATH = "../"
 
 
 class Controller:
@@ -23,14 +32,14 @@ class Controller:
         self.viewList = []
         self.currentItem = None
         self.currentView = None
-
+        self.cid = None
         self.figure_canvas = GraphCanvas()
 
     def add_canvas_to_main_window(self):
         self.main_window.add_canvas(self.figure_canvas)
 
     def connect_actions(self):
-        """Connect functions with actions in the main windows menu."""
+        """Connect functions with actions in the main window's menu."""
         # File menu
         self.main_window.action_clear.triggered.connect(self.clear_lists)
         self.main_window.action_import_files.triggered.connect(self.import_files)
@@ -40,6 +49,8 @@ class Controller:
 
         # View menu
         self.main_window.action_toggle_axes.triggered.connect(self.toggle_axes)
+        self.main_window.action_set_axis_labels_px.triggered.connect(self.update_figures_and_status)
+        self.main_window.action_set_axis_labels_micron.triggered.connect(self.update_figures_and_status)
         self.main_window.action_store_angles.triggered.connect(self.store_viewing_angles)
         self.main_window.action_view_restore.triggered.connect(self.restore_current_view_settings)
 
@@ -50,9 +61,12 @@ class Controller:
 
         # Other
         self.main_window.list_widget.currentItemChanged.connect(self.item_selection_changed_event)
+        self.main_window.action_about.triggered.connect(self.about)
+        self.main_window.closeEvent = self.quit_application
 
-    def quit_application(self):
+    def quit_application(self, event):
         # TODO dialogue unsaved changes
+        print("quit")
         if self.unsaved_changes:
             pass
         sys.exit()
@@ -143,6 +157,7 @@ class Controller:
                 self.currentView = self.viewList[self.itemList.index(self.currentItem)]
 
             self.main_window.action_toggle_axes.setChecked(self.currentView.axes_shown)
+
             self.update_figures_and_status()
         else:
             self.main_window.action_toggle_axes.setEnabled(False)
@@ -162,11 +177,19 @@ class Controller:
     def update_figures_and_status(self):
         """Redraws figures on the canvas and updates statusbar message.
         """
+        self.currentView.show_as_px = self.main_window.action_set_axis_labels_px.isChecked()
         self.figure_canvas.update_plots(self.currentView)
-        self.main_window.display_status_bar_message("Max: %s  Min: %s" % (
-            str(np.max(self.currentView.get_z_data())),
-            str(np.min(self.currentView.get_z_data()))
-        ))
+        try:
+            self.main_window.display_status_bar_message(
+                "Max: %s  Min: %s, x_px: %s, x_size: %s µm, label px: %s" % (
+                    str(np.max(self.currentView.get_z_data())),
+                    str(np.min(self.currentView.get_z_data())),
+                    str(self.currentView.sicm_data.x_px),
+                    str(self.currentView.sicm_data.x_size),
+                    str(self.currentView.show_as_px)
+                ))
+        except:
+            self.main_window.display_status_bar_message("approach curve")
 
     def store_viewing_angles(self):
         """Stores the two viewing angles in the View object.
@@ -198,11 +221,131 @@ class Controller:
         self.update_figures_and_status()
         self.main_window.display_status_bar_message("Reset data of View object.")
 
+    def about(self):
+
+        if not self.cid:
+            if len(self.figure_canvas.figure.get_axes()) > 1:
+                self.cid_press = self.figure_canvas.figure.canvas.mpl_connect('button_press_event', self.origin_point)
+                #self.cid = self.figure_canvas.figure.canvas.mpl_connect('button_press_event', self.click_on_raster_image)
+                #self.cid = self.figure_canvas.figure.canvas.mpl_connect("motion_notify_event", self.mouse_over_value)
+        else:
+            self.figure_canvas.figure.canvas.mpl_disconnect(self.cid)
+            self.cid = None
+
+    def mouse_over_value(self, event):
+        print("z: %s µm " % self.get_data_from_point(QPoint(int(event.xdata), int(event.ydata))))
+        print("Coords: X %s | Y %s " % (event.xdata, event.ydata))
+        time.sleep(0.2)
+
+    def origin_point(self, event):
+        if event.name == "button_press_event":
+            self.P1 = QPoint(int(event.xdata), int(event.ydata))
+            self.cid_release = self.figure_canvas.figure.canvas.mpl_connect('button_release_event', self.rectangle_test)
+            self.cid_move = self.figure_canvas.figure.canvas.mpl_connect('motion_notify_event', self.rectangle_test)
+
+    def rectangle_test(self, event):
+        """TODO Clean up the code and move it to another class"""
+        import matplotlib.patches as patches
+
+
+        if event.name == "motion_notify_event":
+        #    print("move..")
+
+            self.update_figures_and_status()
+            self.P2 = QPoint(int(event.xdata), int(event.ydata))
+            print("P1: %s, P2: %s" % (self.P1, self.P2))
+            width = abs(self.P1.x() - self.P2.x()) +1
+            height = abs(self.P1.y() - self.P2.y()) +1
+            if self.P1.x() < self.P2.x():
+                orig_x = self.P1.x()
+            else:
+                orig_x = self.P2.x()
+            if self.P1.y() < self.P2.y():
+                orig_y = self.P1.y()
+            else:
+                orig_y = self.P2.y()
+            origin = (orig_x, orig_y)
+            rect = patches.Rectangle(xy=origin, width=width, height=height, linewidth=1, edgecolor='r', facecolor='none')
+            self.figure_canvas.figure.get_axes()[1].add_patch(rect)
+            self.figure_canvas.draw()
+        if event.name == "button_release_event":
+            self.figure_canvas.figure.canvas.mpl_disconnect(self.cid_move)
+            crop(self.currentView, self.P1, self.P2)
+            self.update_figures_and_status()
+            self.cid_move = None
+            self.P1 = None
+            self.P2 = None
+            print(rect)
+       # if event.name == 'button_press_event':
+       #     self.P1 = QPoint(int(event.xdata), int(event.ydata))
+       #     print(self.P1)
+       # else:
+       #     self.P2 = QPoint(int(event.xdata), int(event.ydata))
+       #     print(self.P2)
+
+
+    def get_data_from_point(self, point: QPoint):
+        """"""
+        return self.currentView.z_data[point.y(), point.x()]
+
+    def click_on_raster_image(self, event):
+        """A test function for getting the correct pixel after clicking on it.
+        TODO Clean up and move to another class
+        """
+        from pySICM_Analysis.gui import SecondaryWindow
+        axes = event.canvas.figure.get_axes()[0]
+        print(event)
+        if event.inaxes == axes:
+            print("oben")
+        else:
+
+            self.w = SecondaryWindow(self.main_window)
+            self.w.add_canvas(GraphCanvas())
+            self.w.show()
+
+            self.last_change = None
+            self.X = None
+            self.Y = None
+
+            print("unten")
+            print("x: %s, y: %s" % (event.xdata, event.ydata))
+            # coordinates need to be adjusted when imshow is used
+            # instead of pcolormesh for 2D plots
+            x = int(event.xdata)# + 0.5)
+            y = int(event.ydata)# + 0.5)
+
+            self.w.canvas.figure.clear()
+            self.w.canvas.axes = self.w.canvas.figure.add_subplot(111)
+            self.w.canvas.axes.plot(self.currentView.x_data[y, :], self.currentView.z_data[y, :])
+
+            if not self.last_change:
+                self.X = x
+                self.Y = y
+                self.last_change = self.currentView.z_data[y, x]
+                #self.currentView.z_data[y, x] = 0.0
+                self.figure_canvas.update_plots(self.currentView)
+            else:
+                print("Last: %s" % self.last_change)
+                self.currentView.z_data[self.Y, self.X] = self.last_change
+                #self.last_change = self.currentView.z_data[y, x]
+                self.currentView.z_data[y, x] = 0.0
+                self.X = x
+                self.Y = y
+                self.figure_canvas.update_plots(self.currentView)
+                print(self.X, self.Y)
+            print(self.currentView.z_data[x, y])
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    app.setApplicationName(APP_NAME)
+    app.setWindowIcon(QIcon(APP_ICON_PATH))
+
     window = MainWindow()
+    window.setWindowTitle(TITLE)
+
     controller = Controller(window)
     controller.add_canvas_to_main_window()
     controller.connect_actions()
+
     sys.exit(app.exec())
