@@ -70,7 +70,7 @@ class Controller:
         self.main_window.action_data_filter.triggered.connect(self.filter_current_view)
 
         # Other
-        self.main_window.list_widget.currentItemChanged.connect(self.item_selection_changed_event)
+        self.main_window.imported_files_list.currentItemChanged.connect(self.item_selection_changed_event)
         self.main_window.action_about.triggered.connect(self.about)
         self.main_window.closeEvent = self.quit_application
 

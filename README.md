@@ -7,7 +7,7 @@
   - clean up existing py files
 - New Functions:
   - set ROIs 
-  - evalute roughnes from single/multiple ROIs
+  - evaluate roughness from single/multiple ROIs
 - Export function
   - Export 
 - ApproachCurve analysis
@@ -16,15 +16,14 @@
   - aspect ratio
   - axis limits
 - Data manipulations:
-  - add filters
   - add more level/flatten functions
   - interpolation
   - crop
 - Batch mode:
   - store a list of actions which can be applied to selected sicm measurements
 - Colormap window
-  - Select predefined colormaps from list
-  - Create custom colormaps
+  - Select predefined color maps from list
+  - Create custom color maps
 - Show Line profile of selection
   - Column/row
   - custom line defined by drawing into the plot

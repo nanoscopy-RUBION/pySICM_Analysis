@@ -35,7 +35,7 @@ class PlotTests(TestCase):
 
     def test_file_import(self):
         self.controller.add_files_to_list(get_filenames())
-        self.assertEqual(self.controller.main_window.list_widget.count(), 11)
+        self.assertEqual(self.controller.main_window.imported_files_list.count(), 11)
 
 
 class GuiInteractionTests(TestCase):

@@ -2,15 +2,20 @@ from PyQt5.QtWidgets import QDialog, QLineEdit, QDialogButtonBox, QFormLayout, Q
 
 
 class FilterDialog(QDialog):
+    """A small dialog window with a combobox for filter selection
+    and a text field for radius input."""
+
     def __init__(self, parent=None, filter_list=None):
         super().__init__(parent)
 
         if filter_list is None:
             filter_list = []
 
+        self.setWindowTitle("Select filter")
         self.filter_list = QComboBox()
         self.filter_list.addItems(filter_list)
         self.input = QLineEdit(self)
+        self.input.setToolTip("Enter an integer for radius of the filter")
         buttons = QDialogButtonBox(self)
         buttons.addButton(QDialogButtonBox.Ok)
         buttons.addButton(QDialogButtonBox.Cancel)

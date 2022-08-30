@@ -44,7 +44,8 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.close_window = pyqtSignal()
         self.central_widget = QtWidgets.QWidget(self)
-        self.list_widget = QListWidget(self)
+        self.imported_files_list = QListWidget(self)
+        self.data_manipulation_list = QListWidget(self)
         self.init_ui()
         self.set_menus_enabled(False)
 
@@ -56,17 +57,35 @@ class MainWindow(QMainWindow):
         pixmap = QStyle.SP_DirOpenIcon
         icon_directory = self.style().standardIcon(pixmap)
 
+        label_imported_files = QLabel("Imported files:")
+        label_data_manipulations = QLabel("Data manipulations on selected view:")
         self.setCentralWidget(self.central_widget)
-        layout = QHBoxLayout()
-        self.splitter = QSplitter(Qt.Horizontal)
+        horizontal_layout = QHBoxLayout()
 
+        vertical_layout_top = QVBoxLayout()
+        vertical_layout_top.addWidget(label_imported_files)
+        vertical_layout_top.addWidget(self.imported_files_list)
+        top = QWidget()
+        top.setLayout(vertical_layout_top)
+
+        vertical_layout_bottom = QVBoxLayout()
+        vertical_layout_bottom.addWidget(label_data_manipulations)
+        vertical_layout_bottom.addWidget(self.data_manipulation_list)
+        bottom = QWidget()
+        bottom.setLayout(vertical_layout_bottom)
+
+        self.horizontal_splitter = QSplitter(Qt.Horizontal)
+
+        self.vertical_splitter = QSplitter(Qt.Vertical)
+        self.vertical_splitter.addWidget(top)
+        self.vertical_splitter.addWidget(bottom)
         self.statusBar()
         menubar = self.menuBar()
         file_menu = menubar.addMenu("&File")
 
-        self.splitter.addWidget(self.list_widget)
-        layout.addWidget(self.splitter)
-        self.central_widget.setLayout(layout)
+        self.horizontal_splitter.addWidget(self.vertical_splitter)
+        horizontal_layout.addWidget(self.horizontal_splitter)
+        self.central_widget.setLayout(horizontal_layout)
 
         # File menu
         self.action_clear = QtWidgets.QAction('&Clear', self)
@@ -169,6 +188,7 @@ class MainWindow(QMainWindow):
         interpolation_menu = self.data_menu.addMenu('Interpolation')
         interpolation_menu.addAction(action_data_splines)
         interpolation_menu.addAction(action_data_neighbor)
+        self.data_menu.addSeparator()
         self.data_menu.addAction(self.action_data_reset)
 
         # Measurements menu
@@ -205,15 +225,15 @@ class MainWindow(QMainWindow):
         self.about_menu.setEnabled(enable)
 
     def add_canvas(self, canvas):
-        self.splitter.addWidget(canvas)
+        self.horizontal_splitter.addWidget(canvas)
 
     def display_status_bar_message(self, message):
         self.statusBar().showMessage(message)
 
     def add_items_to_list(self, items):
-        self.list_widget.addItems(items)
+        self.imported_files_list.addItems(items)
 
     def clear_list_widget(self):
-        self.list_widget.clear()
+        self.imported_files_list.clear()
 
 
