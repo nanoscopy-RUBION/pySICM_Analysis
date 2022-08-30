@@ -13,14 +13,23 @@ from PyQt5.QtWidgets import QApplication, QFileDialog
 
 from pySICM_Analysis.gui import MainWindow
 from pySICM_Analysis.graph_canvas import GraphCanvas
+from pySICM_Analysis.gui_filter_dialog import FilterDialog
 from pySICM_Analysis.manipulate_data import transpose_data, subtract_minimum, crop
+from pySICM_Analysis.manipulate_data import filter_median_temporal, filter_median_spatial, filter_average_temporal, filter_average_spatial
 from pySICM_Analysis.sicm_data import SICMDataFactory, ApproachCurve
 from pySICM_Analysis.view import View
 
+# APP CONSTANTS
 APP_NAME = "pySICM Analysis"
 APP_ICON_PATH = '../resources/pySICMsplash.png'
 TITLE = f"{APP_NAME} (ver. 2022-08-24)"
 DEFAULT_FILE_PATH = "../"
+
+# FILTERS
+MEDIAN_TEMPORAL = "Median (temporal)"
+MEDIAN_SPATIAL = "Median (spatial)"
+AVERAGE_TEMPORAL = "Average (temporal)"
+AVERAGE_SPATIAL = "Average (spatial)"
 
 
 class Controller:
@@ -58,11 +67,29 @@ class Controller:
         self.main_window.action_data_transpose_z.triggered.connect(self.transpose_z_of_current_view)
         self.main_window.action_data_minimum.triggered.connect(self.subtract_minimum_in_current_view)
         self.main_window.action_data_reset.triggered.connect(self.reset_current_view_data)
+        self.main_window.action_data_filter.triggered.connect(self.filter_current_view)
 
         # Other
         self.main_window.list_widget.currentItemChanged.connect(self.item_selection_changed_event)
         self.main_window.action_about.triggered.connect(self.about)
         self.main_window.closeEvent = self.quit_application
+
+    def filter_current_view(self):
+        filters = {
+            MEDIAN_TEMPORAL: filter_median_temporal,
+            MEDIAN_SPATIAL: filter_median_spatial,
+            AVERAGE_TEMPORAL: filter_average_temporal,
+            AVERAGE_SPATIAL: filter_average_spatial,
+        }
+        dialog = FilterDialog(self.main_window, filters.keys())
+        if dialog.exec():
+            selected_filter, radius = dialog.get_inputs()
+            try:
+                radius = int(radius)
+            except ValueError:
+                radius = 1
+            self.currentView.set_z_data(filters.get(selected_filter)(self.currentView.z_data, radius))
+            self.update_figures_and_status()
 
     def quit_application(self, event):
         # TODO dialogue unsaved changes
@@ -275,7 +302,6 @@ class Controller:
             self.cid_move = None
             self.P1 = None
             self.P2 = None
-            print(rect)
        # if event.name == 'button_press_event':
        #     self.P1 = QPoint(int(event.xdata), int(event.ydata))
        #     print(self.P1)

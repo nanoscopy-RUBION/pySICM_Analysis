@@ -1,10 +1,37 @@
 import numpy as np
+from PyQt5.QtCore import QPoint
 from scipy.interpolate import griddata
 from skimage.draw import disk
+
+from pySICM_Analysis.view import View
 
 
 # Simple Manipulations
 # ______________________________________
+def crop(view_ob: View, point1: QPoint, point2: QPoint):
+    """Reduces the view object's data to the area of a rectangle
+    formed by the two points 1 and 2.
+
+    Note: If the gui framework is changed and PyQt (Qt) is no longer used
+    the data type of point1 and 2 must be changed.
+    """
+    width = abs(point1.x() - point2.x()) + 1
+    height = abs(point1.y() - point2.y()) + 1
+
+    if point1.x() < point2.x():
+        orig_x = point1.x()
+    else:
+        orig_x = point2.x()
+    if point1.y() < point2.y():
+        orig_y = point1.y()
+    else:
+        orig_y = point2.y()
+
+    view_ob.x_data, view_ob.y_data = np.meshgrid(range(orig_x, orig_x + width), range(orig_y, orig_y + height))
+    # For some reason the shape must be Y * X and not X * Y
+    view_ob.z_data = view_ob.z_data[orig_y:orig_y + height, orig_x:orig_x + width]
+
+
 def subtract_minimum(data):
     """Subtracts the minimum of a data set
     from all data points."""
@@ -18,86 +45,86 @@ def transpose_data(data):
 
 # Filter Manipulations
 # ______________________________________
-def filter_median_temporal(data, l=1):
+def filter_median_temporal(z_data, l=1):
     """
     Sets each pixel equal to the median of itself, the l pixel measurements immediately before, and the l pixel 
     measurements immediately afterwards (2l+1 pixels in total). Pixels with less than l pixels before or after them
     will use the available pixels and will not attempt to find addition pixels after the 0th or n-1th index in an array
     of length n.
-    :param data: This is the Z data that is to be smoothed. It can either be as a single array or in an ndarray.
+    :param z_data: This is the Z data that is to be smoothed. It can either be as a single array or in an ndarray.
     :param l: This is the number of measurements on either side (taken either immediately before or after) used to 
     adjust each pixel. 
     :returns: new Z data adjusted using the described method. The existing object is not modified.
     """
-    shape = data.shape
-    flattened = data.flatten('F')
+    shape = z_data.shape
+    flattened = z_data.flatten('C')
     z = np.zeros(len(flattened))
-    for i in np.arange(0,len(flattened)):
-        z[i] = np.median(flattened[np.max([i-l,0]):np.min([i+(l+1),len(flattened)])])
-    return z.reshape(shape,order='F')
+
+    for i in np.arange(0, len(flattened)):
+        z[i] = np.median(flattened[np.max([i - l, 0]):np.min([i + (l + 1), len(flattened)])])
+    return z.reshape(shape, order='C')
 
 
-def filter_average_temporal(data,l=1):
+def filter_average_temporal(z_data, px_neighbours=1):
     """
-    Filter Average Temporal 
     Sets each pixel equal to the average of itself, the l pixel measurements immediately before, and the l pixel 
     measurements immediately afterwards (2l+1 pixels in total). Pixels with less than l pixels before or after them
     will use the available pixels and will not attempt to find addition pixels after the 0th or n-1th index in an array
     of length n.
-    :param data: This is the Z data that is to be smoothed. It can either be as a single array or in an ndarray.
-    :param l: This is the number of measurements on either side (taken either immediately before or after) used to 
+
+    :param z_data: This is the Z data that is to be smoothed. It can either be as a single array or in an ndarray.
+    :param px_neighbours: This is the number of measurements on either side (taken either immediately before or after) used to
     adjust each pixel. 
     :returns: new Z data adjusted using the described method. The existing object is not modified.
     """
-    shape = data.shape
-    flattened = data.flatten('F')
+    shape = z_data.shape
+    flattened = z_data.flatten('C')
     z = np.zeros(len(flattened))
-    for i in np.arange(0,len(flattened)):
-        z[i] = np.mean(flattened[np.max([i-l,0]):np.min([i+(l+1),len(flattened)])])
-    return z.reshape(shape,order='F')
+    for i in np.arange(0, len(flattened)):
+        z[i] = np.mean(flattened[np.max([i - px_neighbours, 0]):np.min([i + (px_neighbours + 1), len(flattened)])])
+    return z.reshape(shape, order='C')
 
-def filter_median_spatial(data,l=1):
-    shape = data.shape
-    print(np.median(data[disk((4,6),l+1,shape=shape)]))
-    z = np.array([[np.median(data[disk((i,j),l+1,shape=shape)]) for i in np.arange(shape[0])]for j in np.arange(shape[1])])
+
+def filter_median_spatial(z_data, px_radius=1):
+    shape = z_data.shape
+    z = np.zeros(shape)
+
+    for i in np.arange(shape[0]):
+        for j in np.arange(shape[1]):
+            z[i, j] = np.median(z_data[disk((i, j), px_radius, shape=shape)])
+
+    #z = np.array([[np.median(z_data[disk((i, j), px_radius, shape=shape)])
+    #               for i in np.arange(shape[1])]
+    #              for j in np.arange(shape[0])]
+    #             )
     return z
-def filter_average_spatial(data,l=1):
-    shape = data.shape
-    z = np.array([[np.median(data[disk((i,j),l+1,shape=shape)]) for i in np.arange(shape[0])]for j in np.arange(shape[1])])
+
+
+def filter_average_spatial(z_data, px_radius=1):
+    shape = z_data.shape
+    z = np.zeros(shape)
+
+    for i in np.arange(shape[0]):
+        for j in np.arange(shape[1]):
+            z[i, j] = np.mean(z_data[disk((i, j), px_radius, shape=shape)])
+    #z = np.array([[np.median(z_data[disk((i, j), px_radius, shape=shape)])
+    #               for i in np.arange(shape[1])]
+    #              for j in np.arange(shape[0])]
+    #             )
     return z
+
+
 def apply_default_scale():
+    """TODO was soll die Funktion machen? """
     return 1
 
 
-
-def fitting_objective(real,pred):
+def fitting_objective(real, pred):
     retVal = 0
     for i in real.shape[0]:
         retVal += np.abs(real[i] - pred[i])
     print("Retval is " + str(retVal))
     return retVal
-
-def crop(view_ob, P1, P2):
-    """Reduces the view object's data to the area between
-    the points P1 and P2.
-    TODO some more comments?
-    """
-
-    width = abs(P1.x() - P2.x())+1
-    height = abs(P1.y() - P2.y())+1
-    if P1.x() < P2.x():
-        orig_x = P1.x()
-    else:
-        orig_x = P2.x()
-    if P1.y() < P2.y():
-        orig_y = P1.y()
-    else:
-        orig_y = P2.y()
-
-    view_ob.x_data, view_ob.y_data = np.meshgrid(range(orig_x, orig_x+width), range(orig_y, orig_y+height))
-    # For some reason the shape must be Y * X and not X * Y
-    view_ob.z_data = view_ob.z_data[orig_y:orig_y+height, orig_x:orig_x+width]
-
 
 
 '''def level_plane(view_ob,guess = [0,0,0]):
@@ -148,21 +175,27 @@ def level_data(view_ob, method='plane'):
     if method == 'plane' or method == 'linewise' or method == 'linewise_mean' or method == 'linewise_y':
         eq = np.array([np.ones(real_z.shape[0]), real_x, real_y]).transpose()
     elif method == '2Dpoly':
-        eq = np.array([np.ones(real_z.shape[0]), real_x, real_y, real_x**2, + (real_x**2)*real_y, + (real_x**2)*(real_y**2),(real_y**2)*real_x,(real_y**2), real_x*real_y]).transpose()
+        eq = np.array([np.ones(real_z.shape[0]), real_x, real_y, real_x ** 2, + (real_x ** 2) * real_y,
+                       + (real_x ** 2) * (real_y ** 2), (real_y ** 2) * real_x, (real_y ** 2),
+                       real_x * real_y]).transpose()
     elif method == 'paraboloid':
-        eq = np.array([np.ones(real_z.shape[0]), np.reciprocal(real_x)**2, np.reciprocal(real_y)**2]).transpose()
+        eq = np.array([np.ones(real_z.shape[0]), np.reciprocal(real_x) ** 2, np.reciprocal(real_y) ** 2]).transpose()
     coeff, r, rank, s = np.linalg.lstsq(eq, real_z, rcond=1)
 
     xy_coord = np.array([view_ob.get_x_data().flatten('F'), view_ob.get_y_data().flatten('F')]).transpose()
 
     # The coefficients calculated above are then used to create a . This will be
     if method == 'plane' or method == 'linewise' or method == 'linewise_mean' or method == 'linewise_y':
-        pred_z = [coeff[0] + coeff[1]*i[0]+coeff[2]*i[1] for i in xy_coord]
+        pred_z = [coeff[0] + coeff[1] * i[0] + coeff[2] * i[1] for i in xy_coord]
     if method == '2Dpoly':
-        pred_z = [coeff[0] + coeff[1]*i[0]+coeff[2]*i[1] + coeff[3]*(i[0]**2) + coeff[4]*(i[0]**2)*i[1] + coeff[5]*(i[0]**2)*(i[1]**2) + coeff[6]*(i[1]**2) + coeff[7]*i[0]*(i[1]**2)+ coeff[8]*i[0]*i[1] for i in xy_coord]
+        pred_z = [
+            coeff[0] + coeff[1] * i[0] + coeff[2] * i[1] + coeff[3] * (i[0] ** 2) + coeff[4] * (i[0] ** 2) * i[1] +
+            coeff[5] * (i[0] ** 2) * (i[1] ** 2) + coeff[6] * (i[1] ** 2) + coeff[7] * i[0] * (i[1] ** 2) + coeff[8] *
+            i[0] * i[1] for i in xy_coord]
     if method == 'paraboloid':
-        #pred_z = [coeff[0] + ((coeff[1]**2))/(i[0]**2) + ((coeff[2]**2))/(i[1]**2) for i in xy_coord]
-        pred_z = [coeff[0] + (1/(coeff[1]**2))*(i[0]**2) + (1/(coeff[2]**2))*(i[1]**2) for i in xy_coord]
+        # pred_z = [coeff[0] + ((coeff[1]**2))/(i[0]**2) + ((coeff[2]**2))/(i[1]**2) for i in xy_coord]
+        pred_z = [coeff[0] + (1 / (coeff[1] ** 2)) * (i[0] ** 2) + (1 / (coeff[2] ** 2)) * (i[1] ** 2) for i in
+                  xy_coord]
 
     adj_z = real_z - pred_z
 
@@ -170,13 +203,11 @@ def level_data(view_ob, method='plane'):
     # this mask is used to exclude all data points which are larger than the 25th percentile
     mask = np.where(adj_z > np.percentile(adj_z, 25))
 
-
     # fit without outliers
     coeff, r, rank, s = np.linalg.lstsq(eq[mask[0]], adj_z[mask[0]], rcond=1)
 
-
     if method == 'plane' or method == 'linewise' or method == 'linewise_mean' or method == 'linewise_y':
-        pred_z = [coeff[0] + coeff[1]*i[0]+coeff[2]*i[1] for i in xy_coord]
+        pred_z = [coeff[0] + coeff[1] * i[0] + coeff[2] * i[1] for i in xy_coord]
     adj_z = adj_z - pred_z
     adj_z = adj_z.reshape(view_ob.get_z_data().shape, order='F').transpose()
     '''if method == 'linewise':
@@ -189,12 +220,11 @@ def level_data(view_ob, method='plane'):
         #coeff, r, rank, s = np.linalg.lstsq(eq, real_z,rcond=1)
         #np.polyfit()'''
     if method == 'linewise_mean':
-        adj_z = [i-np.mean(i) for i in pred_z]
+        adj_z = [i - np.mean(i) for i in pred_z]
     if method == 'linewise_y':
         pass
     print("max: %s  min: %s" % (np.max(adj_z), np.min(adj_z)))
     return adj_z
-
 
 
 '''def level_2D_poly(view_ob):
@@ -228,7 +258,7 @@ def level_data(view_ob, method='plane'):
     return view_ob.get_z_data()'''
 
 
-def interpolate_cubic(view_ob,num_points,method='nearest'):
+def interpolate_cubic(view_ob, num_points, method='nearest'):
     """
     Interpolate Cubic
     Sets x-axis limits for the visual display of the data. This does not crop the data and the rest can still be viewed by panning.
@@ -237,21 +267,23 @@ def interpolate_cubic(view_ob,num_points,method='nearest'):
     :param lims: List containing two floats which define the lower and upper bound of the y-axis, respectively
     :returns: 1 upon successful setting and 0 upon failure
     """
-    x = view_ob.get_x_data()#.flatten()
-    y = view_ob.get_y_data()#.flatten()
+    x = view_ob.get_x_data()  # .flatten()
+    y = view_ob.get_y_data()  # .flatten()
     z = view_ob.get_z_data().flatten()
-    #grid_x, grid_y = np.mgrid[0:len(x):1/num_points, 0:len(y):1/num_points]
-    grid_x_new,grid_y_new = np.mgrid[0:x.shape[0]:1/num_points, 0:x.shape[1]:1/(num_points+1)]
-    #rng = np.random.default_rng()
-    #points = np.array((x,y)).T#np.insert(x, np.arange(len(y)), y)
-    grid_x_old,grid_y_old = np.mgrid[0:x.shape[0],0:x.shape[1]]
+    # grid_x, grid_y = np.mgrid[0:len(x):1/num_points, 0:len(y):1/num_points]
+    grid_x_new, grid_y_new = np.mgrid[0:x.shape[0]:1 / num_points, 0:x.shape[1]:1 / (num_points + 1)]
+    # rng = np.random.default_rng()
+    # points = np.array((x,y)).T#np.insert(x, np.arange(len(y)), y)
+    grid_x_old, grid_y_old = np.mgrid[0:x.shape[0], 0:x.shape[1]]
     grid_x_old = grid_x_old.flatten()
     grid_y_old = grid_y_old.flatten()
-    #print(grid_x_new.shape)
-    #print(z.shape)
-    #print(grid_x_old.shape)
-    inter = griddata((grid_x_old,grid_y_old), z, (grid_x_new,grid_y_new), method=method) #(grid_x,grid_y)
-    return [inter,grid_x_new,grid_y_new]
+    # print(grid_x_new.shape)
+    # print(z.shape)
+    # print(grid_x_old.shape)
+    inter = griddata((grid_x_old, grid_y_old), z, (grid_x_new, grid_y_new), method=method)  # (grid_x,grid_y)
+    return [inter, grid_x_new, grid_y_new]
+
+
 '''def interpolate_neighbor(view_ob):
     """
     Interpolate Neighbor

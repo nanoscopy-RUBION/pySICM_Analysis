@@ -24,6 +24,8 @@ class SecondaryWindow(QWidget):
 
     def __init__(self, parent=None):
         super().__init__()
+        self.toolbar = None
+        self.canvas = None
         self.layout = QVBoxLayout()
         self.setLayout(self.layout)
         print(self.parent())
@@ -35,26 +37,16 @@ class SecondaryWindow(QWidget):
         self.layout.addWidget(self.canvas)
 
 
-
 class MainWindow(QMainWindow):
     """Main window of the application."""
 
     def __init__(self):
         super().__init__()
-
         self.close_window = pyqtSignal()
-        # for testing click events
-        self.last_change = None
-        self.X = None
-        self.Y = None
-        # GUI elements
         self.central_widget = QtWidgets.QWidget(self)
         self.list_widget = QListWidget(self)
-
         self.init_ui()
         self.set_menus_enabled(False)
-
-
 
     def init_ui(self):
         pixmap = QStyle.SP_FileIcon
@@ -76,6 +68,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.splitter)
         self.central_widget.setLayout(layout)
 
+        # File menu
         self.action_clear = QtWidgets.QAction('&Clear', self)
         self.action_import_files = QAction(icon_files, "&Import Files...", self)
         self.action_import_directory = QAction(icon_directory, '&Import Directory...', self)
@@ -95,6 +88,16 @@ class MainWindow(QMainWindow):
         file_menu.addSeparator()
         file_menu.addAction(self.action_exit)
 
+        # Edit menu
+        self.action_undo = QAction("Undo", self)
+        self.action_redo = QAction("Redo", self)
+        self.action_undo.setEnabled(False)
+        self.action_redo.setEnabled(False)
+        edit_menu = menubar.addMenu("Edit")
+        edit_menu.addAction(self.action_undo)
+        edit_menu.addAction(self.action_redo)
+
+        # View menu
         self.action_toggle_axes = QAction('&Show axes', self)
         self.action_toggle_axes.setCheckable(True)
         self.action_toggle_axes.setChecked(True)
@@ -133,35 +136,29 @@ class MainWindow(QMainWindow):
         self.view_menu.addSeparator()
         self.view_menu.addAction(self.action_view_restore)
 
-        action_data_crop = QAction('&Crop', self)
-        action_data_default = QAction('&Apply default scale', self)
-        self.action_data_minimum = QAction('&Subtract minimum', self)
-        self.action_data_transpose_z = QAction('&Transpose Z', self)
-        self.action_data_median = QAction('&Temporal Median', self)
-        action_data_average = QAction('&Temporal Average', self)
-        action_data_smedian = QAction('&Spatial Median', self)
-        action_data_saverage = QAction('&Spatial Average', self)
-        self.action_data_plane = QAction('&Plane', self)
-        action_data_paraboloid = QAction('&Paraboloid', self)
-        action_data_line = QAction('&Linewise', self)
-        action_data_linemean = QAction('&Linewise (mean)', self)
-        action_data_liney = QAction('&Linewise Y', self)
-        action_data_poly = QAction('&polyXX', self)
-        action_data_splines = QAction('&by cubic splines', self)
-        action_data_neighbor = QAction('&by nearest neighbor', self)
-        self.action_data_reset = QAction('&Reset data manipulations', self)
+        # Manipulate data menu
+        self.action_data_crop = QAction('Crop', self)
+        self.action_data_default = QAction('Apply default scale', self)
+        self.action_data_minimum = QAction('Subtract minimum', self)
+        self.action_data_transpose_z = QAction('Transpose Z', self)
+        self.action_data_filter = QAction("Filter data", self)
+        self.action_data_plane = QAction('Plane', self)
+        action_data_paraboloid = QAction('Paraboloid', self)
+        action_data_line = QAction('Linewise', self)
+        action_data_linemean = QAction('Linewise (mean)', self)
+        action_data_liney = QAction('Linewise Y', self)
+        action_data_poly = QAction('polyXX', self)
+        action_data_splines = QAction('by cubic splines', self)
+        action_data_neighbor = QAction('by nearest neighbor', self)
+        self.action_data_reset = QAction('Reset data manipulations', self)
 
         self.data_menu = menubar.addMenu("&Manipulate data")
         simple_menu = self.data_menu.addMenu('Simple Manipulations')
-        simple_menu.addAction(action_data_crop)
-        simple_menu.addAction(action_data_default)
+        simple_menu.addAction(self.action_data_crop)
+        simple_menu.addAction(self.action_data_default)
         simple_menu.addAction(self.action_data_minimum)
         simple_menu.addAction(self.action_data_transpose_z)
-        filter_menu = self.data_menu.addMenu('Filter')
-        filter_menu.addAction(self.action_data_median)
-        filter_menu.addAction(action_data_average)
-        filter_menu.addAction(action_data_smedian)
-        filter_menu.addAction(action_data_saverage)
+        self.data_menu.addAction(self.action_data_filter)
         flatten_menu = self.data_menu.addMenu('Leveling')
         flatten_menu.addAction(self.action_data_plane)
         flatten_menu.addAction(action_data_paraboloid)
@@ -174,6 +171,7 @@ class MainWindow(QMainWindow):
         interpolation_menu.addAction(action_data_neighbor)
         self.data_menu.addAction(self.action_data_reset)
 
+        # Measurements menu
         action_measure_dist = QAction('&Measure distance', self)
         action_measure_profile = QAction('&Measure profile', self)
 
@@ -181,12 +179,18 @@ class MainWindow(QMainWindow):
         self.measure_menu.addAction(action_measure_dist)
         self.measure_menu.addAction(action_measure_profile)
 
+        # Properties menu
         self.properties_menu = menubar.addMenu("&Properties")
 
+        # About menu
         self.about_menu = menubar.addMenu("&About")
         self.action_about = QAction('click test', self)
 
         self.about_menu.addAction(self.action_about)
+
+        # Help menu
+        # this menu should contain instruction how to use the software
+        # and information about algorithms used in data analysis
 
         self.setGeometry(700, 350, 800, 800)
         self.statusBar().showMessage('Ready')

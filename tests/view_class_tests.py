@@ -1,7 +1,7 @@
 import unittest
-import numpy as np
-from pySICM_Analysis.sicm_data import SICMDataFactory
+
 from pySICM_Analysis.graph_canvas import GraphCanvas
+from pySICM_Analysis.sicm_data import SICMDataFactory
 from pySICM_Analysis.view import View
 
 
