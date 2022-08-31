@@ -15,8 +15,9 @@ def crop(view_ob: View, point1: QPoint, point2: QPoint):
     Note: If the gui framework is changed and PyQt (Qt) is no longer used
     the data type of point1 and 2 must be changed.
     """
-    width = abs(point1.x() - point2.x()) + 1
-    height = abs(point1.y() - point2.y()) + 1
+
+    width = abs(point1.x() - point2.x())
+    height = abs(point1.y() - point2.y())
 
     if point1.x() < point2.x():
         orig_x = point1.x()

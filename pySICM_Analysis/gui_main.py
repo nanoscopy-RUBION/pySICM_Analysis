@@ -3,9 +3,10 @@ TODO add module documentation
 """
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtGui import QIcon
 
 from PyQt5.QtWidgets import QHBoxLayout, QListWidget, QLabel, QAction, QWidget, QVBoxLayout, QSplitter, QStyle, \
-    QActionGroup, QMainWindow
+    QActionGroup, QMainWindow, QToolBar
 
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 import matplotlib
@@ -32,6 +33,7 @@ class SecondaryWindow(QWidget):
         self.toolbar = NavigationToolbar(self.canvas, self)
         self.layout.addWidget(self.toolbar)
         self.layout.addWidget(self.canvas)
+
 
 
 class MainWindow(QMainWindow):
@@ -85,7 +87,7 @@ class MainWindow(QMainWindow):
         self.central_widget.setLayout(horizontal_layout)
 
         # File menu
-        self.action_clear = QtWidgets.QAction('&Clear', self)
+        self.action_clear = QtWidgets.QAction(QIcon("../resources/pySICM64.png"), '&Clear', self)
         self.action_import_files = QAction(icon_files, "&Import Files...", self)
         self.action_import_directory = QAction(icon_directory, '&Import Directory...', self)
         self.action_export_file = QAction(icon_export, '&Export to file', self)
@@ -156,8 +158,8 @@ class MainWindow(QMainWindow):
         self.view_menu.addAction(self.action_view_restore)
 
         # Manipulate data menu
-        self.action_data_crop = QAction('Crop', self)
-        self.action_data_crop.setEnabled(False)  # TODO
+        self.action_data_crop_input = QAction('Enter range...', self)
+        self.action_data_crop_select = QAction('Select area...', self)
         self.action_data_default = QAction('Apply default scale', self)
         self.action_data_default.setEnabled(False)  # TODO
         self.action_data_minimum = QAction('Subtract minimum', self)
@@ -181,8 +183,10 @@ class MainWindow(QMainWindow):
         self.action_data_reset = QAction('Reset data manipulations', self)
 
         self.data_menu = menubar.addMenu("&Manipulate data")
+        crop_menu = self.data_menu.addMenu("Crop")
+        crop_menu.addAction(self.action_data_crop_input)
+        crop_menu.addAction(self.action_data_crop_select)
         simple_menu = self.data_menu.addMenu('Simple Manipulations')
-        simple_menu.addAction(self.action_data_crop)
         simple_menu.addAction(self.action_data_default)
         simple_menu.addAction(self.action_data_minimum)
         simple_menu.addAction(self.action_data_transpose_z)
@@ -223,6 +227,14 @@ class MainWindow(QMainWindow):
         # Help menu
         # this menu should contain instruction how to use the software
         # and information about algorithms used in data analysis
+
+        self.toolbar = QToolBar()
+        self.toolbar.setToolButtonStyle(Qt.ToolButtonIconOnly)
+        self.toolbar.setMovable(False)
+        self.toolbar.addAction(self.action_import_files)
+        self.toolbar.addAction(self.action_clear)
+        self.toolbar.addSeparator()
+        self.addToolBar(self.toolbar)
 
         self.setGeometry(700, 350, 800, 800)
         self.statusBar().showMessage('Ready')

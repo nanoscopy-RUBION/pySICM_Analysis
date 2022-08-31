@@ -11,12 +11,15 @@ from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QApplication, QFileDialog, QInputDialog
 
 from pySICM_Analysis.colormap_dialog import ColorMapDialog
+from pySICM_Analysis.enter_area_dialog import EnterAreaDialog
 from pySICM_Analysis.gui_main import MainWindow
 from pySICM_Analysis.graph_canvas import GraphCanvas
-from pySICM_Analysis.gui_filter_dialog import FilterDialog
+from pySICM_Analysis.filter_dialog import FilterDialog
 from pySICM_Analysis.manipulate_data import transpose_data, subtract_minimum, crop
-from pySICM_Analysis.manipulate_data import filter_median_temporal, filter_median_spatial, filter_average_temporal, filter_average_spatial
+from pySICM_Analysis.manipulate_data import filter_median_temporal, filter_median_spatial, filter_average_temporal, \
+    filter_average_spatial
 from pySICM_Analysis.manipulate_data import level_data
+from pySICM_Analysis.mouse_events import MouseInteraction
 from pySICM_Analysis.sicm_data import SICMDataFactory, ApproachCurve
 from pySICM_Analysis.view import View
 
@@ -43,6 +46,7 @@ class Controller:
         self.cid = None
         self.cmap_dialog = None
         self.figure_canvas = GraphCanvas()
+        self.mi = MouseInteraction()
 
     def add_canvas_to_main_window(self):
         self.main_window.add_canvas(self.figure_canvas)
@@ -71,10 +75,12 @@ class Controller:
         self.main_window.action_data_reset.triggered.connect(self.reset_current_view_data)
         self.main_window.action_data_filter.triggered.connect(self.filter_current_view)
         self.main_window.action_data_level_plane.triggered.connect(self.plane_correction)
+        self.main_window.action_data_crop_input.triggered.connect(self.crop_by_input)
+        self.main_window.action_data_crop_select.triggered.connect(self.crop_by_selection)
 
         # Other
         self.main_window.imported_files_list.currentItemChanged.connect(self.item_selection_changed_event)
-        self.main_window.action_about.triggered.connect(self.about)
+        # self.main_window.action_about.triggered.connect(self.about)
         self.main_window.closeEvent = self.quit_application
 
     def open_color_map_dialog(self):
@@ -310,118 +316,83 @@ class Controller:
         self.update_figures_and_status()
         self.main_window.display_status_bar_message("Reset data of View object.")
 
-    def about(self):
-
-        if not self.cid:
-            if len(self.figure_canvas.figure.get_axes()) > 1:
-                self.cid_press = self.figure_canvas.figure.canvas.mpl_connect('button_press_event', self.origin_point)
-                #self.cid = self.figure_canvas.figure.canvas.mpl_connect('button_press_event', self.click_on_raster_image)
-                #self.cid = self.figure_canvas.figure.canvas.mpl_connect("motion_notify_event", self.mouse_over_value)
+    def crop_by_input(self):
+        dialog = EnterAreaDialog(controller=self, parent=self.main_window)
+        if dialog.exec():
+            point1, point2 = dialog.get_input_as_points()
+            self._crop_data(point1, point2)
         else:
-            self.figure_canvas.figure.canvas.mpl_disconnect(self.cid)
-            self.cid = None
+            self.main_window.display_status_bar_message("Data not cropped.")
 
-    def mouse_over_value(self, event):
-        print("z: %s µm " % self.get_data_from_point(QPoint(int(event.xdata), int(event.ydata))))
-        print("Coords: X %s | Y %s " % (event.xdata, event.ydata))
-        time.sleep(0.2)
+    def crop_by_selection(self):
+        self.mi = MouseInteraction()
+        self.bind_mouse_events_for_crop_selection()
 
-    def origin_point(self, event):
-        if event.name == "button_press_event":
-            self.P1 = QPoint(int(event.xdata), int(event.ydata))
-            self.cid_release = self.figure_canvas.figure.canvas.mpl_connect('button_release_event', self.rectangle_test)
-            self.cid_move = self.figure_canvas.figure.canvas.mpl_connect('motion_notify_event', self.rectangle_test)
+    def _crop_data(self, point1: QPoint, point2: QPoint):
+        if self._points_are_not_equal(point1, point2):
+            crop(self.currentView, point1, point2)
+            self.update_figures_and_status("Cropped data")
+        else:
+            self.update_figures_and_status("Data not cropped.")
 
-    def rectangle_test(self, event):
-        """TODO Clean up the code and move it to another class"""
+    def _points_are_not_equal(self, point1: QPoint, point2: QPoint) -> bool:
+        """Checks if two points have the same coordinates."""
+        return point1.x() != point2.x() and point1.y() != point2.y()
+
+    def bind_mouse_events_for_crop_selection(self):
+        self.mi.cid_press = self.figure_canvas.figure.canvas.mpl_connect('button_press_event',
+                                                                         self.select_area_with_mouse)
+        self.mi.cid_release = self.figure_canvas.figure.canvas.mpl_connect('button_release_event',
+                                                                           self.select_area_with_mouse)
+        self.mi.cid_move = self.figure_canvas.figure.canvas.mpl_connect('motion_notify_event',
+                                                                        self.select_area_with_mouse)
+
+    def select_area_with_mouse(self, event):
         import matplotlib.patches as patches
-
+        #if event.inaxes == self.figure_canvas.figure.get_axes()[1]:
+        if event.name == "button_press_event":
+            self.mi.mouse_point1 = QPoint(int(event.xdata), int(event.ydata))
 
         if event.name == "motion_notify_event":
-        #    print("move..")
+            if self.mi.mouse_point1 is not None:
+                self.update_figures_and_status()
+                self.mi.mouse_point2 = QPoint(int(event.xdata), int(event.ydata))
 
-            self.update_figures_and_status()
-            self.P2 = QPoint(int(event.xdata), int(event.ydata))
-            print("P1: %s, P2: %s" % (self.P1, self.P2))
-            width = abs(self.P1.x() - self.P2.x()) +1
-            height = abs(self.P1.y() - self.P2.y()) +1
-            if self.P1.x() < self.P2.x():
-                orig_x = self.P1.x()
-            else:
-                orig_x = self.P2.x()
-            if self.P1.y() < self.P2.y():
-                orig_y = self.P1.y()
-            else:
-                orig_y = self.P2.y()
-            origin = (orig_x, orig_y)
-            rect = patches.Rectangle(xy=origin, width=width, height=height, linewidth=1, edgecolor='r', facecolor='none')
-            self.figure_canvas.figure.get_axes()[1].add_patch(rect)
-            self.figure_canvas.draw()
+                #print("P1: %s, P2: %s" % (self.mi.mouse_point1, self.mi.mouse_point2))
+
+                if self.mi.mouse_point1.x() < self.mi.mouse_point2.x():
+                    orig_x = self.mi.mouse_point1.x()
+                else:
+                    orig_x = self.mi.mouse_point2.x()
+                if self.mi.mouse_point1.y() < self.mi.mouse_point2.y():
+                    orig_y = self.mi.mouse_point1.y()
+                else:
+                    orig_y = self.mi.mouse_point2.y()
+                origin = (orig_x, orig_y)
+
+                width = abs(self.mi.mouse_point1.x() - self.mi.mouse_point2.x()) + 1
+                height = abs(self.mi.mouse_point1.y() - self.mi.mouse_point2.y()) + 1
+                rect = patches.Rectangle(xy=origin, width=width, height=height, linewidth=1, edgecolor='r',
+                                         facecolor='none')
+                self.figure_canvas.figure.get_axes()[1].add_patch(rect)
+                self.figure_canvas.draw()
+
         if event.name == "button_release_event":
-            self.figure_canvas.figure.canvas.mpl_disconnect(self.cid_move)
-            crop(self.currentView, self.P1, self.P2)
-            self.update_figures_and_status()
-            self.cid_move = None
-            self.P1 = None
-            self.P2 = None
-       # if event.name == 'button_press_event':
-       #     self.P1 = QPoint(int(event.xdata), int(event.ydata))
-       #     print(self.P1)
-       # else:
-       #     self.P2 = QPoint(int(event.xdata), int(event.ydata))
-       #     print(self.P2)
+            if self.mi.mouse_point1 is not None and self.mi.mouse_point2 is not None:
+                self.figure_canvas.figure.canvas.mpl_disconnect(self.mi.cid_press)
+                self.figure_canvas.figure.canvas.mpl_disconnect(self.mi.cid_move)
+                self.figure_canvas.figure.canvas.mpl_disconnect(self.mi.cid_release)
+                if self.mi.mouse_point1.x() <= self.mi.mouse_point2.x():
+                    self.mi.mouse_point2 = self.mi.mouse_point2 + QPoint(1, 0)
+                if self.mi.mouse_point1.y() <= self.mi.mouse_point2.y():
+                    self.mi.mouse_point2 = self.mi.mouse_point2 + QPoint(0, 1)
+                self._crop_data(self.mi.mouse_point1, self.mi.mouse_point2)
+                self.mi = None
 
 
-    def get_data_from_point(self, point: QPoint):
-        """"""
-        return self.currentView.z_data[point.y(), point.x()]
-
-    def click_on_raster_image(self, event):
-        """A test function for getting the correct pixel after clicking on it.
-        TODO Clean up and move to another class
-        """
-        from pySICM_Analysis.gui_main import SecondaryWindow
-        axes = event.canvas.figure.get_axes()[0]
-        print(event)
-        if event.inaxes == axes:
-            print("oben")
-        else:
-
-            self.w = SecondaryWindow(self.main_window)
-            self.w.add_canvas(GraphCanvas())
-            self.w.show()
-
-            self.last_change = None
-            self.X = None
-            self.Y = None
-
-            print("unten")
-            print("x: %s, y: %s" % (event.xdata, event.ydata))
-            # coordinates need to be adjusted when imshow is used
-            # instead of pcolormesh for 2D plots
-            x = int(event.xdata)# + 0.5)
-            y = int(event.ydata)# + 0.5)
-
-            self.w.canvas.figure.clear()
-            self.w.canvas.axes = self.w.canvas.figure.add_subplot(111)
-            self.w.canvas.axes.plot(self.currentView.x_data[y, :], self.currentView.z_data[y, :])
-
-            if not self.last_change:
-                self.X = x
-                self.Y = y
-                self.last_change = self.currentView.z_data[y, x]
-                #self.currentView.z_data[y, x] = 0.0
-                self.figure_canvas.update_plots(self.currentView)
-            else:
-                print("Last: %s" % self.last_change)
-                self.currentView.z_data[self.Y, self.X] = self.last_change
-                #self.last_change = self.currentView.z_data[y, x]
-                self.currentView.z_data[y, x] = 0.0
-                self.X = x
-                self.Y = y
-                self.figure_canvas.update_plots(self.currentView)
-                print(self.X, self.Y)
-            print(self.currentView.z_data[x, y])
+def get_data_from_point(self, point: QPoint):
+    """"""
+    return self.currentView.z_data[point.y(), point.x()]
 
 
 if __name__ == "__main__":
