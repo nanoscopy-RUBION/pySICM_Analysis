@@ -9,7 +9,6 @@ from PyQt5.QtWidgets import QHBoxLayout, QListWidget, QLabel, QAction, QWidget, 
 
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 import matplotlib
-from matplotlib.figure import Figure
 
 matplotlib.use('Qt5Agg')
 
@@ -121,8 +120,11 @@ class MainWindow(QMainWindow):
         self.action_view_restore = QAction('&Restore view', self)
         self.action_view_ratio = QAction('Aspect ratio', self)
         action_view_surface = QAction('&Interpolate surface', self)
+        action_view_surface.setEnabled(False)  # TODO
         action_view_xlimits = QAction('&Adjust x limits', self)
+        action_view_xlimits.setEnabled(False)  # TODO
         action_view_ylimits = QAction('&Adjust y limits', self)
+        action_view_ylimits.setEnabled(False)  # TODO
         self.action_view_colormap = QAction('Colormap', self)
         self.action_store_angles = QAction('Store viewing angles', self)
 
@@ -146,7 +148,7 @@ class MainWindow(QMainWindow):
 
         self.view_menu.addAction(self.action_store_angles)
         self.view_menu.addAction(self.action_view_ratio)
-        # view_menu.addAction(action_view_surface)
+        self.view_menu.addAction(action_view_surface)
         self.view_menu.addAction(action_view_xlimits)
         self.view_menu.addAction(action_view_ylimits)
         self.view_menu.addAction(self.action_view_colormap)
@@ -155,18 +157,27 @@ class MainWindow(QMainWindow):
 
         # Manipulate data menu
         self.action_data_crop = QAction('Crop', self)
+        self.action_data_crop.setEnabled(False)  # TODO
         self.action_data_default = QAction('Apply default scale', self)
+        self.action_data_default.setEnabled(False)  # TODO
         self.action_data_minimum = QAction('Subtract minimum', self)
         self.action_data_transpose_z = QAction('Transpose Z', self)
         self.action_data_filter = QAction("Filter data", self)
-        self.action_data_plane = QAction('Plane', self)
+        self.action_data_level_plane = QAction('Plane', self)
         action_data_paraboloid = QAction('Paraboloid', self)
+        action_data_paraboloid.setEnabled(False)  # TODO
         action_data_line = QAction('Linewise', self)
+        action_data_line.setEnabled(False)  # TODO
         action_data_linemean = QAction('Linewise (mean)', self)
+        action_data_linemean.setEnabled(False)  # TODO
         action_data_liney = QAction('Linewise Y', self)
+        action_data_liney.setEnabled(False)  # TODO
         action_data_poly = QAction('polyXX', self)
+        action_data_poly.setEnabled(False)  # TODO
         action_data_splines = QAction('by cubic splines', self)
+        action_data_splines.setEnabled(False)  # TODO
         action_data_neighbor = QAction('by nearest neighbor', self)
+        action_data_neighbor.setEnabled(False)  # TODO
         self.action_data_reset = QAction('Reset data manipulations', self)
 
         self.data_menu = menubar.addMenu("&Manipulate data")
@@ -177,7 +188,7 @@ class MainWindow(QMainWindow):
         simple_menu.addAction(self.action_data_transpose_z)
         self.data_menu.addAction(self.action_data_filter)
         flatten_menu = self.data_menu.addMenu('Leveling')
-        flatten_menu.addAction(self.action_data_plane)
+        flatten_menu.addAction(self.action_data_level_plane)
         flatten_menu.addAction(action_data_paraboloid)
         flatten_menu.addAction(action_data_line)
         flatten_menu.addAction(action_data_linemean)
@@ -191,7 +202,9 @@ class MainWindow(QMainWindow):
 
         # Measurements menu
         action_measure_dist = QAction('&Measure distance', self)
+        action_measure_dist.setEnabled(False)  # TODO
         action_measure_profile = QAction('&Measure profile', self)
+        action_measure_profile.setEnabled(False)  # TODO
 
         self.measure_menu = menubar.addMenu("&Measurements")
         self.measure_menu.addAction(action_measure_dist)
@@ -199,6 +212,7 @@ class MainWindow(QMainWindow):
 
         # Properties menu
         self.properties_menu = menubar.addMenu("&Properties")
+        self.properties_menu.setEnabled(False)  # TODO
 
         # About menu
         self.about_menu = menubar.addMenu("&About")
@@ -219,7 +233,7 @@ class MainWindow(QMainWindow):
         self.view_menu.setEnabled(enable)
         self.data_menu.setEnabled(enable)
         self.measure_menu.setEnabled(enable)
-        self.properties_menu.setEnabled(enable)
+        #self.properties_menu.setEnabled(enable)
         self.about_menu.setEnabled(enable)
 
     def add_canvas(self, canvas):

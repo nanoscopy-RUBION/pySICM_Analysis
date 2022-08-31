@@ -9,7 +9,7 @@ from PyQt5.QtGui import QIcon
 from PyQt5.QtTest import QTest
 from PyQt5.QtWidgets import QApplication
 
-from pySICM_Analysis.gui import MainWindow
+from pySICM_Analysis.gui_main import MainWindow
 from pySICM_Analysis.main import Controller
 
 app = QApplication(sys.argv)

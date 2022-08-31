@@ -1,4 +1,3 @@
-import math
 import sys
 import time
 import traceback
@@ -12,11 +11,12 @@ from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QApplication, QFileDialog, QInputDialog
 
 from pySICM_Analysis.colormap_dialog import ColorMapDialog
-from pySICM_Analysis.gui import MainWindow
+from pySICM_Analysis.gui_main import MainWindow
 from pySICM_Analysis.graph_canvas import GraphCanvas
 from pySICM_Analysis.gui_filter_dialog import FilterDialog
 from pySICM_Analysis.manipulate_data import transpose_data, subtract_minimum, crop
 from pySICM_Analysis.manipulate_data import filter_median_temporal, filter_median_spatial, filter_average_temporal, filter_average_spatial
+from pySICM_Analysis.manipulate_data import level_data
 from pySICM_Analysis.sicm_data import SICMDataFactory, ApproachCurve
 from pySICM_Analysis.view import View
 
@@ -70,6 +70,7 @@ class Controller:
         self.main_window.action_data_minimum.triggered.connect(self.subtract_minimum_in_current_view)
         self.main_window.action_data_reset.triggered.connect(self.reset_current_view_data)
         self.main_window.action_data_filter.triggered.connect(self.filter_current_view)
+        self.main_window.action_data_level_plane.triggered.connect(self.plane_correction)
 
         # Other
         self.main_window.imported_files_list.currentItemChanged.connect(self.item_selection_changed_event)
@@ -132,9 +133,13 @@ class Controller:
             self.currentView.set_z_data(filters.get(selected_filter)(self.currentView.z_data, radius))
             self.update_figures_and_status()
 
+    def plane_correction(self):
+        """TODO"""
+        level_data(self.currentView)
+        self.update_figures_and_status("Leveling: Plane")
+
     def quit_application(self, event):
         # TODO dialogue unsaved changes
-        print("quit")
         if self.unsaved_changes:
             pass
         sys.exit()
@@ -207,6 +212,7 @@ class Controller:
             if file not in self.views.keys():
                 new_files.append(file)
         return new_files
+
     def get_all_views(self):
         """Returns all View objects as a list."""
         return self.views.values()
@@ -254,19 +260,22 @@ class Controller:
         self.currentView.set_z_data(subtract_minimum(self.currentView.get_z_data()))
         self.update_figures_and_status()
 
-    def update_figures_and_status(self):
+    def update_figures_and_status(self, message=""):
         """Redraws figures on the canvas and updates statusbar message.
+
+        An optional message will be concatenated to the status bar message.
         """
         self.currentView.show_as_px = self.main_window.action_set_axis_labels_px.isChecked()
         self.figure_canvas.update_plots(self.currentView)
         try:
             self.main_window.display_status_bar_message(
-                "Max: %s  Min: %s, x_px: %s, x_size: %s µm, label px: %s" % (
+                "Max: %s  Min: %s, x_px: %s, x_size: %s µm, label px: %s  |  %s" % (
                     str(np.max(self.currentView.get_z_data())),
                     str(np.min(self.currentView.get_z_data())),
                     str(self.currentView.sicm_data.x_px),
                     str(self.currentView.sicm_data.x_size),
-                    str(self.currentView.show_as_px)
+                    str(self.currentView.show_as_px),
+                    message
                 ))
         except:
             self.main_window.display_status_bar_message("approach curve")
@@ -371,7 +380,7 @@ class Controller:
         """A test function for getting the correct pixel after clicking on it.
         TODO Clean up and move to another class
         """
-        from pySICM_Analysis.gui import SecondaryWindow
+        from pySICM_Analysis.gui_main import SecondaryWindow
         axes = event.canvas.figure.get_axes()[0]
         print(event)
         if event.inaxes == axes:

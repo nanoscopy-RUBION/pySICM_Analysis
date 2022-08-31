@@ -190,6 +190,7 @@ def level_data(view_ob, method='plane'):
     :returns: An adjusted NDArray of z-data which corresponds to the original data with the specified geometry subtracted.
     This NDArray will be the 
     """
+    # TODO reorganize the code... this function is too large
     # reshape data to vector
     real_z = view_ob.get_z_data().flatten('F')
     real_x = view_ob.get_x_data().flatten('F')

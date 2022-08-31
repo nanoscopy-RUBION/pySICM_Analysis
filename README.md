@@ -13,7 +13,6 @@
 - ApproachCurve analysis
 - Reorganize View class
   - add fields to store more view options
-  - aspect ratio
   - axis limits
 - Data manipulations:
   - add more level/flatten functions
@@ -22,7 +21,6 @@
 - Batch mode:
   - store a list of actions which can be applied to selected sicm measurements
 - Colormap window
-  - Select predefined color maps from list
   - Create custom color maps
 - Show Line profile of selection
   - Column/row

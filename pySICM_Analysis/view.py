@@ -91,7 +91,7 @@ class View:
 
     def toggle_color_bar(self):
         """
-        Switches colorbar on or off.
+        Switches the color bar on or off.
         """
         self.color_bar_shown = not self.color_bar_shown
 

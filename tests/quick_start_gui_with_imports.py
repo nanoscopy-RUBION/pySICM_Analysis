@@ -4,7 +4,7 @@ from os.path import join
 
 from PyQt5.QtWidgets import QApplication
 
-from pySICM_Analysis.gui import MainWindow
+from pySICM_Analysis.gui_main import MainWindow
 from pySICM_Analysis.main import Controller
 
 if __name__ == "__main__":
