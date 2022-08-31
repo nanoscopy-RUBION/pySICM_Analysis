@@ -1,5 +1,4 @@
 import matplotlib
-import matplotlib.pyplot as plt
 from pySICM_Analysis.sicm_data import ApproachCurve, ScanBackstepMode
 import numpy as np
 
@@ -19,6 +18,7 @@ class View:
         self.axes_shown = True
         self.show_as_px = True
         self.color_bar_shown = True
+        self.aspect_ratio = (4, 4, 3)  # Default value by matplotlib
         self.color_map = DEFAULT_COLOR_MAP
         self.data_manipulations = []
 
@@ -83,18 +83,6 @@ class View:
     def get_ylim(self):
         return self.ylims
 
-    def set_aspect(self, aspect):
-
-        if aspect == 'equal' or aspect == 'auto':
-            self.aspectRatio = aspect
-            return 1
-        try:
-            aspect = float(aspect)
-            self.aspectRatio = aspect
-            return 1
-        except ValueError:
-            return 0
-
     def toggle_axes(self):
         """
         Changes the state of axis visibility.
@@ -152,11 +140,9 @@ class View:
         should be used for that purpose.
         """
         self.axes_shown = True
-        # print(self.default_xlim)
-        # print(self.default_ylim)
         #self.set_xlims(self.default_xlim)
         #self.set_ylims(self.default_ylim)
-        #self.set_aspect("auto")
+        self.aspect_ratio = (4, 4, 3)
         self.change_color_map()
         self.set_viewing_angles()
 

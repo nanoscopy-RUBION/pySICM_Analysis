@@ -22,15 +22,19 @@ class GraphCanvas(FigureCanvasQTAgg):
         :param view_object: View object which contains the data and display settings for the graph
         """
         self.figure.clear()
+
+        # Plotting scanning data
         if isinstance(view_object.sicm_data, ScanBackstepMode):
             if view_object.show_as_px:
                 axis_label = "px"
             else:
                 axis_label = "µm"
 
+            # Top Graph: 3D Plot
             self.axes = self.figure.add_subplot(2, 1, 1, projection='3d')
             self.axes.plot_surface(*view_object.get_modified_data(), cmap=view_object.color_map)
 
+            self.axes.set_box_aspect(aspect=view_object.aspect_ratio)
             self.figure.get_axes()[0].azim = view_object.azim
             self.figure.get_axes()[0].elev = view_object.elev
             self.figure.get_axes()[0].proj_type = 'ortho'
@@ -38,7 +42,9 @@ class GraphCanvas(FigureCanvasQTAgg):
 
             self.axes.set_xlabel(axis_label)
             self.axes.set_ylabel(axis_label)
+            self.axes.set_zlabel("µm")
 
+            # Bottom Graph: 2D raster image
             self.axes = self.figure.add_subplot(2, 1, 2)
             # use pcolormesh for scalable pixelmaps
             img = self.axes.pcolormesh(view_object.z_data, cmap=view_object.color_map)
@@ -49,7 +55,10 @@ class GraphCanvas(FigureCanvasQTAgg):
             self.axes.set_xlabel(axis_label)
             self.axes.set_ylabel(axis_label)
 
-            # TEST
+            cb = self.figure.colorbar(img)
+            cb.set_label(label="height in µm")
+
+            # TEST Conversion of px to µm and vice versa
             if not view_object.show_as_px:
                 x_size = view_object.sicm_data.x_size
                 x_px = view_object.sicm_data.x_px
@@ -63,9 +72,7 @@ class GraphCanvas(FigureCanvasQTAgg):
                     self.axes.set_yticklabels(self.get_tick_labels_in_microns(y_ticks, y_px, y_size))
             # ENDTEST
 
-            cb = self.figure.colorbar(img)
-            cb.set_label(label="height in µm")
-
+        # Plotting approach curve data
         if isinstance(view_object.sicm_data, ApproachCurve):
             self.axes = self.figure.add_subplot(111)
             self.axes.plot(*view_object.get_modified_data())

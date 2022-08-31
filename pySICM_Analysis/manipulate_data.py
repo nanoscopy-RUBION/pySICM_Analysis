@@ -45,32 +45,17 @@ def transpose_data(data):
 
 # Filter Manipulations
 # ______________________________________
-def filter_median_temporal(z_data, l=1):
+def filter_median_temporal(z_data, px_neighbours=1):
     """
     Sets each pixel equal to the median of itself, the l pixel measurements immediately before, and the l pixel 
-    measurements immediately afterwards (2l+1 pixels in total). Pixels with less than l pixels before or after them
+    measurements immediately afterwards (2l+1 pixels in total).
+
+    Pixels with less than l pixels before or after them
     will use the available pixels and will not attempt to find addition pixels after the 0th or n-1th index in an array
     of length n.
-    :param z_data: This is the Z data that is to be smoothed. It can either be as a single array or in an ndarray.
-    :param l: This is the number of measurements on either side (taken either immediately before or after) used to 
-    adjust each pixel. 
-    :returns: new Z data adjusted using the described method. The existing object is not modified.
-    """
-    shape = z_data.shape
-    flattened = z_data.flatten('C')
-    z = np.zeros(len(flattened))
 
-    for i in np.arange(0, len(flattened)):
-        z[i] = np.median(flattened[np.max([i - l, 0]):np.min([i + (l + 1), len(flattened)])])
-    return z.reshape(shape, order='C')
-
-
-def filter_average_temporal(z_data, px_neighbours=1):
-    """
-    Sets each pixel equal to the average of itself, the l pixel measurements immediately before, and the l pixel 
-    measurements immediately afterwards (2l+1 pixels in total). Pixels with less than l pixels before or after them
-    will use the available pixels and will not attempt to find addition pixels after the 0th or n-1th index in an array
-    of length n.
+    Note: This function is only valid if data was scanned line-wise and each line beginning on the same end.
+    This feature may be extended to support different scan modes.
 
     :param z_data: This is the Z data that is to be smoothed. It can either be as a single array or in an ndarray.
     :param px_neighbours: This is the number of measurements on either side (taken either immediately before or after) used to
@@ -80,37 +65,75 @@ def filter_average_temporal(z_data, px_neighbours=1):
     shape = z_data.shape
     flattened = z_data.flatten('C')
     z = np.zeros(len(flattened))
+
+    for i in np.arange(0, len(flattened)):
+        z[i] = np.median(flattened[np.max([i - px_neighbours, 0]):np.min([i + (px_neighbours + 1), len(flattened)])])
+    return z.reshape(shape, order='C')
+
+
+def filter_average_temporal(z_data, px_neighbours=1):
+    """
+    Sets each pixel equal to the average of itself, the l pixel measurements immediately before, and the l pixel 
+    measurements immediately afterwards (2l+1 pixels in total).
+
+    Pixels with less than l pixels before or after them
+    will use the available pixels and will not attempt to find addition pixels after the 0th or n-1th index in an array
+    of length n.
+
+    Note: This function is only valid if data was scanned line-wise and each line beginning on the same end.
+    This feature may be extended to support different scan modes.
+
+    :param z_data: This is the Z data that is to be smoothed. It can either be as a single array or in an ndarray.
+    :param px_neighbours: This is the number of measurements on either side (taken either immediately before or after) used to
+    adjust each pixel.
+    :returns: new Z data adjusted using the described method. The existing object is not modified.
+    """
+    shape = z_data.shape
+    flattened = z_data.flatten('C')
+    z = np.zeros(len(flattened))
+
     for i in np.arange(0, len(flattened)):
         z[i] = np.mean(flattened[np.max([i - px_neighbours, 0]):np.min([i + (px_neighbours + 1), len(flattened)])])
     return z.reshape(shape, order='C')
 
 
 def filter_median_spatial(z_data, px_radius=1):
+    """
+    Sets each pixel equal to the median of all points included in a disc-shaped field centered on the point itself with
+    a given px_radius.
+    If the pixel radius equals 1, the data will not be changed.
+
+    :param z_data: This is the Z data that is to be smoothed. It can either be as a single array or in an ndarray.
+    :param px_radius: This is the number of measurements on either side (taken either immediately before or after) used to
+    adjust each pixel.
+    :returns: new Z data adjusted using the described method. The existing object is not modified.
+    """
     shape = z_data.shape
     z = np.zeros(shape)
 
     for i in np.arange(shape[0]):
         for j in np.arange(shape[1]):
             z[i, j] = np.median(z_data[disk((i, j), px_radius, shape=shape)])
-
-    #z = np.array([[np.median(z_data[disk((i, j), px_radius, shape=shape)])
-    #               for i in np.arange(shape[1])]
-    #              for j in np.arange(shape[0])]
-    #             )
     return z
 
 
 def filter_average_spatial(z_data, px_radius=1):
+    """
+    Sets each pixel equal to the average of all points included in a disc-shaped field centered on the point itself with
+    a given px_radius.
+    If the pixel radius equals 1, the data will not be changed.
+
+    :param z_data: This is the Z data that is to be smoothed. It can either be as a single array or in an ndarray.
+    :param px_radius: This is the number of measurements on either side (taken either immediately before or after) used to
+    adjust each pixel.
+    :returns: new Z data adjusted using the described method. The existing object is not modified.
+    """
     shape = z_data.shape
     z = np.zeros(shape)
 
     for i in np.arange(shape[0]):
         for j in np.arange(shape[1]):
             z[i, j] = np.mean(z_data[disk((i, j), px_radius, shape=shape)])
-    #z = np.array([[np.median(z_data[disk((i, j), px_radius, shape=shape)])
-    #               for i in np.arange(shape[1])]
-    #              for j in np.arange(shape[0])]
-    #             )
     return z
 
 

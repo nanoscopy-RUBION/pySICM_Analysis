@@ -9,8 +9,9 @@ import numpy as np
 from PyQt5.QtCore import QPoint
 from PyQt5.QtGui import QIcon
 
-from PyQt5.QtWidgets import QApplication, QFileDialog
+from PyQt5.QtWidgets import QApplication, QFileDialog, QInputDialog
 
+from pySICM_Analysis.colormap_dialog import ColorMapDialog
 from pySICM_Analysis.gui import MainWindow
 from pySICM_Analysis.graph_canvas import GraphCanvas
 from pySICM_Analysis.gui_filter_dialog import FilterDialog
@@ -37,11 +38,10 @@ class Controller:
     def __init__(self, main_window):
         self.main_window = main_window
         self.unsaved_changes = False
-        self.itemList = []
-        self.viewList = []
-        self.currentItem = None
+        self.views = {}
         self.currentView = None
         self.cid = None
+        self.cmap_dialog = None
         self.figure_canvas = GraphCanvas()
 
     def add_canvas_to_main_window(self):
@@ -62,6 +62,8 @@ class Controller:
         self.main_window.action_set_axis_labels_micron.triggered.connect(self.update_figures_and_status)
         self.main_window.action_store_angles.triggered.connect(self.store_viewing_angles)
         self.main_window.action_view_restore.triggered.connect(self.restore_current_view_settings)
+        self.main_window.action_view_colormap.triggered.connect(self.open_color_map_dialog)
+        self.main_window.action_view_ratio.triggered.connect(self.open_aspect_ratio_input_dialog)
 
         # Data manipulation
         self.main_window.action_data_transpose_z.triggered.connect(self.transpose_z_of_current_view)
@@ -73,6 +75,45 @@ class Controller:
         self.main_window.imported_files_list.currentItemChanged.connect(self.item_selection_changed_event)
         self.main_window.action_about.triggered.connect(self.about)
         self.main_window.closeEvent = self.quit_application
+
+    def open_color_map_dialog(self):
+        """Opens a dialog to choose a color map.
+        The selected color map can be applied to the current view
+        or to all view objects an once.
+        """
+        if not self.cmap_dialog:
+            self.cmap_dialog = ColorMapDialog(controller=self, parent=self.main_window)
+        self.cmap_dialog.open_window()
+
+    def open_aspect_ratio_input_dialog(self):
+        input_string, apply = QInputDialog.getText(
+            self.main_window, "Aspect Ratio Dialog", "Enter an aspect ratio (X:Y:Z):"
+        )
+        aspect_r = self._extract_aspect_ratio_tuple_from_string(input_string)
+        if aspect_r:
+            self.change_aspect_ratio_for_current_view(aspect_r)
+
+    def _extract_aspect_ratio_tuple_from_string(self, input_string: str) -> tuple:
+        """Returns a valid tuple for an aspect ratio of three axis.
+
+        Input string should have the form X:Y:Z. The string is separated
+        at ":" and freed from white spaces before conversion to a 3-tuple
+        containing flaots.
+
+        For invalid input strings an empty tuple is returned.
+        """
+        try:
+            splitted = input_string.split(":")
+            trimmed = [element.strip() for element in splitted]
+            aspect_r = tuple([float(n) for n in trimmed])
+        except ValueError as e:
+            self.main_window.display_status_bar_message("Invalid input for aspect ratio")
+            aspect_r = tuple()
+        return aspect_r
+
+    def change_aspect_ratio_for_current_view(self, aspect_r):
+        self.currentView.aspect_ratio = aspect_r
+        self.update_figures_and_status()
 
     def filter_current_view(self):
         filters = {
@@ -141,25 +182,41 @@ class Controller:
         Adds file paths to the list widget.
         :param files: list of files
         """
-        if files:
-            if len(files) > 1:
+        new_files = self.get_files_without_duplicates(files)
+        if new_files:
+            self.main_window.add_items_to_list(new_files)
+            self._create_view_objects()
+            self.main_window.set_menus_enabled(True)
+
+            if len(new_files) > 1:
                 message_end = " files."
             else:
                 message_end = " file."
-            self.main_window.add_items_to_list(files)
-            self.main_window.set_menus_enabled(True)
-            self.main_window.display_status_bar_message("Imported " + str(len(files)) + message_end)
+            self.main_window.display_status_bar_message("Imported " + str(len(new_files)) + message_end)
         else:
             self.main_window.display_status_bar_message("No files imported.")
+
+    def get_files_without_duplicates(self, files):
+        """Returns a list which only includes files that
+        have not already been imported.
+
+        A file is a new file if its full file path is not already
+        a dictionary key in views."""
+        new_files = []
+        for file in files:
+            if file not in self.views.keys():
+                new_files.append(file)
+        return new_files
+    def get_all_views(self):
+        """Returns all View objects as a list."""
+        return self.views.values()
 
     def clear_lists(self):
         """Removes all items from list widget and disables menus."""
         self.main_window.clear_list_widget()
         self.main_window.set_menus_enabled(False)
-        self.currentItem = None
         self.currentView = None
-        self.itemList.clear()
-        self.viewList.clear()
+        self.views.clear()
         self.main_window.display_status_bar_message("Files removed from the list.")
 
     def toggle_axes(self):
@@ -174,20 +231,16 @@ class Controller:
         """
         if item:
             self.main_window.action_toggle_axes.setEnabled(True)
-            self.currentItem = item
-
-            if self.currentItem not in self.itemList:
-                self.itemList.append(item)
-                self.currentView = View(SICMDataFactory().get_sicm_data(item.text()))
-                self.viewList.append(self.currentView)
-            else:
-                self.currentView = self.viewList[self.itemList.index(self.currentItem)]
-
+            self.currentView = self.views.get(item.text())
             self.main_window.action_toggle_axes.setChecked(self.currentView.axes_shown)
-
             self.update_figures_and_status()
         else:
             self.main_window.action_toggle_axes.setEnabled(False)
+
+    def _create_view_objects(self):
+        for i in range(self.main_window.get_item_list_count()):
+            item = self.main_window.imported_files_list.item(i)
+            self.views[item.text()] = View(SICMDataFactory().get_sicm_data(item.text()))
 
     def transpose_z_of_current_view(self):
         """Transposes z data of current measurement of all types

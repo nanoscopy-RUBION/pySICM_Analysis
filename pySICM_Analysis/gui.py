@@ -14,12 +14,10 @@ from matplotlib.figure import Figure
 matplotlib.use('Qt5Agg')
 
 
-
 class SecondaryWindow(QWidget):
     """
     This widget will appear as a free-floating window if
     it has no parent.
-    CURRENTLY UNUSED AND NOT WORKING..
     """
 
     def __init__(self, parent=None):
@@ -121,11 +119,11 @@ class MainWindow(QMainWindow):
         self.action_toggle_axes.setCheckable(True)
         self.action_toggle_axes.setChecked(True)
         self.action_view_restore = QAction('&Restore view', self)
-        action_view_ratio = QAction('&Aspect ratio', self)
+        self.action_view_ratio = QAction('Aspect ratio', self)
         action_view_surface = QAction('&Interpolate surface', self)
         action_view_xlimits = QAction('&Adjust x limits', self)
         action_view_ylimits = QAction('&Adjust y limits', self)
-        action_view_colormap = QAction('&Colormap', self)
+        self.action_view_colormap = QAction('Colormap', self)
         self.action_store_angles = QAction('Store viewing angles', self)
 
         self.action_set_axis_labels_px = QAction("pixels", self)
@@ -147,11 +145,11 @@ class MainWindow(QMainWindow):
         self.action_set_axis_labels_px.setChecked(True)
 
         self.view_menu.addAction(self.action_store_angles)
-        self.view_menu.addAction(action_view_ratio)
+        self.view_menu.addAction(self.action_view_ratio)
         # view_menu.addAction(action_view_surface)
         self.view_menu.addAction(action_view_xlimits)
         self.view_menu.addAction(action_view_ylimits)
-        self.view_menu.addAction(action_view_colormap)
+        self.view_menu.addAction(self.action_view_colormap)
         self.view_menu.addSeparator()
         self.view_menu.addAction(self.action_view_restore)
 
@@ -236,4 +234,7 @@ class MainWindow(QMainWindow):
     def clear_list_widget(self):
         self.imported_files_list.clear()
 
-
+    def get_item_list_count(self):
+        """Returns the number of items
+        in the imported files list."""
+        return self.imported_files_list.count()
