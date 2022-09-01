@@ -26,7 +26,7 @@ from pySICM_Analysis.view import View
 # APP CONSTANTS
 APP_NAME = "pySICM Analysis"
 APP_ICON_PATH = '../resources/pySICMsplash.png'
-TITLE = f"{APP_NAME} (ver. 2022-08-24)"
+TITLE = f"{APP_NAME} (ver. 2022-09-01)"
 DEFAULT_FILE_PATH = "../"
 
 # FILTERS

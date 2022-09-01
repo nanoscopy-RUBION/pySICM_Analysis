@@ -1,7 +1,7 @@
 import copy
 
 import matplotlib
-from pySICM_Analysis.sicm_data import ApproachCurve, ScanBackstepMode
+from pySICM_Analysis.sicm_data import ApproachCurve, ScanBackstepMode, SICMdata
 import numpy as np
 
 from pySICM_Analysis.undo_redo import UndoRedoData
@@ -16,9 +16,8 @@ class View:
     features (such as rotation of )
     """
 
-    def __init__(self, data):
+    def __init__(self, data: SICMdata):
         self.sicm_data = data
-        self.mode = data.scan_mode
         self.axes_shown = True
         self.show_as_px = True
         self.color_bar_shown = True
@@ -38,10 +37,14 @@ class View:
 
             self.azim = -60.0
             self.elev = 30.0
-        if isinstance(self.sicm_data, ApproachCurve):
+        elif isinstance(self.sicm_data, ApproachCurve):
             self.x_data, self.z_data = data.plot()
             self.x_data = np.array(self.x_data)
             self.z_data = np.array(self.z_data)
+        else:
+            self.x_data = np.zeros((2, 2))
+            self.y_data = np.zeros((2, 2))
+            self.z_data = np.zeros((2, 2))
 
     # Undo/Redo section
     # ---------------------------------------------------------------------------------------------
