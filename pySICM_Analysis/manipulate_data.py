@@ -33,20 +33,20 @@ def crop(view_ob: View, point1: QPoint, point2: QPoint):
     view_ob.z_data = view_ob.z_data[orig_y:orig_y + height, orig_x:orig_x + width]
 
 
-def subtract_minimum(data):
+def subtract_z_minimum(view: View):
     """Subtracts the minimum of a data set
     from all data points."""
-    return data - np.min(data)
+    view.z_data = view.z_data - np.min(view.z_data)
 
 
-def transpose_data(data):
+def transpose_z_data(view: View):
     """Transposes the z array."""
-    return data.transpose()
+    view.z_data = view.z_data.transpose()
 
 
 # Filter Manipulations
 # ______________________________________
-def filter_median_temporal(z_data, px_neighbours=1):
+def filter_median_temporal(view: View, px_neighbours=1):
     """
     Sets each pixel equal to the median of itself, the l pixel measurements immediately before, and the l pixel 
     measurements immediately afterwards (2l+1 pixels in total).
@@ -58,21 +58,21 @@ def filter_median_temporal(z_data, px_neighbours=1):
     Note: This function is only valid if data was scanned line-wise and each line beginning on the same end.
     This feature may be extended to support different scan modes.
 
-    :param z_data: This is the Z data that is to be smoothed. It can either be as a single array or in an ndarray.
+    :param view: This is the Z data that is to be smoothed. It can either be as a single array or in an ndarray.
     :param px_neighbours: This is the number of measurements on either side (taken either immediately before or after) used to
     adjust each pixel. 
     :returns: new Z data adjusted using the described method. The existing object is not modified.
     """
-    shape = z_data.shape
-    flattened = z_data.flatten('C')
+    shape = view.z_data.shape
+    flattened = view.z_data.flatten('C')
     z = np.zeros(len(flattened))
 
     for i in np.arange(0, len(flattened)):
         z[i] = np.median(flattened[np.max([i - px_neighbours, 0]):np.min([i + (px_neighbours + 1), len(flattened)])])
-    return z.reshape(shape, order='C')
+    view.z_data = z.reshape(shape, order='C')
 
 
-def filter_average_temporal(z_data, px_neighbours=1):
+def filter_average_temporal(view: View, px_neighbours=1):
     """
     Sets each pixel equal to the average of itself, the l pixel measurements immediately before, and the l pixel 
     measurements immediately afterwards (2l+1 pixels in total).
@@ -84,63 +84,58 @@ def filter_average_temporal(z_data, px_neighbours=1):
     Note: This function is only valid if data was scanned line-wise and each line beginning on the same end.
     This feature may be extended to support different scan modes.
 
-    :param z_data: This is the Z data that is to be smoothed. It can either be as a single array or in an ndarray.
+    :param view: This is the Z data that is to be smoothed. It can either be as a single array or in an ndarray.
     :param px_neighbours: This is the number of measurements on either side (taken either immediately before or after) used to
     adjust each pixel.
     :returns: new Z data adjusted using the described method. The existing object is not modified.
     """
-    shape = z_data.shape
-    flattened = z_data.flatten('C')
+    shape = view.z_data.shape
+    flattened = view.z_data.flatten('C')
     z = np.zeros(len(flattened))
 
     for i in np.arange(0, len(flattened)):
         z[i] = np.mean(flattened[np.max([i - px_neighbours, 0]):np.min([i + (px_neighbours + 1), len(flattened)])])
-    return z.reshape(shape, order='C')
+    view.z_data = z.reshape(shape, order='C')
 
 
-def filter_median_spatial(z_data, px_radius=1):
+def filter_median_spatial(view: View, px_radius=1):
     """
     Sets each pixel equal to the median of all points included in a disc-shaped field centered on the point itself with
     a given px_radius.
     If the pixel radius equals 1, the data will not be changed.
 
-    :param z_data: This is the Z data that is to be smoothed. It can either be as a single array or in an ndarray.
+    :param view: This is the Z data that is to be smoothed. It can either be as a single array or in an ndarray.
     :param px_radius: This is the number of measurements on either side (taken either immediately before or after) used to
     adjust each pixel.
     :returns: new Z data adjusted using the described method. The existing object is not modified.
     """
-    shape = z_data.shape
+    shape = view.z_data.shape
     z = np.zeros(shape)
 
     for i in np.arange(shape[0]):
         for j in np.arange(shape[1]):
-            z[i, j] = np.median(z_data[disk((i, j), px_radius, shape=shape)])
-    return z
+            z[i, j] = np.median(view.z_data[disk((i, j), px_radius, shape=shape)])
+    view.z_data = z
 
 
-def filter_average_spatial(z_data, px_radius=1):
+def filter_average_spatial(view: View, px_radius=1):
     """
     Sets each pixel equal to the average of all points included in a disc-shaped field centered on the point itself with
     a given px_radius.
     If the pixel radius equals 1, the data will not be changed.
 
-    :param z_data: This is the Z data that is to be smoothed. It can either be as a single array or in an ndarray.
+    :param view: This is the Z data that is to be smoothed. It can either be as a single array or in an ndarray.
     :param px_radius: This is the number of measurements on either side (taken either immediately before or after) used to
     adjust each pixel.
     :returns: new Z data adjusted using the described method. The existing object is not modified.
     """
-    shape = z_data.shape
+    shape = view.z_data.shape
     z = np.zeros(shape)
 
     for i in np.arange(shape[0]):
         for j in np.arange(shape[1]):
-            z[i, j] = np.mean(z_data[disk((i, j), px_radius, shape=shape)])
-    return z
-
-
-def apply_default_scale():
-    """TODO was soll die Funktion machen? """
-    return 1
+            z[i, j] = np.mean(view.z_data[disk((i, j), px_radius, shape=shape)])
+    view.z_data = z
 
 
 def fitting_objective(real, pred):
@@ -182,7 +177,7 @@ def level_plane(view_ob,guess = [0,0,0]):
     return view_ob.get_z_data()'''
 
 
-def level_data(view_ob, method='plane'):
+def level_data(view_ob: View, method='plane'):
     """
     This method is intended to correct for a variety of possible shapes that . 
 
@@ -224,7 +219,7 @@ def level_data(view_ob, method='plane'):
 
     adj_z = real_z - pred_z
 
-    print("max: %s  min: %s" % (np.max(adj_z), np.min(adj_z)))
+    #print("max: %s  min: %s" % (np.max(adj_z), np.min(adj_z)))
     # this mask is used to exclude all data points which are larger than the 25th percentile
     mask = np.where(adj_z > np.percentile(adj_z, 25))
 
@@ -248,8 +243,9 @@ def level_data(view_ob, method='plane'):
         adj_z = [i - np.mean(i) for i in pred_z]
     if method == 'linewise_y':
         pass
-    print("max: %s  min: %s" % (np.max(adj_z), np.min(adj_z)))
-    return adj_z
+    #print("max: %s  min: %s" % (np.max(adj_z), np.min(adj_z)))
+
+    view_ob.z_data = adj_z
 
 
 '''def level_2D_poly(view_ob):

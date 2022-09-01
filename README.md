@@ -17,7 +17,6 @@
 - Data manipulations:
   - add more level/flatten functions
   - interpolation
-  - crop
 - Batch mode:
   - store a list of actions which can be applied to selected sicm measurements
 - Colormap window

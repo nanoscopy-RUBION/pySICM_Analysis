@@ -1,6 +1,10 @@
+import copy
+
 import matplotlib
 from pySICM_Analysis.sicm_data import ApproachCurve, ScanBackstepMode
 import numpy as np
+
+from pySICM_Analysis.undo_redo import UndoRedoData
 
 DEFAULT_COLOR_MAP = matplotlib.cm.YlGnBu_r
 
@@ -20,13 +24,17 @@ class View:
         self.color_bar_shown = True
         self.aspect_ratio = (4, 4, 3)  # Default value by matplotlib
         self.color_map = DEFAULT_COLOR_MAP
-        self.data_manipulations = []
+
+        # These two lists should be treated as stacks
+        # for undo (data_manipulations) and redo (redoable_manipulations)
+        self.data_manipulations: list[UndoRedoData] = list()
+        self.redoable_manipulations: list[UndoRedoData] = list()
 
         if isinstance(self.sicm_data, ScanBackstepMode):
             self.x_data, self.y_data, self.z_data = data.plot()
             self.x_data = np.array(self.x_data)
             self.y_data = np.array(self.y_data)
-            self.z_data = np.array(self.z_data) - np.min(self.z_data)
+            self.z_data = np.array(self.z_data)
 
             self.azim = -60.0
             self.elev = 30.0
@@ -34,6 +42,82 @@ class View:
             self.x_data, self.z_data = data.plot()
             self.x_data = np.array(self.x_data)
             self.z_data = np.array(self.z_data)
+
+    # Undo/Redo section
+    # ---------------------------------------------------------------------------------------------
+    def store_undoable_action(self, action_name="action"):
+        print("store undoable action")
+        data = self._make_undoredoable_data_object()
+        undoable = UndoRedoData(name=action_name, data=data)
+        self.data_manipulations.append(undoable)
+
+    def _make_undoredoable_data_object(self):
+        if isinstance(self.sicm_data, ScanBackstepMode):
+            data = (
+                copy.deepcopy(self.x_data),
+                copy.deepcopy(self.y_data),
+                copy.deepcopy(self.z_data)
+            )
+        else:
+            data = (
+                copy.deepcopy(self.x_data),
+                copy.deepcopy(self.z_data)
+            )
+        return data
+
+    def store_redoable_data(self):
+        print("store redoable")
+        data = self._make_undoredoable_data_object()
+        self.data_manipulations[-1].redodata = data
+
+    def undo_manipulation(self):
+        undoredoable = self.data_manipulations.pop()
+        self._restore_data_from_undoable(undoredoable.undodata)
+        self.redoable_manipulations.append(undoredoable)
+
+    def redo_manipulation(self):
+        undoredoable = self.redoable_manipulations.pop()
+        self._restore_data_from_undoable(undoredoable.redodata)
+        self.data_manipulations.append(undoredoable)
+
+    def _restore_data_from_undoable(self, undoredoable_data: tuple):
+        """This function copies data obtained from the undo
+        or redo stack to the x, y, and z_data fields to restore
+        a previous state."""
+        if isinstance(self.sicm_data, ScanBackstepMode):
+            self.x_data = copy.deepcopy(undoredoable_data[0])
+            self.y_data = copy.deepcopy(undoredoable_data[1])
+            self.z_data = copy.deepcopy(undoredoable_data[2])
+
+        if isinstance(self.sicm_data, ApproachCurve):
+            self.x_data = copy.deepcopy(undoredoable_data[0])
+            self.z_data = copy.deepcopy(undoredoable_data[1])
+
+    def is_undoable(self):
+        return len(self.data_manipulations) > 0
+
+    def is_redoable(self):
+        return len(self.redoable_manipulations) > 0
+
+    def get_undo_text(self):
+        try:
+            return self.data_manipulations[-1].name
+        except IndexError:
+            return ""
+
+    def get_redo_text(self):
+        try:
+            return self.redoable_manipulations[-1].name
+        except IndexError:
+            return ""
+
+    def get_undoable_manipulations_list(self) -> list[str]:
+        items = []
+        for item in self.data_manipulations:
+            items.append(item.name)
+        return items
+    # Undo/Redo section END
+    # ---------------------------------------------------------------------------------------------
 
     def get_raw_data(self):
         """
@@ -56,26 +140,8 @@ class View:
         else:
             return self.x_data, self.z_data
 
-    def get_x_data(self):
-        return self.x_data
-
-    def get_y_data(self):
-        return self.y_data
-
-    def get_z_data(self):
-        return self.z_data
-
     def set_data(self, data):
         self.x_data, self.y_data, self.z_data = np.array(data)
-
-    def set_x_data(self, data):
-        self.x_data = np.array(data)
-
-    def set_y_data(self, data):
-        self.y_data = np.array(data)
-
-    def set_z_data(self, data):
-        self.z_data = np.array(data)
 
     def get_xlim(self):
         return self.xlims

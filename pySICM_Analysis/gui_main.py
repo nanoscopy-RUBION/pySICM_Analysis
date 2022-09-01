@@ -6,7 +6,7 @@ from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QIcon
 
 from PyQt5.QtWidgets import QHBoxLayout, QListWidget, QLabel, QAction, QWidget, QVBoxLayout, QSplitter, QStyle, \
-    QActionGroup, QMainWindow, QToolBar
+    QActionGroup, QMainWindow, QToolBar, QAbstractItemView
 
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 import matplotlib
@@ -70,6 +70,8 @@ class MainWindow(QMainWindow):
         vertical_layout_bottom = QVBoxLayout()
         vertical_layout_bottom.addWidget(label_data_manipulations)
         vertical_layout_bottom.addWidget(self.data_manipulation_list)
+        self.data_manipulation_list.setFocusPolicy(Qt.NoFocus)
+        self.data_manipulation_list.setSelectionMode(QAbstractItemView.NoSelection)
         bottom = QWidget()
         bottom.setLayout(vertical_layout_bottom)
 
@@ -78,6 +80,8 @@ class MainWindow(QMainWindow):
         self.vertical_splitter = QSplitter(Qt.Vertical)
         self.vertical_splitter.addWidget(top)
         self.vertical_splitter.addWidget(bottom)
+        self.vertical_splitter.setStretchFactor(0, 6)
+
         self.statusBar()
         menubar = self.menuBar()
         file_menu = menubar.addMenu("&File")
@@ -108,7 +112,9 @@ class MainWindow(QMainWindow):
 
         # Edit menu
         self.action_undo = QAction("Undo", self)
+        self.action_undo.setShortcut("Ctrl+Z")
         self.action_redo = QAction("Redo", self)
+        self.action_redo.setShortcut("Ctrl+R")
         self.action_undo.setEnabled(False)
         self.action_redo.setEnabled(False)
         edit_menu = menubar.addMenu("Edit")
@@ -257,10 +263,33 @@ class MainWindow(QMainWindow):
     def add_items_to_list(self, items):
         self.imported_files_list.addItems(items)
 
-    def clear_list_widget(self):
+    def clear_list_widgets(self):
         self.imported_files_list.clear()
+        self.data_manipulation_list.clear()
 
     def get_item_list_count(self):
         """Returns the number of items
         in the imported files list."""
         return self.imported_files_list.count()
+
+    def set_undo_menu_items(self, enabled: bool = False, text=""):
+        default = "Undo "
+        try:
+            self.action_undo.setEnabled(enabled)
+            self.action_undo.setText(default + text)
+        except TypeError:
+            self.action_undo.setEnabled(enabled)
+            self.action_undo.setText(default)
+
+    def set_redo_menu_items(self, enabled: bool = False, text=""):
+        default = "Redo "
+        try:
+            self.action_redo.setEnabled(enabled)
+            self.action_redo.setText(default + text)
+        except TypeError:
+            self.action_redo.setEnabled(enabled)
+            self.action_redo.setText(default)
+
+    def set_data_manipulation_list_items(self, items):
+        self.data_manipulation_list.clear()
+        self.data_manipulation_list.addItems(items)

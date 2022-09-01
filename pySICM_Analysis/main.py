@@ -15,7 +15,7 @@ from pySICM_Analysis.enter_area_dialog import EnterAreaDialog
 from pySICM_Analysis.gui_main import MainWindow
 from pySICM_Analysis.graph_canvas import GraphCanvas
 from pySICM_Analysis.filter_dialog import FilterDialog
-from pySICM_Analysis.manipulate_data import transpose_data, subtract_minimum, crop
+from pySICM_Analysis.manipulate_data import transpose_z_data, subtract_z_minimum, crop
 from pySICM_Analysis.manipulate_data import filter_median_temporal, filter_median_spatial, filter_average_temporal, \
     filter_average_spatial
 from pySICM_Analysis.manipulate_data import level_data
@@ -39,11 +39,10 @@ AVERAGE_SPATIAL = "Average (spatial)"
 class Controller:
 
     def __init__(self, main_window):
-        self.main_window = main_window
+        self.main_window: MainWindow = main_window
         self.unsaved_changes = False
-        self.views = {}
-        self.currentView = None
-        self.cid = None
+        self.views: dict[str, View] = {}
+        self.currentView: View = None
         self.cmap_dialog = None
         self.figure_canvas = GraphCanvas()
         self.mi = MouseInteraction()
@@ -59,6 +58,10 @@ class Controller:
         self.main_window.action_import_directory.triggered.connect(self.import_directory)
 
         self.main_window.action_exit.triggered.connect(self.quit_application)
+
+        # Edit menu
+        self.main_window.action_undo.triggered.connect(self.undo)
+        self.main_window.action_redo.triggered.connect(self.redo)
 
         # View menu
         self.main_window.action_toggle_axes.triggered.connect(self.toggle_axes)
@@ -82,6 +85,27 @@ class Controller:
         self.main_window.imported_files_list.currentItemChanged.connect(self.item_selection_changed_event)
         # self.main_window.action_about.triggered.connect(self.about)
         self.main_window.closeEvent = self.quit_application
+
+    def undo(self):
+        self.currentView.undo_manipulation()
+        self._undo_redo()
+
+    def redo(self):
+        self.currentView.redo_manipulation()
+        self._undo_redo()
+
+    def _undo_redo(self):
+        self.update_figures_and_status()
+
+    def _update_undo_redo_menu_items(self):
+        self.main_window.set_undo_menu_items(
+            self.currentView.is_undoable(),
+            self.currentView.get_undo_text()
+        )
+        self.main_window.set_redo_menu_items(
+            self.currentView.is_redoable(),
+            self.currentView.get_redo_text()
+        )
 
     def open_color_map_dialog(self):
         """Opens a dialog to choose a color map.
@@ -136,13 +160,11 @@ class Controller:
                 radius = int(radius)
             except ValueError:
                 radius = 1
-            self.currentView.set_z_data(filters.get(selected_filter)(self.currentView.z_data, radius))
-            self.update_figures_and_status()
+            self.undo_wrapper_test(filters.get(selected_filter), name=selected_filter)(self.currentView, radius)
 
     def plane_correction(self):
-        """TODO"""
-        level_data(self.currentView)
-        self.update_figures_and_status("Leveling: Plane")
+        """TODO: implement for functions"""
+        self.undo_wrapper_test(level_data, "Leveling (plane)")(self.currentView)
 
     def quit_application(self, event):
         # TODO dialogue unsaved changes
@@ -225,10 +247,12 @@ class Controller:
 
     def clear_lists(self):
         """Removes all items from list widget and disables menus."""
-        self.main_window.clear_list_widget()
-        self.main_window.set_menus_enabled(False)
-        self.currentView = None
+        self.main_window.clear_list_widgets()
         self.views.clear()
+        self.currentView = None
+        self.main_window.set_menus_enabled(False)
+        self.main_window.set_undo_menu_items()
+        self.main_window.set_redo_menu_items()
         self.main_window.display_status_bar_message("Files removed from the list.")
 
     def toggle_axes(self):
@@ -259,12 +283,30 @@ class Controller:
         except ApproachCurves.
         """
         if not isinstance(self.currentView.sicm_data, ApproachCurve):
-            self.currentView.set_z_data(transpose_data(self.currentView.z_data))
+            self.undo_wrapper_test(transpose_z_data, name="Transpose z")(self.currentView)
+
+    def undo_wrapper_test(self, func, name: str = "action"):
+        """This wrapper function is used to make other functions undo/redoable.
+        Wrap the function and pass a name for that action.
+
+        Before calling the function, store_undoable_action will be called to store the
+        state of the current view object. After the function call, the readoable state
+        will be stored and figures will be updated.
+
+        Example to use the wrapper:
+            undo_wrapper_test(function, name="Name for that function")(currentView, args)
+        """
+        self.currentView.store_undoable_action(name)
+
+        def wrapper(*args, **kwargs):
+            func(*args, **kwargs)
+            self.currentView.store_redoable_data()
             self.update_figures_and_status()
 
+        return wrapper
+
     def subtract_minimum_in_current_view(self):
-        self.currentView.set_z_data(subtract_minimum(self.currentView.get_z_data()))
-        self.update_figures_and_status()
+        self.undo_wrapper_test(subtract_z_minimum, "Subtract z minimum")(self.currentView)
 
     def update_figures_and_status(self, message=""):
         """Redraws figures on the canvas and updates statusbar message.
@@ -273,6 +315,8 @@ class Controller:
         """
         self.currentView.show_as_px = self.main_window.action_set_axis_labels_px.isChecked()
         self.figure_canvas.update_plots(self.currentView)
+        self._update_undo_redo_menu_items()
+        self.main_window.set_data_manipulation_list_items(self.currentView.get_undoable_manipulations_list())
         try:
             self.main_window.display_status_bar_message(
                 "Max: %s  Min: %s, x_px: %s, x_size: %s µm, label px: %s  |  %s" % (
@@ -330,8 +374,7 @@ class Controller:
 
     def _crop_data(self, point1: QPoint, point2: QPoint):
         if self._points_are_not_equal(point1, point2):
-            crop(self.currentView, point1, point2)
-            self.update_figures_and_status("Cropped data")
+            self.undo_wrapper_test(crop, name="Crop data")(self.currentView, point1, point2)
         else:
             self.update_figures_and_status("Data not cropped.")
 
@@ -349,45 +392,45 @@ class Controller:
 
     def select_area_with_mouse(self, event):
         import matplotlib.patches as patches
-        #if event.inaxes == self.figure_canvas.figure.get_axes()[1]:
-        if event.name == "button_press_event":
-            self.mi.mouse_point1 = QPoint(int(event.xdata), int(event.ydata))
+        if event.inaxes == self.figure_canvas.figure.get_axes()[1]:
+            if event.name == "button_press_event":
+                self.mi.mouse_point1 = QPoint(int(event.xdata), int(event.ydata))
 
-        if event.name == "motion_notify_event":
-            if self.mi.mouse_point1 is not None:
-                self.update_figures_and_status()
-                self.mi.mouse_point2 = QPoint(int(event.xdata), int(event.ydata))
+            if event.name == "motion_notify_event":
+                if self.mi.mouse_point1 is not None:
+                    self.update_figures_and_status()
+                    self.mi.mouse_point2 = QPoint(int(event.xdata), int(event.ydata))
 
-                #print("P1: %s, P2: %s" % (self.mi.mouse_point1, self.mi.mouse_point2))
+                    #print("P1: %s, P2: %s" % (self.mi.mouse_point1, self.mi.mouse_point2))
 
-                if self.mi.mouse_point1.x() < self.mi.mouse_point2.x():
-                    orig_x = self.mi.mouse_point1.x()
-                else:
-                    orig_x = self.mi.mouse_point2.x()
-                if self.mi.mouse_point1.y() < self.mi.mouse_point2.y():
-                    orig_y = self.mi.mouse_point1.y()
-                else:
-                    orig_y = self.mi.mouse_point2.y()
-                origin = (orig_x, orig_y)
+                    if self.mi.mouse_point1.x() < self.mi.mouse_point2.x():
+                        orig_x = self.mi.mouse_point1.x()
+                    else:
+                        orig_x = self.mi.mouse_point2.x()
+                    if self.mi.mouse_point1.y() < self.mi.mouse_point2.y():
+                        orig_y = self.mi.mouse_point1.y()
+                    else:
+                        orig_y = self.mi.mouse_point2.y()
+                    origin = (orig_x, orig_y)
 
-                width = abs(self.mi.mouse_point1.x() - self.mi.mouse_point2.x()) + 1
-                height = abs(self.mi.mouse_point1.y() - self.mi.mouse_point2.y()) + 1
-                rect = patches.Rectangle(xy=origin, width=width, height=height, linewidth=1, edgecolor='r',
-                                         facecolor='none')
-                self.figure_canvas.figure.get_axes()[1].add_patch(rect)
-                self.figure_canvas.draw()
+                    width = abs(self.mi.mouse_point1.x() - self.mi.mouse_point2.x()) + 1
+                    height = abs(self.mi.mouse_point1.y() - self.mi.mouse_point2.y()) + 1
+                    rect = patches.Rectangle(xy=origin, width=width, height=height, linewidth=1, edgecolor='r',
+                                             facecolor='none')
+                    self.figure_canvas.figure.get_axes()[1].add_patch(rect)
+                    self.figure_canvas.draw()
 
-        if event.name == "button_release_event":
-            if self.mi.mouse_point1 is not None and self.mi.mouse_point2 is not None:
-                self.figure_canvas.figure.canvas.mpl_disconnect(self.mi.cid_press)
-                self.figure_canvas.figure.canvas.mpl_disconnect(self.mi.cid_move)
-                self.figure_canvas.figure.canvas.mpl_disconnect(self.mi.cid_release)
-                if self.mi.mouse_point1.x() <= self.mi.mouse_point2.x():
-                    self.mi.mouse_point2 = self.mi.mouse_point2 + QPoint(1, 0)
-                if self.mi.mouse_point1.y() <= self.mi.mouse_point2.y():
-                    self.mi.mouse_point2 = self.mi.mouse_point2 + QPoint(0, 1)
-                self._crop_data(self.mi.mouse_point1, self.mi.mouse_point2)
-                self.mi = None
+            if event.name == "button_release_event":
+                if self.mi.mouse_point1 is not None and self.mi.mouse_point2 is not None:
+                    self.figure_canvas.figure.canvas.mpl_disconnect(self.mi.cid_press)
+                    self.figure_canvas.figure.canvas.mpl_disconnect(self.mi.cid_move)
+                    self.figure_canvas.figure.canvas.mpl_disconnect(self.mi.cid_release)
+                    if self.mi.mouse_point1.x() <= self.mi.mouse_point2.x():
+                        self.mi.mouse_point2 = self.mi.mouse_point2 + QPoint(1, 0)
+                    if self.mi.mouse_point1.y() <= self.mi.mouse_point2.y():
+                        self.mi.mouse_point2 = self.mi.mouse_point2 + QPoint(0, 1)
+                    self._crop_data(self.mi.mouse_point1, self.mi.mouse_point2)
+                    self.mi = None
 
 
 def get_data_from_point(self, point: QPoint):
