@@ -13,7 +13,7 @@ if __name__ == "__main__":
     app.setApplicationName("pySICM TestSuite")
     window = MainWindow()
     controller = Controller(window)
-    controller.add_canvas_to_main_window()
+    controller.add_canvases_to_main_window()
     controller.connect_actions()
 
     # import some sicm files

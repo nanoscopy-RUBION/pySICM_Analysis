@@ -11,7 +11,7 @@ class ViewDataTests(unittest.TestCase):
         sicm_file = "./test_sicm_files/Zelle1 PFA.sicm"
         self.data = SICMDataFactory().get_sicm_data(sicm_file)
         self.graph = GraphCanvas()
-        self.graph.update_plots(View(self.data))
+        self.graph.draw_graph(View(self.data))
 
     def tearDown(self):
         pass

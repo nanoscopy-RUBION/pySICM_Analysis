@@ -54,7 +54,7 @@ def click_on_raster_image(event):
             self.Y = y
             self.last_change = self.currentView.z_data[y, x]
             # self.currentView.z_data[y, x] = 0.0
-            self.figure_canvas.update_plots(self.currentView)
+            self.figure_canvas_2d.draw_graph(self.currentView)
         else:
             print("Last: %s" % self.last_change)
             self.currentView.z_data[self.Y, self.X] = self.last_change
@@ -62,7 +62,7 @@ def click_on_raster_image(event):
             self.currentView.z_data[y, x] = 0.0
             self.X = x
             self.Y = y
-            self.figure_canvas.update_plots(self.currentView)
+            self.figure_canvas_2d.draw_graph(self.currentView)
             print(self.X, self.Y)
         print(self.currentView.z_data[x, y])
 
@@ -72,8 +72,8 @@ def click_on_raster_image(event):
 def origin_point(canvas, event):
     if event.name == "button_press_event":
         self.P1 = QPoint(int(event.xdata), int(event.ydata))
-        self.cid_release = self.figure_canvas.figure.canvas.mpl_connect('button_release_event', self.rectangle_test)
-        self.cid_move = self.figure_canvas.figure.canvas.mpl_connect('motion_notify_event', self.rectangle_test)
+        self.cid_release = self.figure_canvas_2d.figure.canvas.mpl_connect('button_release_event', self.rectangle_test)
+        self.cid_move = self.figure_canvas_2d.figure.canvas.mpl_connect('motion_notify_event', self.rectangle_test)
 
 
 def mouse_over_value(event):
@@ -85,10 +85,10 @@ def mouse_over_value(event):
 def about():
 
     if not self.cid:
-        if len(self.figure_canvas.figure.get_axes()) > 1:
-            self.cid_press = self.figure_canvas.figure.canvas.mpl_connect('button_press_event', self.origin_point)
-            self.cid = self.figure_canvas.figure.canvas.mpl_connect('button_press_event', self.click_on_raster_image)
-            self.cid = self.figure_canvas.figure.canvas.mpl_connect("motion_notify_event", self.mouse_over_value)
+        if len(self.figure_canvas_2d.figure.get_axes()) > 1:
+            self.cid_press = self.figure_canvas_2d.figure.canvas.mpl_connect('button_press_event', self.origin_point)
+            self.cid = self.figure_canvas_2d.figure.canvas.mpl_connect('button_press_event', self.click_on_raster_image)
+            self.cid = self.figure_canvas_2d.figure.canvas.mpl_connect("motion_notify_event", self.mouse_over_value)
     else:
         figure_canvas.figure.canvas.mpl_disconnect(self.cid)
         cid = None

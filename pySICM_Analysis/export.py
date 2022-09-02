@@ -10,24 +10,23 @@ def export_file():
     print("TODO: Export to file")
 
 
-def _figure_save_configuration(self):
+def export_top_plot_as_svg(figure):
     """Helper function for setting up which part
     of the plot should be saves."""
-    fig = self.canvas.figure
-    ax = fig.get_axes()[0]
+    ax = figure.get_axes()[0]
     # Save just the portion _inside_ the second axis's boundaries
-    extent = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-    fig.savefig('ax2_figure.svg', bbox_inches=extent)
+    extent = ax.get_window_extent().transformed(figure.dpi_scale_trans.inverted())
+    figure.savefig('../tests/outputs/ax2_figure.svg', bbox_inches=extent)
 
     # Pad the saved area by 10% in the x-direction and 20% in the y-direction
-    fig.savefig('ax2_figure_expanded.svg', bbox_inches=extent.expanded(1.1, 1.2))
+    figure.savefig('../tests/outputs/ax2_figure_expanded.svg', bbox_inches=extent.expanded(1.1, 1.2))
 
 
 def menu_action_export_bitmap():
     # TODO filedialog for saving
 
     self.canvas.figure.savefig(fname="testfigure.svg", format="svg")
-    self._figure_save_configuration()
+    self.export_top_plot_as_svg()
     print("TODO: Export as bitmap")
 
 

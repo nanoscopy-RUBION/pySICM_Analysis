@@ -20,8 +20,10 @@ from pySICM_Analysis.manipulate_data import filter_median_temporal, filter_media
     filter_average_spatial
 from pySICM_Analysis.manipulate_data import level_data
 from pySICM_Analysis.mouse_events import MouseInteraction
-from pySICM_Analysis.sicm_data import SICMDataFactory, ApproachCurve
+from pySICM_Analysis.sicm_data import SICMDataFactory, ApproachCurve, ScanBackstepMode
 from pySICM_Analysis.view import View
+from pySICM_Analysis.export import export_top_plot_as_svg
+from pySICM_Analysis.graph_canvas import SURFACE_PLOT, RASTER_IMAGE, APPROACH_CURVE
 
 # APP CONSTANTS
 APP_NAME = "pySICM Analysis"
@@ -44,11 +46,13 @@ class Controller:
         self.views: dict[str, View] = {}
         self.currentView: View = None
         self.cmap_dialog = None
-        self.figure_canvas = GraphCanvas()
+        self.figure_canvas_3d = GraphCanvas()
+        self.figure_canvas_2d = GraphCanvas()
         self.mi = MouseInteraction()
 
-    def add_canvas_to_main_window(self):
-        self.main_window.add_canvas(self.figure_canvas)
+    def add_canvases_to_main_window(self):
+        self.main_window.add_canvas_for_3d_plot(self.figure_canvas_3d)
+        self.main_window.add_canvas_for_2d_plot(self.figure_canvas_2d)
 
     def connect_actions(self):
         """Connect functions with actions in the main window's menu."""
@@ -56,7 +60,7 @@ class Controller:
         self.main_window.action_clear.triggered.connect(self.clear_lists)
         self.main_window.action_import_files.triggered.connect(self.import_files)
         self.main_window.action_import_directory.triggered.connect(self.import_directory)
-
+        self.main_window.action_export_vector.triggered.connect(lambda: export_top_plot_as_svg(self.figure_canvas_3d.figure))
         self.main_window.action_exit.triggered.connect(self.quit_application)
 
         # Edit menu
@@ -259,7 +263,7 @@ class Controller:
         """Shows or hides axes in figures.
         """
         self.currentView.toggle_axes()
-        self.figure_canvas.update_plots(self.currentView)
+        self.update_figures_and_status()
 
     def item_selection_changed_event(self, item):
         """Updates the figure canvas and menu availability when the
@@ -314,14 +318,21 @@ class Controller:
         An optional message will be concatenated to the status bar message.
         """
         self.currentView.show_as_px = self.main_window.action_set_axis_labels_px.isChecked()
-        self.figure_canvas.update_plots(self.currentView)
+        if isinstance(self.currentView.sicm_data, ScanBackstepMode):
+            self.figure_canvas_3d.draw_graph(self.currentView, SURFACE_PLOT)
+            self.figure_canvas_2d.draw_graph(self.currentView, RASTER_IMAGE)
+
+        if isinstance(self.currentView.sicm_data, ApproachCurve):
+            self.figure_canvas_3d.draw_graph(self.currentView)
+            self.figure_canvas_2d.draw_graph(self.currentView, APPROACH_CURVE)
+
         self._update_undo_redo_menu_items()
         self.main_window.set_data_manipulation_list_items(self.currentView.get_undoable_manipulations_list())
         try:
             self.main_window.display_status_bar_message(
                 "Max: %s  Min: %s, x_px: %s, x_size: %s µm, label px: %s  |  %s" % (
-                    str(np.max(self.currentView.get_z_data())),
-                    str(np.min(self.currentView.get_z_data())),
+                    str(np.max(self.currentView.z_data)),
+                    str(np.min(self.currentView.z_data)),
                     str(self.currentView.sicm_data.x_px),
                     str(self.currentView.sicm_data.x_size),
                     str(self.currentView.show_as_px),
@@ -336,7 +347,7 @@ class Controller:
         ApproachCurve.
         """
         try:
-            self.currentView.set_viewing_angles(*self.figure_canvas.get_viewing_angles_from_3d_plot())
+            self.currentView.set_viewing_angles(*self.figure_canvas_2d.get_viewing_angles_from_3d_plot())
         except AttributeError:
             self.main_window.display_status_bar_message("ApproachCurves have no viewing angles.")
             self.currentView.set_viewing_angles()
@@ -383,16 +394,16 @@ class Controller:
         return point1.x() != point2.x() and point1.y() != point2.y()
 
     def bind_mouse_events_for_crop_selection(self):
-        self.mi.cid_press = self.figure_canvas.figure.canvas.mpl_connect('button_press_event',
-                                                                         self.select_area_with_mouse)
-        self.mi.cid_release = self.figure_canvas.figure.canvas.mpl_connect('button_release_event',
+        self.mi.cid_press = self.figure_canvas_2d.figure.canvas.mpl_connect('button_press_event',
+                                                                            self.select_area_with_mouse)
+        self.mi.cid_release = self.figure_canvas_2d.figure.canvas.mpl_connect('button_release_event',
+                                                                              self.select_area_with_mouse)
+        self.mi.cid_move = self.figure_canvas_2d.figure.canvas.mpl_connect('motion_notify_event',
                                                                            self.select_area_with_mouse)
-        self.mi.cid_move = self.figure_canvas.figure.canvas.mpl_connect('motion_notify_event',
-                                                                        self.select_area_with_mouse)
 
     def select_area_with_mouse(self, event):
         import matplotlib.patches as patches
-        if event.inaxes == self.figure_canvas.figure.get_axes()[1]:
+        if event.inaxes == self.figure_canvas_2d.figure.get_axes()[1]:
             if event.name == "button_press_event":
                 self.mi.mouse_point1 = QPoint(int(event.xdata), int(event.ydata))
 
@@ -417,14 +428,14 @@ class Controller:
                     height = abs(self.mi.mouse_point1.y() - self.mi.mouse_point2.y()) + 1
                     rect = patches.Rectangle(xy=origin, width=width, height=height, linewidth=1, edgecolor='r',
                                              facecolor='none')
-                    self.figure_canvas.figure.get_axes()[1].add_patch(rect)
-                    self.figure_canvas.draw()
+                    self.figure_canvas_2d.figure.get_axes()[1].add_patch(rect)
+                    self.figure_canvas_2d.draw()
 
             if event.name == "button_release_event":
                 if self.mi.mouse_point1 is not None and self.mi.mouse_point2 is not None:
-                    self.figure_canvas.figure.canvas.mpl_disconnect(self.mi.cid_press)
-                    self.figure_canvas.figure.canvas.mpl_disconnect(self.mi.cid_move)
-                    self.figure_canvas.figure.canvas.mpl_disconnect(self.mi.cid_release)
+                    self.figure_canvas_2d.figure.canvas.mpl_disconnect(self.mi.cid_press)
+                    self.figure_canvas_2d.figure.canvas.mpl_disconnect(self.mi.cid_move)
+                    self.figure_canvas_2d.figure.canvas.mpl_disconnect(self.mi.cid_release)
                     if self.mi.mouse_point1.x() <= self.mi.mouse_point2.x():
                         self.mi.mouse_point2 = self.mi.mouse_point2 + QPoint(1, 0)
                     if self.mi.mouse_point1.y() <= self.mi.mouse_point2.y():
@@ -447,7 +458,7 @@ if __name__ == "__main__":
     window.setWindowTitle(TITLE)
 
     controller = Controller(window)
-    controller.add_canvas_to_main_window()
+    controller.add_canvases_to_main_window()
     controller.connect_actions()
 
     sys.exit(app.exec())

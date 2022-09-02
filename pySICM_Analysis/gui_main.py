@@ -6,7 +6,7 @@ from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QIcon
 
 from PyQt5.QtWidgets import QHBoxLayout, QListWidget, QLabel, QAction, QWidget, QVBoxLayout, QSplitter, QStyle, \
-    QActionGroup, QMainWindow, QToolBar, QAbstractItemView
+    QActionGroup, QMainWindow, QToolBar, QAbstractItemView, QDockWidget
 
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 import matplotlib
@@ -35,12 +35,11 @@ class SecondaryWindow(QWidget):
         self.layout.addWidget(self.canvas)
 
 
-
 class MainWindow(QMainWindow):
     """Main window of the application."""
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None):
+        super(MainWindow, self).__init__(parent)
         self.close_window = pyqtSignal()
         self.central_widget = QtWidgets.QWidget(self)
         self.imported_files_list = QListWidget(self)
@@ -88,7 +87,16 @@ class MainWindow(QMainWindow):
 
         self.horizontal_splitter.addWidget(self.vertical_splitter)
         horizontal_layout.addWidget(self.horizontal_splitter)
+
+        # DockWidgets
+        self.dock_3d_plot = QDockWidget("3D graph", self)
+        self.dock_3d_plot.setFloating(False)
+        self.dock_2d_plot = QDockWidget("2D graph", self)
+        self.dock_2d_plot.setFloating(False)
         self.central_widget.setLayout(horizontal_layout)
+        self.addDockWidget(Qt.RightDockWidgetArea, self.dock_3d_plot)
+        self.addDockWidget(Qt.RightDockWidgetArea, self.dock_2d_plot)
+
 
         # File menu
         self.action_clear = QtWidgets.QAction(QIcon("../resources/pySICM64.png"), '&Clear', self)
@@ -96,7 +104,7 @@ class MainWindow(QMainWindow):
         self.action_import_directory = QAction(icon_directory, '&Import Directory...', self)
         self.action_export_file = QAction(icon_export, '&Export to file', self)
         self.action_export_bitmap = QAction('&As bitmap (png)', self)
-        self.action_export_vector = QAction('&as vector (pdf)', self)
+        self.action_export_vector = QAction('&as vector (svg)', self)
         self.action_exit = QtWidgets.QAction('&Exit', self)
 
         file_menu.addAction(self.action_clear)
@@ -239,6 +247,11 @@ class MainWindow(QMainWindow):
         self.toolbar.setMovable(False)
         self.toolbar.addAction(self.action_import_files)
         self.toolbar.addAction(self.action_clear)
+
+        self.action_test_dock = QAction("Show dock")
+        self.action_test_dock.triggered.connect(self.show_dock)
+        self.toolbar.addAction(self.action_test_dock)
+
         self.toolbar.addSeparator()
         self.addToolBar(self.toolbar)
 
@@ -247,6 +260,10 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(300, 300)
         self.show()
 
+    def show_dock(self):
+        if not self.dock_3d_plot.isVisible():
+            self.dock_3d_plot.show()
+
     def set_menus_enabled(self, enable):
         self.view_menu.setEnabled(enable)
         self.data_menu.setEnabled(enable)
@@ -254,8 +271,13 @@ class MainWindow(QMainWindow):
         #self.properties_menu.setEnabled(enable)
         self.about_menu.setEnabled(enable)
 
-    def add_canvas(self, canvas):
-        self.horizontal_splitter.addWidget(canvas)
+    def add_canvas_for_3d_plot(self, canvas):
+        self.dock_3d_plot.setWidget(canvas)
+        #self.graph_layout.addWidget(canvas)
+        #self.horizontal_splitter.addWidget(a)
+
+    def add_canvas_for_2d_plot(self, canvas):
+        self.dock_2d_plot.setWidget(canvas)
 
     def display_status_bar_message(self, message):
         self.statusBar().showMessage(message)

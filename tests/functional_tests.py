@@ -30,7 +30,7 @@ class PlotTests(TestCase):
         app.setApplicationName("pySICM TestSuite")
         window = MainWindow()
         self.controller = Controller(window)
-        self.controller.add_canvas_to_main_window()
+        self.controller.add_canvases_to_main_window()
         self.controller.connect_actions()
 
     def test_file_import(self):
@@ -44,7 +44,7 @@ class GuiInteractionTests(TestCase):
         app.setApplicationName("pySICM TestSuite")
         window = MainWindow()
         self.controller = Controller(window)
-        self.controller.add_canvas_to_main_window()
+        self.controller.add_canvases_to_main_window()
         self.controller.connect_actions()
         self.controller.add_files_to_list(get_filenames())
 
