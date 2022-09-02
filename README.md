@@ -8,7 +8,7 @@
   - set ROIs 
   - evaluate roughness from single/multiple ROIs
 - Export function
-  - Export 
+  - Export view object
 - ApproachCurve analysis
 - Reorganize View class
   - add fields to store more view options
