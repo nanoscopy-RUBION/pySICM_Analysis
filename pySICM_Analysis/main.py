@@ -344,10 +344,10 @@ class Controller:
     def store_viewing_angles(self):
         """Stores the two viewing angles in the View object.
         This is only possible for scans that are not of the type
-        ApproachCurve.
+        ApproachCurve. The viewing angles can only be obtained from surface plots.
         """
         try:
-            self.currentView.set_viewing_angles(*self.figure_canvas_2d.get_viewing_angles_from_3d_plot())
+            self.currentView.set_viewing_angles(*self.figure_canvas_3d.get_viewing_angles_from_3d_plot())
         except AttributeError:
             self.main_window.display_status_bar_message("ApproachCurves have no viewing angles.")
             self.currentView.set_viewing_angles()
@@ -380,8 +380,7 @@ class Controller:
             self.main_window.display_status_bar_message("Data not cropped.")
 
     def crop_by_selection(self):
-        self.mi = MouseInteraction()
-        self.bind_mouse_events_for_crop_selection()
+        self.figure_canvas_2d.draw_rectangle_on_raster_image(current_view=self.currentView, func=self._crop_data)
 
     def _crop_data(self, point1: QPoint, point2: QPoint):
         if self._points_are_not_equal(point1, point2):
@@ -392,61 +391,6 @@ class Controller:
     def _points_are_not_equal(self, point1: QPoint, point2: QPoint) -> bool:
         """Checks if two points have the same coordinates."""
         return point1.x() != point2.x() and point1.y() != point2.y()
-
-    def bind_mouse_events_for_crop_selection(self):
-        self.mi.cid_press = self.figure_canvas_2d.figure.canvas.mpl_connect('button_press_event',
-                                                                            self.select_area_with_mouse)
-        self.mi.cid_release = self.figure_canvas_2d.figure.canvas.mpl_connect('button_release_event',
-                                                                              self.select_area_with_mouse)
-        self.mi.cid_move = self.figure_canvas_2d.figure.canvas.mpl_connect('motion_notify_event',
-                                                                           self.select_area_with_mouse)
-
-    def select_area_with_mouse(self, event):
-        import matplotlib.patches as patches
-        if event.inaxes == self.figure_canvas_2d.figure.get_axes()[1]:
-            if event.name == "button_press_event":
-                self.mi.mouse_point1 = QPoint(int(event.xdata), int(event.ydata))
-
-            if event.name == "motion_notify_event":
-                if self.mi.mouse_point1 is not None:
-                    self.update_figures_and_status()
-                    self.mi.mouse_point2 = QPoint(int(event.xdata), int(event.ydata))
-
-                    #print("P1: %s, P2: %s" % (self.mi.mouse_point1, self.mi.mouse_point2))
-
-                    if self.mi.mouse_point1.x() < self.mi.mouse_point2.x():
-                        orig_x = self.mi.mouse_point1.x()
-                    else:
-                        orig_x = self.mi.mouse_point2.x()
-                    if self.mi.mouse_point1.y() < self.mi.mouse_point2.y():
-                        orig_y = self.mi.mouse_point1.y()
-                    else:
-                        orig_y = self.mi.mouse_point2.y()
-                    origin = (orig_x, orig_y)
-
-                    width = abs(self.mi.mouse_point1.x() - self.mi.mouse_point2.x()) + 1
-                    height = abs(self.mi.mouse_point1.y() - self.mi.mouse_point2.y()) + 1
-                    rect = patches.Rectangle(xy=origin, width=width, height=height, linewidth=1, edgecolor='r',
-                                             facecolor='none')
-                    self.figure_canvas_2d.figure.get_axes()[1].add_patch(rect)
-                    self.figure_canvas_2d.draw()
-
-            if event.name == "button_release_event":
-                if self.mi.mouse_point1 is not None and self.mi.mouse_point2 is not None:
-                    self.figure_canvas_2d.figure.canvas.mpl_disconnect(self.mi.cid_press)
-                    self.figure_canvas_2d.figure.canvas.mpl_disconnect(self.mi.cid_move)
-                    self.figure_canvas_2d.figure.canvas.mpl_disconnect(self.mi.cid_release)
-                    if self.mi.mouse_point1.x() <= self.mi.mouse_point2.x():
-                        self.mi.mouse_point2 = self.mi.mouse_point2 + QPoint(1, 0)
-                    if self.mi.mouse_point1.y() <= self.mi.mouse_point2.y():
-                        self.mi.mouse_point2 = self.mi.mouse_point2 + QPoint(0, 1)
-                    self._crop_data(self.mi.mouse_point1, self.mi.mouse_point2)
-                    self.mi = None
-
-
-def get_data_from_point(self, point: QPoint):
-    """"""
-    return self.currentView.z_data[point.y(), point.x()]
 
 
 if __name__ == "__main__":

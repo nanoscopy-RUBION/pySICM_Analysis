@@ -1,6 +1,8 @@
 import copy
 
 import matplotlib
+from PyQt5.QtCore import QPoint
+
 from pySICM_Analysis.sicm_data import ApproachCurve, ScanBackstepMode, SICMdata
 import numpy as np
 
@@ -23,6 +25,7 @@ class View:
         self.color_bar_shown = True
         self.aspect_ratio = (4, 4, 3)  # Default value by matplotlib
         self.color_map = DEFAULT_COLOR_MAP
+        self.rois = list[tuple[QPoint, QPoint]]
 
         # These two lists should be treated as stacks
         # for undo (data_manipulations) and redo (redoable_manipulations)

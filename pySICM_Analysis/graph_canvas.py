@@ -1,5 +1,9 @@
+from PyQt5.QtCore import QPoint
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
+from matplotlib.patches import Rectangle
+
+from pySICM_Analysis.mouse_events import MouseInteraction
 from pySICM_Analysis.view import View
 
 SURFACE_PLOT = "surface"
@@ -14,6 +18,10 @@ class GraphCanvas(FigureCanvasQTAgg):
         fig = Figure(figsize=(width, height), dpi=dpi)
         self.axes = fig.add_subplot(111)
         super().__init__(fig)
+
+        self.mi = MouseInteraction()
+        self.function_after_mouse_events = None
+        self.current_view: View = None
 
     def draw_graph(self, view_object: View, graph_type: str = ""):
         """
@@ -115,4 +123,71 @@ class GraphCanvas(FigureCanvasQTAgg):
         elev = self.figure.get_axes()[0].elev
         return azim, elev
 
+    def draw_rectangle_on_raster_image(self, current_view: View, func=None):
+        self._bind_mouse_events(self._draw_rectangle_and_call_func)
+        self.function_after_mouse_events = func
+        self.current_view = current_view
+
+    def _bind_mouse_events(self, func):
+        """Binds func1 to mouse events on the canvas.
+        Function 2 is optional and will be called after the mouse button
+        release event has occured."""
+        self.mi = MouseInteraction()
+        self.mi.cid_press = self.figure.canvas.mpl_connect('button_press_event', func)
+        self.mi.cid_move = self.figure.canvas.mpl_connect('motion_notify_event', func)
+        self.mi.cid_release = self.figure.canvas.mpl_connect('button_release_event', func)
+
+    def _draw_rectangle_and_call_func(self, event):
+        """Allows to draw a rectangle on the raster image canvas and calls func with
+        the points of the drawn rectangle as arguments."""
+        if event.inaxes:
+            if event.name == "button_press_event":
+                self.mi.mouse_point1 = QPoint(int(event.xdata), int(event.ydata))
+
+            if event.name == "motion_notify_event":
+                if self.mi.mouse_point1 is not None:
+                    self.figure.clear()
+                    self.draw_2d_plot_raster_image(self.current_view)
+                    self.mi.mouse_point2 = QPoint(int(event.xdata), int(event.ydata))
+
+                    print("P1: %s, P2: %s" % (self.mi.mouse_point1, self.mi.mouse_point2))
+
+                    if self.mi.mouse_point1.x() < self.mi.mouse_point2.x():
+                        orig_x = self.mi.mouse_point1.x()
+                    else:
+                        orig_x = self.mi.mouse_point2.x()
+                    if self.mi.mouse_point1.y() < self.mi.mouse_point2.y():
+                        orig_y = self.mi.mouse_point1.y()
+                    else:
+                        orig_y = self.mi.mouse_point2.y()
+                    origin = (orig_x, orig_y)
+
+                    width = abs(self.mi.mouse_point1.x() - self.mi.mouse_point2.x()) + 1
+                    height = abs(self.mi.mouse_point1.y() - self.mi.mouse_point2.y()) + 1
+                    rect = Rectangle(xy=origin, width=width, height=height,
+                                     fill=True, facecolor='r', alpha=0.4,
+                                     linewidth=1, edgecolor='r',
+                                     figure=self.figure
+                                     )
+                    self.figure.get_axes()[0].add_patch(rect)
+                    self.draw()
+
+            if event.name == "button_release_event":
+                if self.mi.mouse_point1 is not None and self.mi.mouse_point2 is not None:
+                    self.figure.canvas.mpl_disconnect(self.mi.cid_press)
+                    self.figure.canvas.mpl_disconnect(self.mi.cid_move)
+                    self.figure.canvas.mpl_disconnect(self.mi.cid_release)
+                    if self.mi.mouse_point1.x() <= self.mi.mouse_point2.x():
+                        self.mi.mouse_point2 = self.mi.mouse_point2 + QPoint(1, 0)
+                    else:
+                        self.mi.mouse_point1 = self.mi.mouse_point1 + QPoint(1, 0)
+                    if self.mi.mouse_point1.y() <= self.mi.mouse_point2.y():
+                        self.mi.mouse_point2 = self.mi.mouse_point2 + QPoint(0, 1)
+                    else:
+                        self.mi.mouse_point1 = self.mi.mouse_point1 + QPoint(0, 1)
+                    print("CROP P1: %s, P2: %s" % (self.mi.mouse_point1, self.mi.mouse_point2))
+                    if self.function_after_mouse_events:
+                        self.function_after_mouse_events(self.mi.mouse_point1, self.mi.mouse_point2)
+                        self.function_after_mouse_events = None
+                    self.mi = None
 

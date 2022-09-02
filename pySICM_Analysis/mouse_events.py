@@ -92,3 +92,7 @@ def about():
     else:
         figure_canvas.figure.canvas.mpl_disconnect(self.cid)
         cid = None
+
+def get_data_from_point(self, point: QPoint):
+    """"""
+    return self.currentView.z_data[point.y(), point.x()]
