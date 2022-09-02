@@ -1,5 +1,4 @@
 import sys
-import time
 import traceback
 from os import listdir
 from os.path import join, isfile
@@ -9,6 +8,7 @@ from PyQt5.QtCore import QPoint
 from PyQt5.QtGui import QIcon
 
 from PyQt5.QtWidgets import QApplication, QFileDialog, QInputDialog
+from matplotlib.figure import Figure
 
 from pySICM_Analysis.colormap_dialog import ColorMapDialog
 from pySICM_Analysis.enter_area_dialog import EnterAreaDialog
@@ -22,7 +22,7 @@ from pySICM_Analysis.manipulate_data import level_data
 from pySICM_Analysis.mouse_events import MouseInteraction
 from pySICM_Analysis.sicm_data import SICMDataFactory, ApproachCurve, ScanBackstepMode
 from pySICM_Analysis.view import View
-from pySICM_Analysis.export import export_top_plot_as_svg
+
 from pySICM_Analysis.graph_canvas import SURFACE_PLOT, RASTER_IMAGE, APPROACH_CURVE
 
 # APP CONSTANTS
@@ -60,7 +60,8 @@ class Controller:
         self.main_window.action_clear.triggered.connect(self.clear_lists)
         self.main_window.action_import_files.triggered.connect(self.import_files)
         self.main_window.action_import_directory.triggered.connect(self.import_directory)
-        self.main_window.action_export_vector.triggered.connect(lambda: export_top_plot_as_svg(self.figure_canvas_3d.figure))
+        self.main_window.action_export_2d.triggered.connect(lambda: self.export_figure(self.figure_canvas_2d.figure))
+        self.main_window.action_export_3d.triggered.connect(lambda: self.export_figure(self.figure_canvas_3d.figure))
         self.main_window.action_exit.triggered.connect(self.quit_application)
 
         # Edit menu
@@ -89,6 +90,17 @@ class Controller:
         self.main_window.imported_files_list.currentItemChanged.connect(self.item_selection_changed_event)
         # self.main_window.action_about.triggered.connect(self.about)
         self.main_window.closeEvent = self.quit_application
+
+    def export_figure(self, figure: Figure):
+        file_path = QFileDialog.getSaveFileName(parent=self.main_window,
+                                                caption="Export figure as...",
+                                                filter="All files (*.*);;BMP (*.bmp);;GIF (*.gif);;JPEG (*.jpeg);;JPG (*.jpg);;PNG (*.png);;SVG (*.svg);;TIF (*.tif);;TIFF (*.tiff)",
+                                                directory=DEFAULT_FILE_PATH,
+                                                initialFilter="SVG (*.svg)"
+                                                )
+        if file_path:
+            figure.savefig(fname=file_path[0])
+            self.main_window.display_status_bar_message("Figure saved")
 
     def undo(self):
         self.currentView.undo_manipulation()

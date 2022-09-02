@@ -2,7 +2,6 @@
 
 # To Do
 - General:
-  - optimize splitter in main window
   - add checkbox to list items
   - clean up existing py files
 - New Functions:
