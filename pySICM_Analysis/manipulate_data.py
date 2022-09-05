@@ -1,5 +1,5 @@
 import numpy as np
-from PyQt5.QtCore import QPoint
+from PyQt6.QtCore import QPoint
 from scipy.interpolate import griddata
 from skimage.draw import disk
 

@@ -2,7 +2,7 @@ import sys
 from os import listdir
 from os.path import join
 
-from PyQt5.QtWidgets import QApplication
+from PyQt6.QtWidgets import QApplication
 
 from pySICM_Analysis.gui_main import MainWindow
 from pySICM_Analysis.main import Controller

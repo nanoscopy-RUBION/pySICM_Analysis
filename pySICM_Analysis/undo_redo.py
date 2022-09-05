@@ -21,6 +21,7 @@ def undoable_action(func):
     return wrap
 '''
 
+
 class UndoRedoData:
     """This is a simple class to hold information for
     undo and redo actions. This implementatino of undo/redo

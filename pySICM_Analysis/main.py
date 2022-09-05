@@ -4,10 +4,10 @@ from os import listdir
 from os.path import join, isfile
 
 import numpy as np
-from PyQt5.QtCore import QPoint
-from PyQt5.QtGui import QIcon
+from PyQt6.QtCore import QPoint
+from PyQt6.QtGui import QIcon
+from PyQt6.QtWidgets import QApplication, QFileDialog, QInputDialog
 
-from PyQt5.QtWidgets import QApplication, QFileDialog, QInputDialog
 from matplotlib.figure import Figure
 
 from pySICM_Analysis.colormap_dialog import ColorMapDialog
@@ -92,11 +92,13 @@ class Controller:
         self.main_window.closeEvent = self.quit_application
 
     def export_figure(self, figure: Figure):
+        options = QFileDialog.Option(QFileDialog.Option.DontUseNativeDialog)
         file_path = QFileDialog.getSaveFileName(parent=self.main_window,
                                                 caption="Export figure as...",
                                                 filter="All files (*.*);;BMP (*.bmp);;GIF (*.gif);;JPEG (*.jpeg);;JPG (*.jpg);;PNG (*.png);;SVG (*.svg);;TIF (*.tif);;TIFF (*.tiff)",
                                                 directory=DEFAULT_FILE_PATH,
-                                                initialFilter="SVG (*.svg)"
+                                                initialFilter="SVG (*.svg)",
+                                                options=options
                                                 )
         if file_path:
             figure.savefig(fname=file_path[0])
@@ -137,8 +139,10 @@ class Controller:
             self.main_window, "Aspect Ratio Dialog", "Enter an aspect ratio (X:Y:Z):"
         )
         aspect_r = self._extract_aspect_ratio_tuple_from_string(input_string)
-        if aspect_r:
+        try:
             self.change_aspect_ratio_for_current_view(aspect_r)
+        except ValueError:
+            self.main_window.display_status_bar_message("Invalid input for aspect ratio")
 
     def _extract_aspect_ratio_tuple_from_string(self, input_string: str) -> tuple:
         """Returns a valid tuple for an aspect ratio of three axis.
@@ -179,7 +183,7 @@ class Controller:
             self.undo_wrapper_test(filters.get(selected_filter), name=selected_filter)(self.currentView, radius)
 
     def plane_correction(self):
-        """TODO: implement for functions"""
+        """TODO: implement more functions"""
         self.undo_wrapper_test(level_data, "Leveling (plane)")(self.currentView)
 
     def quit_application(self, event):
@@ -200,8 +204,7 @@ class Controller:
 
     def get_filenames_from_selected_directory(self):
         """Opens a file dialog to choose a directory."""
-        options = QFileDialog.Options()
-        options |= QFileDialog.DontUseNativeDialog
+        options = QFileDialog.Option(QFileDialog.Option.DontUseNativeDialog)
         filenames = []
         dirname = QFileDialog().getExistingDirectory(parent=self.main_window,
                                                      caption='Select Folder',
@@ -216,8 +219,7 @@ class Controller:
 
     def get_filenames_from_selected_files(self, directory=".."):
         """Opens a directory to import all .sicm files (Does not search subdirectories)."""
-        options = QFileDialog.Options()
-        options |= QFileDialog.DontUseNativeDialog
+        options = QFileDialog.Option(QFileDialog.Option.DontUseNativeDialog)
         filenames, _ = QFileDialog.getOpenFileNames(parent=self.main_window,
                                                     caption="Import pySICM Scan Files",
                                                     directory=directory,
@@ -405,7 +407,7 @@ class Controller:
         return point1.x() != point2.x() and point1.y() != point2.y()
 
 
-if __name__ == "__main__":
+def main():
     app = QApplication(sys.argv)
     app.setApplicationName(APP_NAME)
     app.setWindowIcon(QIcon(APP_ICON_PATH))
@@ -418,3 +420,7 @@ if __name__ == "__main__":
     controller.connect_actions()
 
     sys.exit(app.exec())
+
+
+if __name__ == "__main__":
+    main()

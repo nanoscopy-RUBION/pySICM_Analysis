@@ -1,4 +1,4 @@
-from PyQt5.QtCore import QPoint
+from PyQt6.QtCore import QPoint
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 from matplotlib.patches import Rectangle

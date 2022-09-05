@@ -1,7 +1,7 @@
 import copy
 
 import matplotlib
-from PyQt5.QtCore import QPoint
+from PyQt6.QtCore import QPoint
 
 from pySICM_Analysis.sicm_data import ApproachCurve, ScanBackstepMode, SICMdata
 import numpy as np
@@ -33,7 +33,7 @@ class View:
         self.redoable_manipulations: list[UndoRedoData] = list()
 
         if isinstance(self.sicm_data, ScanBackstepMode):
-            self.x_data, self.y_data, self.z_data = data.plot()
+            self.x_data, self.y_data, self.z_data = data.set_data()
             self.x_data = np.array(self.x_data)
             self.y_data = np.array(self.y_data)
             self.z_data = np.array(self.z_data)
@@ -41,7 +41,7 @@ class View:
             self.azim = -60.0
             self.elev = 30.0
         elif isinstance(self.sicm_data, ApproachCurve):
-            self.x_data, self.z_data = data.plot()
+            self.x_data, self.z_data = data.set_data()
             self.x_data = np.array(self.x_data)
             self.z_data = np.array(self.z_data)
         else:
@@ -133,7 +133,7 @@ class View:
         :returns: Unmodified data extracted from imported file. For approach curves
         x and z are returned; for data from backstep mode scans x, y, and z.
         """
-        return self.sicm_data.plot()
+        return self.sicm_data.set_data()
 
     def get_modified_data(self):
         """Returns modified data for plotting.
@@ -233,6 +233,6 @@ class View:
 
     def reset_data(self):
         """Restores the original sicm data."""
-        self.set_data(self.sicm_data.plot())
+        self.set_data(self.sicm_data.set_data())
         self.data_manipulations = []
 

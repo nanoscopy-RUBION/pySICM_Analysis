@@ -1,9 +1,25 @@
+"""This module handles import of raw data obtained from our custom build scanning
+ion conductance microsope (SICM) which was recorded with the homebrew software pySICM.
+pySICM recordings are stored in a custom file format: .sicm
 
+Some information on the supported file format (.sicm):
+    '.sicm' files are gzipped tar archives containing several files:
+        - .mode: Byte file that contains the operation mode of the microscope used
+                 to obtain data.
+        - <FILENAME>: the actual measurement data. This is a binary file containing
+                      unsigned 16-bit integers (little endian!).
+        - <FILENAME>.info: Some information on scan times.
+        - settings.json: A JSON file containing scan settings.
+
+It is planned to support multiple scanning modes. At this moment (2022-09-05)
+only approach curves and backstep scans are supported. A factory class which takes
+the file path as an argument enables import of .sicm files and returns an object
+of either ApproachCurve or ScanBackstepMode.
+"""
 import tarfile
 from tarfile import TarFile
 import json
 from typing import Any
-from dataclasses import dataclass
 import numpy as np
 import struct
 
@@ -18,26 +34,19 @@ X_size = "x-Size"
 Y_size = "y-Size"
 
 
-@dataclass
 class SICMdata:
     """
-    Class for loading pySICM data.
-    Supports only the .sicm file format used by pySICM. Depending on the scan mode
-    that was used, scan data can be 2D (approach curves) or 3D (scan of an area).
-    Some information on the supported file format (.sicm):
-    '.sicm' files are gzipped tar archives containing several files:
-        - .mode: Byte file that contains the operation mode of the microscope used
-                 to obtain data.
-        - <FILENAME>: the actual measurement data. This is a binary file containing
-                      unsigned 16-bit integers (little endian!).
-        - <FILENAME>.info: Some information on scan times.
-        - settings.json: A JSON file containing scan settings.
+    This class works as an interface for SICM data recorded in different scan modes.
+    Each scan mode should be implemented as a subclass inheriting from SICMdata.
+    set_data() should be overridden in the subclass to set the correct data fields.
+    Data fields in all three dimensions represent numpy arrays.
     """
-    # TODO make normal class and initialize class fields
     def __init__(self):
+        # data containing fields
         self.x: np.ndarray
         self.y: np.ndarray
         self.z: np.ndarray
+        # metadata fields
         self.x_size: int
         self.y_size: int
         self.z_size: int
@@ -46,27 +55,29 @@ class SICMdata:
         self.settings: dict
 
     def set_settings(self, settings: dict):
+        """Sets metadata obtained from settings.json
+        and .mode."""
         pass
 
-    def plot(self):
-        """Returns data used for plotting."""
+    def set_data(self):
+        """Sets data used for plotting."""
         pass
 
 
 class ApproachCurve(SICMdata):
-    """TODO add doc string"""
+    """ApproachCurves are two-dimensional data sets.
+     Therefore, data is stored in x and z fields."""
+
+    def __init__(self):
+        super(ApproachCurve, self).__init__()
 
     def set_plot_values(self, data: list[int]):
         """TODO add doc string"""
         self.x = np.array(range(len(data)))
         self.z = np.array(data)
 
-    def plot(self):
+    def set_data(self):
         return self.x, self.z
-
-    def get_tip_openeing_diameter(self):
-        """TODO add doc string"""
-        print("not yet implemented")
 
 
 class ScanBackstepMode(SICMdata):
@@ -92,7 +103,7 @@ class ScanBackstepMode(SICMdata):
         self.z = np.reshape(data, (self.x_px, self.y_px)) / 1000  # to have z data in µm
         self.x, self.y = np.meshgrid(range(self.x_px), range(self.y_px))
 
-    def plot(self):
+    def set_data(self):
         return self.x, self.y, self.z
 
 

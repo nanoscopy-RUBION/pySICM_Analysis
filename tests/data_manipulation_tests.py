@@ -1,8 +1,7 @@
-import copy
 import unittest
 import numpy as np
 from pySICM_Analysis.manipulate_data import filter_median_spatial, filter_average_spatial, filter_average_temporal, filter_median_temporal
-from pySICM_Analysis.manipulate_data import transpose_z_data, subtract_z_minimum
+from pySICM_Analysis.manipulate_data import transpose_z_data
 from pySICM_Analysis.view import View
 
 

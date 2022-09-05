@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QDialog, QLineEdit, QDialogButtonBox, QFormLayout, QComboBox
+from PyQt6.QtWidgets import QDialog, QLineEdit, QDialogButtonBox, QFormLayout, QComboBox
 
 
 class FilterDialog(QDialog):
@@ -17,8 +17,8 @@ class FilterDialog(QDialog):
         self.input = QLineEdit(self)
         self.input.setToolTip("Enter an integer for radius of the filter")
         buttons = QDialogButtonBox(self)
-        buttons.addButton(QDialogButtonBox.Ok)
-        buttons.addButton(QDialogButtonBox.Cancel)
+        buttons.addButton(QDialogButtonBox.ButtonRole.Ok)
+        buttons.addButton(QDialogButtonBox.ButtonRole.Cancel)
 
         layout = QFormLayout(self)
         layout.addRow("Filter:", self.filter_list)

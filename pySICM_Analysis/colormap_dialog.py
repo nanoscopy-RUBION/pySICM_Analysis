@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QWidget, QComboBox, QPushButton, QVBoxLayout, QHBoxLayout, QDesktopWidget
+from PyQt6.QtWidgets import QWidget, QComboBox, QPushButton, QVBoxLayout, QHBoxLayout
 from matplotlib import cm
 
 COLOR_MAPS = {

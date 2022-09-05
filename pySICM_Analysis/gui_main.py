@@ -1,17 +1,20 @@
 """
 TODO add module documentation
 """
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtGui import QIcon
+from PyQt6 import QtWidgets
+from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtGui import QIcon, QAction, QActionGroup
 
-from PyQt5.QtWidgets import QHBoxLayout, QListWidget, QLabel, QAction, QWidget, QVBoxLayout, QSplitter, QStyle, \
-    QActionGroup, QMainWindow, QToolBar, QAbstractItemView, QDockWidget
+from PyQt6.QtWidgets import QHBoxLayout, QListWidget, QLabel, QWidget, QVBoxLayout, QSplitter, QStyle, \
+    QMainWindow, QToolBar, QAbstractItemView, QDockWidget
 
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 import matplotlib
 
-matplotlib.use('Qt5Agg')
+try:
+    matplotlib.use('QtAgg')
+except:
+    matplotlib.use("agg")
 
 
 class SecondaryWindow(QWidget):
@@ -48,11 +51,11 @@ class MainWindow(QMainWindow):
         self.set_menus_enabled(False)
 
     def init_ui(self):
-        pixmap = QStyle.SP_FileIcon
+        pixmap = QStyle.StandardPixmap.SP_FileIcon
         icon_files = self.style().standardIcon(pixmap)
-        pixmap = QStyle.SP_DriveFDIcon
+        pixmap = QStyle.StandardPixmap.SP_DriveFDIcon
         icon_export = self.style().standardIcon(pixmap)
-        pixmap = QStyle.SP_DirOpenIcon
+        pixmap = QStyle.StandardPixmap.SP_DirOpenIcon
         icon_directory = self.style().standardIcon(pixmap)
 
         label_imported_files = QLabel("Imported files:")
@@ -69,14 +72,14 @@ class MainWindow(QMainWindow):
         vertical_layout_bottom = QVBoxLayout()
         vertical_layout_bottom.addWidget(label_data_manipulations)
         vertical_layout_bottom.addWidget(self.data_manipulation_list)
-        self.data_manipulation_list.setFocusPolicy(Qt.NoFocus)
-        self.data_manipulation_list.setSelectionMode(QAbstractItemView.NoSelection)
+        self.data_manipulation_list.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.data_manipulation_list.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
         bottom = QWidget()
         bottom.setLayout(vertical_layout_bottom)
 
-        self.horizontal_splitter = QSplitter(Qt.Horizontal)
+        self.horizontal_splitter = QSplitter(Qt.Orientation.Horizontal)
 
-        self.vertical_splitter = QSplitter(Qt.Vertical)
+        self.vertical_splitter = QSplitter(Qt.Orientation.Vertical)
         self.vertical_splitter.addWidget(top)
         self.vertical_splitter.addWidget(bottom)
         self.vertical_splitter.setStretchFactor(0, 6)
@@ -94,19 +97,19 @@ class MainWindow(QMainWindow):
         self.dock_2d_plot = QDockWidget("2D graph", self)
         self.dock_2d_plot.setFloating(False)
         self.central_widget.setLayout(horizontal_layout)
-        self.addDockWidget(Qt.RightDockWidgetArea, self.dock_3d_plot)
-        self.addDockWidget(Qt.RightDockWidgetArea, self.dock_2d_plot)
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.dock_3d_plot)
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.dock_2d_plot)
 
 
         # File menu
-        self.action_clear = QtWidgets.QAction(QIcon("../resources/pySICM64.png"), '&Clear', self)
+        self.action_clear = QAction(QIcon("../resources/pySICM64.png"), '&Clear', self)
         self.action_import_files = QAction(icon_files, "&Import Files...", self)
         self.action_import_directory = QAction(icon_directory, '&Import Directory...', self)
         self.action_export_file = QAction(icon_export, 'Export view object', self)
         self.action_export_file.setEnabled(False)
         self.action_export_3d = QAction("3D graph", self)
         self.action_export_2d = QAction("2D graph", self)
-        self.action_exit = QtWidgets.QAction('&Exit', self)
+        self.action_exit = QAction('&Exit', self)
 
         file_menu.addAction(self.action_clear)
         file_menu.addSeparator()
@@ -241,7 +244,7 @@ class MainWindow(QMainWindow):
         # and information about algorithms used in data analysis
 
         self.toolbar = QToolBar()
-        self.toolbar.setToolButtonStyle(Qt.ToolButtonIconOnly)
+        self.toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
         self.toolbar.setMovable(False)
         self.toolbar.addAction(self.action_import_files)
         self.toolbar.addAction(self.action_clear)

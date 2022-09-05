@@ -1,5 +1,5 @@
-from PyQt5.QtCore import QPoint
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QGroupBox, QFormLayout, QLineEdit, QLabel, QPushButton, \
+from PyQt6.QtCore import QPoint
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLineEdit, QLabel, \
     QDialog, QDialogButtonBox
 
 
@@ -48,8 +48,8 @@ class EnterAreaDialog(QDialog):
         central_layout.addWidget(row2)
 
         buttons = QDialogButtonBox(self)
-        buttons.addButton(QDialogButtonBox.Ok)
-        buttons.addButton(QDialogButtonBox.Cancel)
+        buttons.addButton(QDialogButtonBox.StandardButton.Ok)
+        buttons.addButton(QDialogButtonBox.StandardButton.Cancel)
 
         central_layout.addWidget(buttons)
 
