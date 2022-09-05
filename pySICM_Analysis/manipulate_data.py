@@ -188,9 +188,9 @@ def level_data(view_ob: View, method='plane'):
     """
     # TODO reorganize the code... this function is too large
     # reshape data to vector
-    real_z = view_ob.get_z_data().flatten('F')
-    real_x = view_ob.get_x_data().flatten('F')
-    real_y = view_ob.get_y_data().flatten('F')
+    real_z = view_ob.z_data.flatten('F')
+    real_x = view_ob.x_data.flatten('F')
+    real_y = view_ob.y_data.flatten('F')
 
     if method == 'plane' or method == 'linewise' or method == 'linewise_mean' or method == 'linewise_y':
         eq = np.array([np.ones(real_z.shape[0]), real_x, real_y]).transpose()
@@ -202,7 +202,7 @@ def level_data(view_ob: View, method='plane'):
         eq = np.array([np.ones(real_z.shape[0]), np.reciprocal(real_x) ** 2, np.reciprocal(real_y) ** 2]).transpose()
     coeff, r, rank, s = np.linalg.lstsq(eq, real_z, rcond=1)
 
-    xy_coord = np.array([view_ob.get_x_data().flatten('F'), view_ob.get_y_data().flatten('F')]).transpose()
+    xy_coord = np.array([view_ob.x_data.flatten('F'), view_ob.y_data.flatten('F')]).transpose()
 
     # The coefficients calculated above are then used to create a . This will be
     if method == 'plane' or method == 'linewise' or method == 'linewise_mean' or method == 'linewise_y':
@@ -229,7 +229,7 @@ def level_data(view_ob: View, method='plane'):
     if method == 'plane' or method == 'linewise' or method == 'linewise_mean' or method == 'linewise_y':
         pred_z = [coeff[0] + coeff[1] * i[0] + coeff[2] * i[1] for i in xy_coord]
     adj_z = adj_z - pred_z
-    adj_z = adj_z.reshape(view_ob.get_z_data().shape, order='F').transpose()
+    adj_z = adj_z.reshape(view_ob.z_data.shape, order='F').transpose()
     '''if method == 'linewise':
         #xz_coord = np.array([view_ob.get_x_data(), adj_z])#.transpose()
         #adj_z = np.empty()

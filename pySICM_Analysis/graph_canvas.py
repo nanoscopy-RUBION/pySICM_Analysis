@@ -2,7 +2,7 @@ from PyQt5.QtCore import QPoint
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 from matplotlib.patches import Rectangle
-
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 from pySICM_Analysis.mouse_events import MouseInteraction
 from pySICM_Analysis.view import View
 
@@ -106,8 +106,10 @@ class GraphCanvas(FigureCanvasQTAgg):
         axes.set_aspect("equal")
 
         self.show_or_hide_axis(view_object, axes)
-
-        cb = self.figure.colorbar(img)
+        divider = make_axes_locatable(axes)
+        cax = divider.append_axes("right", size="5%", pad=0.2)
+        #cb = self.figure.colorbar(img)
+        cb = self.figure.colorbar(img, cax=cax)
         cb.set_label(label="height in µm")
 
     def draw_approach_curve(self, view_object: View):

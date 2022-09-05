@@ -175,8 +175,6 @@ class MainWindow(QMainWindow):
         # Manipulate data menu
         self.action_data_crop_input = QAction('Enter range...', self)
         self.action_data_crop_select = QAction('Select area...', self)
-        self.action_data_default = QAction('Apply default scale', self)
-        self.action_data_default.setEnabled(False)  # TODO
         self.action_data_minimum = QAction('Subtract minimum', self)
         self.action_data_transpose_z = QAction('Transpose Z', self)
         self.action_data_filter = QAction("Filter data", self)
@@ -202,7 +200,6 @@ class MainWindow(QMainWindow):
         crop_menu.addAction(self.action_data_crop_input)
         crop_menu.addAction(self.action_data_crop_select)
         simple_menu = self.data_menu.addMenu('Simple Manipulations')
-        simple_menu.addAction(self.action_data_default)
         simple_menu.addAction(self.action_data_minimum)
         simple_menu.addAction(self.action_data_transpose_z)
         self.data_menu.addAction(self.action_data_filter)
@@ -250,7 +247,7 @@ class MainWindow(QMainWindow):
         self.toolbar.addAction(self.action_clear)
 
         self.action_test_dock = QAction("Show dock")
-        self.action_test_dock.triggered.connect(self.show_dock)
+        self.action_test_dock.triggered.connect(self.show_graphs)
         self.toolbar.addAction(self.action_test_dock)
 
         self.toolbar.addSeparator()
@@ -261,9 +258,11 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(300, 300)
         self.show()
 
-    def show_dock(self):
+    def show_graphs(self):
         if not self.dock_3d_plot.isVisible():
             self.dock_3d_plot.show()
+        if not self.dock_2d_plot.isVisible():
+            self.dock_2d_plot.show()
 
     def set_menus_enabled(self, enable):
         self.view_menu.setEnabled(enable)

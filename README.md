@@ -4,6 +4,7 @@
 - General:
   - add checkbox to list items
   - clean up existing py files
+  - UNDO/REDO von Reset
 - New Functions:
   - set ROIs 
   - evaluate roughness from single/multiple ROIs

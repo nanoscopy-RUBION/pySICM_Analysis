@@ -6,6 +6,9 @@ COLOR_MAPS = {
     "Bone": cm.bone,
     "Cividis": cm.cividis,
     "Greys": cm.gray,
+    "Hot (für Dilan)": cm.hot,
+    "Jet": cm.jet,
+    "Jet (reverse)": cm.jet_r,
     "Summer": cm.summer,
     "Summer (reverse)": cm.summer_r,
     "Viridis": cm.viridis
