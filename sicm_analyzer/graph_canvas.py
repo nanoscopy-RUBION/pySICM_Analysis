@@ -1,7 +1,9 @@
 from PyQt6.QtCore import QPoint
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
+from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 from matplotlib.patches import Rectangle
+from matplotlib.lines import Line2D
 from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from sicm_analyzer.mouse_events import MouseInteraction
@@ -19,7 +21,9 @@ class GraphCanvas(FigureCanvasQTAgg):
         fig = Figure(figsize=(width, height), dpi=dpi)
         self.axes = fig.add_subplot(111)
         super().__init__(fig)
-
+        # NavToolbar should be customized before integrating in GraphCanvas
+        # Furthermore, GraphCanvas needs a parent widget
+        #self.toolbar = NavigationToolbar(canvas=self, parent=self)
         self.mi = MouseInteraction()
         self.function_after_mouse_events = None
         self.current_view: View = None
@@ -119,6 +123,10 @@ class GraphCanvas(FigureCanvasQTAgg):
         self.axes.axis(view_object.axes_shown)
 
     def draw_line_profile(self, view_object: View, *args):
+        """Draw line profile plot.
+        TODO distinguish between column and row mode
+        Maybe later custom drawn lines on the plot will be supported.
+        """
         print(*args)
 
     def get_viewing_angles_from_3d_plot(self):
@@ -134,7 +142,7 @@ class GraphCanvas(FigureCanvasQTAgg):
     def _bind_mouse_events(self, func):
         """Binds func1 to mouse events on the canvas.
         Function 2 is optional and will be called after the mouse button
-        release event has occured."""
+        release event has occurred."""
         self.mi = MouseInteraction()
         self.mi.cid_press = self.figure.canvas.mpl_connect('button_press_event', func)
         self.mi.cid_move = self.figure.canvas.mpl_connect('motion_notify_event', func)
@@ -153,7 +161,7 @@ class GraphCanvas(FigureCanvasQTAgg):
                     self.draw_2d_plot_raster_image(self.current_view)
                     self.mi.mouse_point2 = QPoint(int(event.xdata), int(event.ydata))
 
-                    print("P1: %s, P2: %s" % (self.mi.mouse_point1, self.mi.mouse_point2))
+                    #print("P1: %s, P2: %s" % (self.mi.mouse_point1, self.mi.mouse_point2))
 
                     if self.mi.mouse_point1.x() < self.mi.mouse_point2.x():
                         orig_x = self.mi.mouse_point1.x()
@@ -188,9 +196,28 @@ class GraphCanvas(FigureCanvasQTAgg):
                         self.mi.mouse_point2 = self.mi.mouse_point2 + QPoint(0, 1)
                     else:
                         self.mi.mouse_point1 = self.mi.mouse_point1 + QPoint(0, 1)
-                    print("CROP P1: %s, P2: %s" % (self.mi.mouse_point1, self.mi.mouse_point2))
+                    #print("CROP P1: %s, P2: %s" % (self.mi.mouse_point1, self.mi.mouse_point2))
                     if self.function_after_mouse_events:
                         self.function_after_mouse_events(self.mi.mouse_point1, self.mi.mouse_point2)
                         self.function_after_mouse_events = None
                     self.mi = None
+
+    def _draw_a_line_on_raster_image(self):
+        """TODO not yet finished
+        Create a Line2D object from mouse coordinates and then
+        add a patch to the figure axes before figure.draw.
+        """
+        p1 = [self.mi.mouse_point1.x(), self.mi.mouse_point2.x() + 1]
+        p2 = [self.mi.mouse_point1.y(), self.mi.mouse_point2.y() + 1]
+        line = Line2D(p1, p2, color="r")
+        self.figure.get_axes()[0].add_patch(line)
+
+    def _get_coordinate_of_click_on_click(self, event) -> QPoint or None:
+        """Returns a QPoint with coordinates of mouse click event or None if the click event
+        was not inside the graph.
+        """
+        if event.inaxes and event.name == "button_press_event":
+            return QPoint(int(event.xdata), int(event.ydata))
+        else:
+            return None
 

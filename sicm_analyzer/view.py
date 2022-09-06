@@ -1,5 +1,4 @@
 import copy
-
 import matplotlib
 import numpy as np
 from PyQt6.QtCore import QPoint
@@ -51,7 +50,6 @@ class View:
     # Undo/Redo section
     # ---------------------------------------------------------------------------------------------
     def store_undoable_action(self, action_name="action"):
-        print("store undoable action")
         data = self._make_undoredoable_data_object()
         undoable = UndoRedoData(name=action_name, data=data)
         self.data_manipulations.append(undoable)
@@ -71,7 +69,6 @@ class View:
         return data
 
     def store_redoable_data(self):
-        print("store redoable")
         data = self._make_undoredoable_data_object()
         self.data_manipulations[-1].redodata = data
 

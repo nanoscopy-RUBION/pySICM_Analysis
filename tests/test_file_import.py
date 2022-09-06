@@ -2,21 +2,22 @@ from os import listdir
 from os.path import join
 import sys
 from unittest import TestCase
+import os
+from PyQt6.QtWidgets import QApplication
 
-from PyQt5.QtWidgets import QApplication
-
-from sicm_analyzer import MainWindow
-from sicm_analyzer import Controller
+from sicm_analyzer.gui_main import MainWindow
+from sicm_analyzer.main import Controller
 
 app = QApplication(sys.argv)
 
 
 def get_filenames():
-    dir = "/mnt/data/programmierung/sicm_test_data/"
+    APP_PATH = os.getcwd()
+    SAMPLE_FILES_DIR = join(APP_PATH, "tests", "sample_sicm_files")
     files = []
-    for file in listdir(dir):
+    for file in listdir(SAMPLE_FILES_DIR):
         if file.endswith(".sicm"):
-            files.append(join(dir, file))
+            files.append(join(SAMPLE_FILES_DIR, file))
     return files
 
 
