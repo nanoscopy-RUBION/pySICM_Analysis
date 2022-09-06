@@ -17,8 +17,8 @@ class FilterDialog(QDialog):
         self.input = QLineEdit(self)
         self.input.setToolTip("Enter an integer for radius of the filter")
         buttons = QDialogButtonBox(self)
-        buttons.addButton(QDialogButtonBox.ButtonRole.Ok)
-        buttons.addButton(QDialogButtonBox.ButtonRole.Cancel)
+        buttons.addButton(QDialogButtonBox.StandardButton.Ok)
+        buttons.addButton(QDialogButtonBox.StandardButton.Cancel)
 
         layout = QFormLayout(self)
         layout.addRow("Filter:", self.filter_list)

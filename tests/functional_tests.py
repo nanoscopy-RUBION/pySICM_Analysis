@@ -1,16 +1,12 @@
 from os import listdir
 from os.path import join
 import sys
-from os.path import isfile
-from time import sleep
 from unittest import TestCase
 
-from PyQt5.QtGui import QIcon
-from PyQt5.QtTest import QTest
 from PyQt5.QtWidgets import QApplication
 
-from pySICM_Analysis.gui_main import MainWindow
-from pySICM_Analysis.main import Controller
+from sicm_analyzer import MainWindow
+from sicm_analyzer import Controller
 
 app = QApplication(sys.argv)
 

@@ -1,35 +1,38 @@
+import os
 import sys
 import traceback
+import numpy as np
+
 from os import listdir
 from os.path import join, isfile
+from matplotlib.figure import Figure
 
-import numpy as np
 from PyQt6.QtCore import QPoint
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication, QFileDialog, QInputDialog
 
-from matplotlib.figure import Figure
-
-from pySICM_Analysis.colormap_dialog import ColorMapDialog
-from pySICM_Analysis.enter_area_dialog import EnterAreaDialog
-from pySICM_Analysis.gui_main import MainWindow
-from pySICM_Analysis.graph_canvas import GraphCanvas
-from pySICM_Analysis.filter_dialog import FilterDialog
-from pySICM_Analysis.manipulate_data import transpose_z_data, subtract_z_minimum, crop
-from pySICM_Analysis.manipulate_data import filter_median_temporal, filter_median_spatial, filter_average_temporal, \
+from sicm_analyzer.colormap_dialog import ColorMapDialog
+from sicm_analyzer.enter_area_dialog import EnterAreaDialog
+from sicm_analyzer.gui_main import MainWindow
+from sicm_analyzer.graph_canvas import GraphCanvas
+from sicm_analyzer.filter_dialog import FilterDialog
+from sicm_analyzer.manipulate_data import transpose_z_data, subtract_z_minimum, crop
+from sicm_analyzer.manipulate_data import filter_median_temporal, filter_median_spatial, filter_average_temporal, \
     filter_average_spatial
-from pySICM_Analysis.manipulate_data import level_data
-from pySICM_Analysis.mouse_events import MouseInteraction
-from pySICM_Analysis.sicm_data import SICMDataFactory, ApproachCurve, ScanBackstepMode
-from pySICM_Analysis.view import View
-
-from pySICM_Analysis.graph_canvas import SURFACE_PLOT, RASTER_IMAGE, APPROACH_CURVE
+from sicm_analyzer.manipulate_data import level_data
+from sicm_analyzer.mouse_events import MouseInteraction
+from sicm_analyzer.sicm_data import SICMDataFactory, ApproachCurve, ScanBackstepMode
+from sicm_analyzer.view import View
+from sicm_analyzer.graph_canvas import SURFACE_PLOT, RASTER_IMAGE, APPROACH_CURVE
 
 # APP CONSTANTS
 APP_NAME = "pySICM Analysis"
-APP_ICON_PATH = '../resources/pySICMsplash.png'
+APP_PATH = os.getcwd()
+RESOURCE_DIRECTORY = "resources"
+APP_ICON = "pySICMsplash.png"
+APP_ICON_PATH = join(APP_PATH, RESOURCE_DIRECTORY, APP_ICON)
 TITLE = f"{APP_NAME} (ver. 2022-09-01)"
-DEFAULT_FILE_PATH = "../"
+DEFAULT_FILE_PATH = os.getcwd()
 
 # FILTERS
 MEDIAN_TEMPORAL = "Median (temporal)"
@@ -217,7 +220,7 @@ class Controller:
             ]
         return filenames
 
-    def get_filenames_from_selected_files(self, directory=".."):
+    def get_filenames_from_selected_files(self, directory=DEFAULT_FILE_PATH):
         """Opens a directory to import all .sicm files (Does not search subdirectories)."""
         options = QFileDialog.Option(QFileDialog.Option.DontUseNativeDialog)
         filenames, _ = QFileDialog.getOpenFileNames(parent=self.main_window,
@@ -413,6 +416,7 @@ def main():
     app.setWindowIcon(QIcon(APP_ICON_PATH))
 
     window = MainWindow()
+    window.resource_dir = RESOURCE_DIRECTORY
     window.setWindowTitle(TITLE)
 
     controller = Controller(window)

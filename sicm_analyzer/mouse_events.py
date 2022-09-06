@@ -23,7 +23,7 @@ def click_on_raster_image(event):
     """A test function for getting the correct pixel after clicking on it.
     TODO Clean up and move to another class
     """
-    from pySICM_Analysis.gui_main import SecondaryWindow
+    from sicm_analyzer.gui_main import SecondaryWindow
     axes = event.canvas.figure.get_axes()[0]
     print(event)
     if event.inaxes == axes:

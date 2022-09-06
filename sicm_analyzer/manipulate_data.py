@@ -3,7 +3,7 @@ from PyQt6.QtCore import QPoint
 from scipy.interpolate import griddata
 from skimage.draw import disk
 
-from pySICM_Analysis.view import View
+from sicm_analyzer.view import View
 
 
 # Simple Manipulations

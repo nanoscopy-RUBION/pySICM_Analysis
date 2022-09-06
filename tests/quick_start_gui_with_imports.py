@@ -1,11 +1,15 @@
 import sys
+import os
 from os import listdir
 from os.path import join
 
 from PyQt6.QtWidgets import QApplication
 
-from pySICM_Analysis.gui_main import MainWindow
-from pySICM_Analysis.main import Controller
+from sicm_analyzer.gui_main import MainWindow
+from sicm_analyzer.main import Controller
+
+APP_PATH = os.getcwd()
+SAMPLE_FILES_DIR = join(APP_PATH, "tests", "sample_sicm_files")
 
 if __name__ == "__main__":
     # setup application and gui
@@ -17,11 +21,10 @@ if __name__ == "__main__":
     controller.connect_actions()
 
     # import some sicm files
-    dir = "/mnt/data/programmierung/sicm_test_data/"
     files = []
-    for file in listdir(dir):
+    for file in listdir(SAMPLE_FILES_DIR):
         if file.endswith(".sicm"):
-            files.append(join(dir, file))
+            files.append(join(SAMPLE_FILES_DIR, file))
     controller.add_files_to_list(files)
 
     sys.exit(app.exec())

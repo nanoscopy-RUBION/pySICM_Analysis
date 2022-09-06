@@ -2,9 +2,10 @@ from PyQt6.QtCore import QPoint
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 from matplotlib.patches import Rectangle
+from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from pySICM_Analysis.mouse_events import MouseInteraction
-from pySICM_Analysis.view import View
+from sicm_analyzer.mouse_events import MouseInteraction
+from sicm_analyzer.view import View
 
 SURFACE_PLOT = "surface"
 RASTER_IMAGE = "raster"

@@ -1,8 +1,10 @@
 import unittest
+
 import numpy as np
-from pySICM_Analysis.manipulate_data import filter_median_spatial, filter_average_spatial, filter_average_temporal, filter_median_temporal
-from pySICM_Analysis.manipulate_data import transpose_z_data
-from pySICM_Analysis.view import View
+
+from sicm_analyzer.manipulate_data import filter_median_spatial, filter_average_spatial, filter_average_temporal, filter_median_temporal
+from sicm_analyzer.manipulate_data import transpose_z_data
+from sicm_analyzer.view import View
 
 
 class DataManipulationFilterTests(unittest.TestCase):

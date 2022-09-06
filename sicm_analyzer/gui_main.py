@@ -1,6 +1,8 @@
 """
 TODO add module documentation
 """
+import os
+from os.path import join
 from PyQt6 import QtWidgets
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QIcon, QAction, QActionGroup
@@ -43,6 +45,7 @@ class MainWindow(QMainWindow):
 
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
+        self.resource_dir = join(os.getcwd(), "resources")
         self.close_window = pyqtSignal()
         self.central_widget = QtWidgets.QWidget(self)
         self.imported_files_list = QListWidget(self)
@@ -102,7 +105,7 @@ class MainWindow(QMainWindow):
 
 
         # File menu
-        self.action_clear = QAction(QIcon("../resources/pySICM64.png"), '&Clear', self)
+        self.action_clear = QAction(QIcon(join(self.resource_dir, "pySICM64.png")), '&Clear', self)
         self.action_import_files = QAction(icon_files, "&Import Files...", self)
         self.action_import_directory = QAction(icon_directory, '&Import Directory...', self)
         self.action_export_file = QAction(icon_export, 'Export view object', self)
@@ -129,9 +132,14 @@ class MainWindow(QMainWindow):
         self.action_redo.setShortcut("Ctrl+R")
         self.action_undo.setEnabled(False)
         self.action_redo.setEnabled(False)
+
+        self.action_toggle_toolbar = QAction("Show/Hide toolbar", self)
+        self.action_toggle_toolbar.triggered.connect(self.toggle_show_toolbar)
         edit_menu = menubar.addMenu("Edit")
         edit_menu.addAction(self.action_undo)
         edit_menu.addAction(self.action_redo)
+        edit_menu.addSeparator()
+        edit_menu.addAction(self.action_toggle_toolbar)
 
         # View menu
         self.action_toggle_axes = QAction('&Show axes', self)
@@ -274,10 +282,14 @@ class MainWindow(QMainWindow):
         #self.properties_menu.setEnabled(enable)
         self.about_menu.setEnabled(enable)
 
+    def toggle_show_toolbar(self):
+        if self.toolbar.isVisible():
+            self.toolbar.setVisible(False)
+        else:
+            self.toolbar.setVisible(True)
+
     def add_canvas_for_3d_plot(self, canvas):
         self.dock_3d_plot.setWidget(canvas)
-        #self.graph_layout.addWidget(canvas)
-        #self.horizontal_splitter.addWidget(a)
 
     def add_canvas_for_2d_plot(self, canvas):
         self.dock_2d_plot.setWidget(canvas)

@@ -1,12 +1,11 @@
 import copy
 
 import matplotlib
+import numpy as np
 from PyQt6.QtCore import QPoint
 
-from pySICM_Analysis.sicm_data import ApproachCurve, ScanBackstepMode, SICMdata
-import numpy as np
-
-from pySICM_Analysis.undo_redo import UndoRedoData
+from sicm_analyzer.undo_redo import UndoRedoData
+from sicm_analyzer.sicm_data import ApproachCurve, ScanBackstepMode, SICMdata
 
 DEFAULT_COLOR_MAP = matplotlib.cm.YlGnBu_r
 

@@ -1,14 +1,14 @@
 import unittest
 
-from pySICM_Analysis.graph_canvas import GraphCanvas
-from pySICM_Analysis.sicm_data import SICMDataFactory
-from pySICM_Analysis.view import View
+from sicm_analyzer.graph_canvas import GraphCanvas
+from sicm_analyzer import SICMDataFactory
+from sicm_analyzer.view import View
 
 
 class ViewDataTests(unittest.TestCase):
 
     def setUp(self):
-        sicm_file = "./test_sicm_files/Zelle1 PFA.sicm"
+        sicm_file = "sample_sicm_files/Zelle1 PFA.sicm"
         self.data = SICMDataFactory().get_sicm_data(sicm_file)
         self.graph = GraphCanvas()
         self.graph.draw_graph(View(self.data))

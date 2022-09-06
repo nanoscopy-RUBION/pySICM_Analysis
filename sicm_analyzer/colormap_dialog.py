@@ -25,7 +25,7 @@ class ColorMapDialog(QWidget):
         super().__init__()
         self.parent = parent
         self.setWindowTitle("Color Map Chooser")
-        self.setFixedSize(300, 100)
+        self.setFixedSize(300, 150)
         self.controller = controller
 
         layout = QVBoxLayout()
