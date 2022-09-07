@@ -339,6 +339,8 @@ class Controller:
         if isinstance(self.currentView.sicm_data, ScanBackstepMode):
             self.figure_canvas_3d.draw_graph(self.currentView, SURFACE_PLOT)
             self.figure_canvas_2d.draw_graph(self.currentView, RASTER_IMAGE)
+            print("Z")
+            print(self.currentView.z_data)
 
         if isinstance(self.currentView.sicm_data, ApproachCurve):
             self.figure_canvas_3d.draw_graph(self.currentView)
