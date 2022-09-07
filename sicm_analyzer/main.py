@@ -184,7 +184,7 @@ class Controller:
                 radius = int(radius)
             except ValueError:
                 radius = 1
-            self.undo_wrapper_test(filters.get(selected_filter), name=selected_filter)(self.currentView, radius)
+            self.undo_wrapper_test(filters.get(selected_filter), name=f"selected_filter (px-size: {radius})")(self.currentView, radius)
 
     def plane_correction(self):
         """TODO: implement more functions"""
