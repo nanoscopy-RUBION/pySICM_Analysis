@@ -25,6 +25,7 @@ from sicm_analyzer.mouse_events import MouseInteraction
 from sicm_analyzer.sicm_data import SICMDataFactory, ApproachCurve, ScanBackstepMode
 from sicm_analyzer.view import View
 from sicm_analyzer.graph_canvas import SURFACE_PLOT, RASTER_IMAGE, APPROACH_CURVE
+from sicm_analyzer.set_rois_dialog import ROIsDialog
 
 # APP CONSTANTS
 APP_NAME = "pySICM Analysis"
@@ -90,6 +91,9 @@ class Controller:
         self.main_window.action_data_crop_input.triggered.connect(self.crop_by_input)
         self.main_window.action_data_crop_select.triggered.connect(self.crop_by_selection)
 
+        # Measurement
+        self.main_window.action_set_rois.triggered.connect(self.show_roi_dialog)
+        self.main_window.action_set_roi.triggered.connect(self.select_roi_with_mouse)
         # Other
         self.main_window.imported_files_list.currentItemChanged.connect(self.item_selection_changed_event)
         # self.main_window.action_about.triggered.connect(self.about)
@@ -391,6 +395,16 @@ class Controller:
         self.update_figures_and_status()
         self.main_window.display_status_bar_message("Reset data of View object.")
 
+    def select_roi_with_mouse(self):
+        self.figure_canvas_2d.draw_rectangle_on_raster_image(current_view=self.currentView, func=self._select_area)
+
+    def _select_area(self, point1: QPoint, point2: QPoint):
+        if self._points_are_not_equal(point1, point2):
+            self.currentView.rois = (point1, point2)
+            self.update_figures_and_status("ROI set")
+        else:
+            self.update_figures_and_status("No ROI set.")
+
     def crop_by_input(self):
         dialog = EnterAreaDialog(controller=self, parent=self.main_window)
         if dialog.exec():
@@ -411,6 +425,10 @@ class Controller:
     def _points_are_not_equal(self, point1: QPoint, point2: QPoint) -> bool:
         """Checks if two points have the same coordinates."""
         return point1.x() != point2.x() and point1.y() != point2.y()
+
+    def show_roi_dialog(self):
+        self.roi_dialog = ROIsDialog(controller=self, parent=self.main_window)
+        self.roi_dialog.open_window()
 
 
 def main():

@@ -232,10 +232,14 @@ class MainWindow(QMainWindow):
         action_measure_dist.setEnabled(False)  # TODO
         action_measure_profile = QAction('&Measure profile', self)
         action_measure_profile.setEnabled(False)  # TODO
+        self.action_set_rois = QAction("ROIs", self)
+        self.action_set_roi = QAction("Set ROI", self)
 
         self.measure_menu = menubar.addMenu("&Measurements")
         self.measure_menu.addAction(action_measure_dist)
         self.measure_menu.addAction(action_measure_profile)
+        self.measure_menu.addAction(self.action_set_rois)
+        self.measure_menu.addAction(self.action_set_roi)
 
         # Properties menu
         self.properties_menu = menubar.addMenu("&Properties")

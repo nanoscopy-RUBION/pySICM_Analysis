@@ -110,12 +110,43 @@ class GraphCanvas(FigureCanvasQTAgg):
         # img = self.axes.imshow(view_object.z_data, cmap=view_object.color_map)
         axes.set_aspect("equal")
 
+        if view_object.rois:
+            self.draw_roi(view_object)
+
         self.show_or_hide_axis(view_object, axes)
         divider = make_axes_locatable(axes)
         cax = divider.append_axes("right", size="5%", pad=0.2)
         #cb = self.figure.colorbar(img)
         cb = self.figure.colorbar(img, cax=cax)
         cb.set_label(label="height in µm")
+
+    def draw_roi(self, view_object: View):
+        """This function should be generalised to prevent code duplication.
+        At the moment it is a quick and dirty implementation for testing
+        ROIs."""
+        try:
+            point1 = view_object.rois[0]
+            point2 = view_object.rois[1]
+            if point1.x() < point2.x():
+                orig_x = point1.x()
+            else:
+                orig_x = point2.x()
+            if point1.y() < point2.y():
+                orig_y = point1.y()
+            else:
+                orig_y = point2.y()
+            origin = (orig_x, orig_y)
+
+            width = abs(point1.x() - point2.x())
+            height = abs(point1.y() - point2.y())
+            rect = Rectangle(xy=origin, width=width, height=height,
+                             fill=False,
+                             linewidth=2, edgecolor='g',
+                             figure=self.figure
+                             )
+            self.figure.get_axes()[0].add_patch(rect)
+        except:
+            pass
 
     def draw_approach_curve(self, view_object: View):
         self.axes = self.figure.add_subplot(111)
@@ -177,7 +208,7 @@ class GraphCanvas(FigureCanvasQTAgg):
                     height = abs(self.mi.mouse_point1.y() - self.mi.mouse_point2.y()) + 1
                     rect = Rectangle(xy=origin, width=width, height=height,
                                      fill=True, facecolor='r', alpha=0.4,
-                                     linewidth=1, edgecolor='r',
+                                     linewidth=2, edgecolor='r',
                                      figure=self.figure
                                      )
                     self.figure.get_axes()[0].add_patch(rect)
