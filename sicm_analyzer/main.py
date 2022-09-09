@@ -12,6 +12,7 @@ from PyQt6.QtCore import QPoint
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication, QFileDialog, QInputDialog
 
+from sicm_analyzer.data_manager import DataManager
 from sicm_analyzer.colormap_dialog import ColorMapDialog
 from sicm_analyzer.enter_area_dialog import EnterAreaDialog
 from sicm_analyzer.gui_main import MainWindow
@@ -22,7 +23,7 @@ from sicm_analyzer.manipulate_data import filter_median_temporal, filter_median_
     filter_average_spatial
 from sicm_analyzer.manipulate_data import level_data
 from sicm_analyzer.mouse_events import MouseInteraction
-from sicm_analyzer.sicm_data import SICMDataFactory, ApproachCurve, ScanBackstepMode
+from sicm_analyzer.sicm_data import SICMDataFactory, ApproachCurve, ScanBackstepMode, SICMdata
 from sicm_analyzer.view import View
 from sicm_analyzer.graph_canvas import SURFACE_PLOT, RASTER_IMAGE, APPROACH_CURVE
 from sicm_analyzer.set_rois_dialog import ROIsDialog
@@ -48,13 +49,16 @@ class Controller:
 
     def __init__(self, main_window):
         self.main_window: MainWindow = main_window
+        self.data_manager = DataManager()
         self.unsaved_changes = False
-        self.views: dict[str, View] = {}
-        self.currentView: View = None
+        self.current_selection: str = ""
         self.cmap_dialog = None
         self.figure_canvas_3d = GraphCanvas()
         self.figure_canvas_2d = GraphCanvas()
         self.mi = MouseInteraction()
+
+    def set_listener_function_in_data_manager(self):
+        self.data_manager.listener_function = self.update_figures_and_status
 
     def add_canvases_to_main_window(self):
         self.main_window.add_canvas_for_3d_plot(self.figure_canvas_3d)
@@ -86,7 +90,7 @@ class Controller:
         # Data manipulation
         self.main_window.action_data_transpose_z.triggered.connect(self.transpose_z_of_current_view)
         self.main_window.action_data_minimum.triggered.connect(self.subtract_minimum_in_current_view)
-        self.main_window.action_data_reset.triggered.connect(self.reset_current_view_data)
+        self.main_window.action_data_reset.triggered.connect(self.reset_current_data_manipulations)
         self.main_window.action_data_filter.triggered.connect(self.filter_current_view)
         self.main_window.action_data_level_plane.triggered.connect(self.plane_correction)
         self.main_window.action_data_crop_input.triggered.connect(self.crop_by_input)
@@ -115,11 +119,11 @@ class Controller:
             self.main_window.display_status_bar_message("Figure saved")
 
     def undo(self):
-        self.currentView.undo_manipulation()
+        self.data_manager.undo_manipulation(self.current_selection)
         self._undo_redo()
 
     def redo(self):
-        self.currentView.redo_manipulation()
+        self.data_manager.redo_manipulation(self.current_selection)
         self._undo_redo()
 
     def _undo_redo(self):
@@ -127,12 +131,12 @@ class Controller:
 
     def _update_undo_redo_menu_items(self):
         self.main_window.set_undo_menu_items(
-            self.currentView.is_undoable(),
-            self.currentView.get_undo_text()
+            self.data_manager.is_undoable(self.current_selection),
+            self.data_manager.get_undo_text(self.current_selection)
         )
         self.main_window.set_redo_menu_items(
-            self.currentView.is_redoable(),
-            self.currentView.get_redo_text()
+            self.data_manager.is_redoable(self.current_selection),
+            self.data_manager.get_redo_text(self.current_selection)
         )
 
     def open_color_map_dialog(self):
@@ -173,7 +177,7 @@ class Controller:
         return aspect_r
 
     def change_aspect_ratio_for_current_view(self, aspect_r):
-        self.currentView.aspect_ratio = aspect_r
+        self.current_selection.aspect_ratio = aspect_r
         self.update_figures_and_status()
 
     def filter_current_view(self):
@@ -190,18 +194,21 @@ class Controller:
                 radius = int(radius)
             except ValueError:
                 radius = 1
-            self.undo_wrapper_test(filters.get(selected_filter), name=f"selected_filter (px-size: {radius})")(self.currentView, radius)
+            self.data_manager.execute_func_on_current_data(filters.get(selected_filter), key=self.current_selection, action_name=f"selected_filter (px-size: {radius})")(
+                self.data_manager.get_data(self.current_selection), radius)
 
     def plane_correction(self):
         """TODO: implement more functions"""
-        self.undo_wrapper_test(level_data, "Leveling (plane)")(self.currentView)
+        self.data_manager.execute_func_on_current_data(level_data, key=self.current_selection, action_name="Leveling (plane)")(
+            self.data_manager.get_data(self.current_selection))
 
     def fit_to_polyXX(self):
         """TODO: implement more functions"""
-        self.undo_wrapper_test(self._helper_for_fit, "Leveling (polyXX)")()
+        self.data_manager.execute_func_on_current_data(self._helper_for_fit, key=self.current_selection, action_name="Leveling (polyXX)")()
 
     def _helper_for_fit(self):
-        self.currentView.z_data = self.currentView.z_data - polynomial_fifth_degree(self.currentView.x_data, self.currentView.y_data, self.currentView.z_data)
+        data = self.data_manager.get_data(self.current_selection)
+        data.z = data.z - polynomial_fifth_degree(data.x, data.y, data.z)
 
     def quit_application(self, event):
         # TODO dialogue unsaved changes
@@ -217,6 +224,7 @@ class Controller:
     def import_directory(self):
         """Opens a file dialog to select a directory."""
         files = self.get_filenames_from_selected_directory()
+        self.data_manager.import_files(files)
         self.add_files_to_list(files)
 
     def get_filenames_from_selected_directory(self):
@@ -250,10 +258,10 @@ class Controller:
         Adds file paths to the list widget.
         :param files: list of files
         """
-        new_files = self.get_files_without_duplicates(files)
+        new_files = self.data_manager.get_files_without_duplicates(files)
+        self.data_manager.import_files(files)
         if new_files:
             self.main_window.add_items_to_list(new_files)
-            self._create_view_objects()
             self.main_window.set_menus_enabled(True)
 
             if len(new_files) > 1:
@@ -264,27 +272,12 @@ class Controller:
         else:
             self.main_window.display_status_bar_message("No files imported.")
 
-    def get_files_without_duplicates(self, files):
-        """Returns a list which only includes files that
-        have not already been imported.
-
-        A file is a new file if its full file path is not already
-        a dictionary key in views."""
-        new_files = []
-        for file in files:
-            if file not in self.views.keys():
-                new_files.append(file)
-        return new_files
-
-    def get_all_views(self):
-        """Returns all View objects as a list."""
-        return self.views.values()
-
     def clear_lists(self):
         """Removes all items from list widget and disables menus."""
         self.main_window.clear_list_widgets()
-        self.views.clear()
-        self.currentView = None
+        self.data_manager.clear_all_data()
+        #self.views.clear()
+        self.currentView = ""
         self.main_window.set_menus_enabled(False)
         self.main_window.set_undo_menu_items()
         self.main_window.set_redo_menu_items()
@@ -293,7 +286,7 @@ class Controller:
     def toggle_axes(self):
         """Shows or hides axes in figures.
         """
-        self.currentView.toggle_axes()
+        #self.currentView.toggle_axes()
         self.update_figures_and_status()
 
     def item_selection_changed_event(self, item):
@@ -302,73 +295,55 @@ class Controller:
         """
         if item:
             self.main_window.action_toggle_axes.setEnabled(True)
-            self.currentView = self.views.get(item.text())
-            self.main_window.action_toggle_axes.setChecked(self.currentView.axes_shown)
+            self.current_selection = item.text()
+            #self.main_window.action_toggle_axes.setChecked(self.currentView.axes_shown)
             self.update_figures_and_status()
         else:
             self.main_window.action_toggle_axes.setEnabled(False)
 
-    def _create_view_objects(self):
-        for i in range(self.main_window.get_item_list_count()):
-            item = self.main_window.imported_files_list.item(i)
-            self.views[item.text()] = View(SICMDataFactory().get_sicm_data(item.text()))
 
     def transpose_z_of_current_view(self):
         """Transposes z data of current measurement of all types
         except ApproachCurves.
         """
-        if not isinstance(self.currentView.sicm_data, ApproachCurve):
-            self.undo_wrapper_test(transpose_z_data, name="Transpose z")(self.currentView)
-
-    def undo_wrapper_test(self, func, name: str = "action"):
-        """This wrapper function is used to make other functions undo/redoable.
-        Wrap the function and pass a name for that action.
-
-        Before calling the function, store_undoable_action will be called to store the
-        state of the current view object. After the function call, the readoable state
-        will be stored and figures will be updated.
-
-        Example to use the wrapper:
-            undo_wrapper_test(function, name="Name for that function")(currentView, args)
-        """
-        self.currentView.store_undoable_action(name)
-
-        def wrapper(*args, **kwargs):
-            func(*args, **kwargs)
-            self.currentView.store_redoable_data()
-            self.update_figures_and_status()
-
-        return wrapper
+        if not isinstance(self.data_manager.get_data(self.current_selection), ApproachCurve):
+            self.data_manager.execute_func_on_current_data(transpose_z_data, key=self.current_selection, action_name="Transpose z")(
+                self.data_manager.get_data(self.current_selection))
 
     def subtract_minimum_in_current_view(self):
-        self.undo_wrapper_test(subtract_z_minimum, "Subtract z minimum")(self.currentView)
+        self.data_manager.execute_func_on_current_data(subtract_z_minimum, key=self.current_selection, action_name="Subtract z minimum")(
+            self.data_manager.get_data(self.current_selection))
 
-    def update_figures_and_status(self, message=""):
+    def update_figures_and_status(self, message: str = ""):
         """Redraws figures on the canvas and updates statusbar message.
 
         An optional message will be concatenated to the status bar message.
         """
-        self.currentView.show_as_px = self.main_window.action_set_axis_labels_px.isChecked()
-        if isinstance(self.currentView.sicm_data, ScanBackstepMode):
-            self.figure_canvas_3d.draw_graph(self.currentView, SURFACE_PLOT)
-            self.figure_canvas_2d.draw_graph(self.currentView, RASTER_IMAGE)
-            print("Z")
-            print(self.currentView.z_data)
+        try:
+            current_data = self.data_manager.get_data(self.current_selection)
 
-        if isinstance(self.currentView.sicm_data, ApproachCurve):
-            self.figure_canvas_3d.draw_graph(self.currentView)
-            self.figure_canvas_2d.draw_graph(self.currentView, APPROACH_CURVE)
+            #self.currentView.show_as_px = self.main_window.action_set_axis_labels_px.isChecked()
+            if isinstance(current_data, ScanBackstepMode):
+                self.figure_canvas_3d.draw_graph(current_data, SURFACE_PLOT)
+                self.figure_canvas_2d.draw_graph(current_data, RASTER_IMAGE)
 
-        self._update_undo_redo_menu_items()
-        self.main_window.set_data_manipulation_list_items(self.currentView.get_undoable_manipulations_list())
+            if isinstance(current_data, ApproachCurve):
+                self.figure_canvas_3d.draw_graph(current_data)
+                self.figure_canvas_2d.draw_graph(current_data, APPROACH_CURVE)
+
+            self._update_undo_redo_menu_items()
+            self.main_window.set_data_manipulation_list_items(
+                self.data_manager.get_undoable_manipulations_list(self.current_selection)
+            )
+        except:
+            pass
         try:
             self.main_window.display_status_bar_message(
-                "Max: %s  Min: %s, x_px: %s, x_size: %s µm, label px: %s  |  %s" % (
-                    str(np.max(self.currentView.z_data)),
-                    str(np.min(self.currentView.z_data)),
-                    str(self.currentView.sicm_data.x_px),
-                    str(self.currentView.sicm_data.x_size),
-                    str(self.currentView.show_as_px),
+                "Max: %s  Min: %s, x_px: %s, x_size: %s µm, Message:  %s" % (
+                    str(np.max(current_data.z)),
+                    str(np.min(current_data.z)),
+                    str(current_data.x_px),
+                    str(current_data.x_size),
                     message
                 ))
         except:
@@ -380,17 +355,17 @@ class Controller:
         ApproachCurve. The viewing angles can only be obtained from surface plots.
         """
         try:
-            self.currentView.set_viewing_angles(*self.figure_canvas_3d.get_viewing_angles_from_3d_plot())
+            self.current_selection.set_viewing_angles(*self.figure_canvas_3d.get_viewing_angles_from_3d_plot())
         except AttributeError:
             self.main_window.display_status_bar_message("ApproachCurves have no viewing angles.")
-            self.currentView.set_viewing_angles()
+            self.current_selection.set_viewing_angles()
 
     def restore_current_view_settings(self):
         """Sets all viewing settings in the current View object
         to default values.
         """
         try:
-            self.currentView.restore()
+            #self.current_selection.restore()
             self.update_figures_and_status()
             self.main_window.action_toggle_axes.setChecked(True)
         except Exception as e:
@@ -399,17 +374,17 @@ class Controller:
             print(traceback.format_exc())
             print(sys.exc_info()[2])
 
-    def reset_current_view_data(self):
-        self.currentView.reset_data()
-        self.update_figures_and_status()
-        self.main_window.display_status_bar_message("Reset data of View object.")
+    def reset_current_data_manipulations(self):
+        self.data_manager.reset_manipulations(self.current_selection)
+        self.update_figures_and_status("Reset data of View object.")
 
     def select_roi_with_mouse(self):
-        self.figure_canvas_2d.draw_rectangle_on_raster_image(current_view=self.currentView, func=self._select_area)
+        data = self.data_manager.get_data(self.current_selection)
+        self.figure_canvas_2d.draw_rectangle_on_raster_image(current_view=data, func=self._select_area)
 
     def _select_area(self, point1: QPoint, point2: QPoint):
         if self._points_are_not_equal(point1, point2):
-            self.currentView.rois = (point1, point2)
+            self.current_selection.rois = (point1, point2)
             self.update_figures_and_status("ROI set")
         else:
             self.update_figures_and_status("No ROI set.")
@@ -423,11 +398,12 @@ class Controller:
             self.main_window.display_status_bar_message("Data not cropped.")
 
     def crop_by_selection(self):
-        self.figure_canvas_2d.draw_rectangle_on_raster_image(current_view=self.currentView, func=self._crop_data)
+        self.figure_canvas_2d.draw_rectangle_on_raster_image(current_view=self.data_manager.get_data(self.current_selection), func=self._crop_data)
 
     def _crop_data(self, point1: QPoint, point2: QPoint):
         if self._points_are_not_equal(point1, point2):
-            self.undo_wrapper_test(crop, name="Crop data")(self.currentView, point1, point2)
+            self.data_manager.execute_func_on_current_data(crop, self.current_selection, action_name="Crop data")(
+                self.data_manager.get_data(self.current_selection), point1, point2)
         else:
             self.update_figures_and_status("Data not cropped.")
 
@@ -451,6 +427,7 @@ def main():
 
     controller = Controller(window)
     controller.add_canvases_to_main_window()
+    controller.set_listener_function_in_data_manager()
     controller.connect_actions()
 
     sys.exit(app.exec())

@@ -39,15 +39,15 @@ class ColorMapDialog(QWidget):
         self.cmap_combobox.addItems(COLOR_MAPS.keys())
 
         self.button_apply = QPushButton("Apply")
-        self.button_apply_all = QPushButton("Apply to all")
+        #self.button_apply_all = QPushButton("Apply to all")
 
         layout.addWidget(self.cmap_combobox)
         layout.addWidget(button_box)
         hlayout.addWidget(self.button_apply)
-        hlayout.addWidget(self.button_apply_all)
+        #hlayout.addWidget(self.button_apply_all)
 
         self.button_apply.clicked.connect(self.apply_to_current_view)
-        self.button_apply_all.clicked.connect(self.apply_to_all_views)
+        #self.button_apply_all.clicked.connect(self.apply_to_all_views)
 
     def open_window(self):
         if self.isVisible():
@@ -59,13 +59,13 @@ class ColorMapDialog(QWidget):
             self.show()
 
     def apply_to_current_view(self):
-        self._apply_color_map_to_view(self.controller.currentView, COLOR_MAPS.get(self.cmap_combobox.currentText()))
+        self._apply_color_map_to_view(self.controller.current_selection, COLOR_MAPS.get(self.cmap_combobox.currentText()))
         self.controller.update_figures_and_status()
 
-    def apply_to_all_views(self):
-        for view in self.controller.get_all_views():
-            self._apply_color_map_to_view(view, COLOR_MAPS.get(self.cmap_combobox.currentText()))
-        self.controller.update_figures_and_status()
+    #def apply_to_all_views(self):
+    #    for view in self.controller.get_all_views():
+    #        self._apply_color_map_to_view(view, COLOR_MAPS.get(self.cmap_combobox.currentText()))
+    #    self.controller.update_figures_and_status()
 
     def _apply_color_map_to_view(self, view, cmap):
         view.color_map = cmap

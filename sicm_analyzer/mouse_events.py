@@ -47,24 +47,24 @@ def click_on_raster_image(event):
 
         self.w.canvas.figure.clear()
         self.w.canvas.axes = self.w.canvas.figure.add_subplot(111)
-        self.w.canvas.axes.plot(self.currentView.x_data[y, :], self.currentView.z_data[y, :])
+        self.w.canvas.axes.plot(self.current_selection.x_data[y, :], self.current_selection.z_data[y, :])
 
         if not self.last_change:
             self.X = x
             self.Y = y
-            self.last_change = self.currentView.z_data[y, x]
+            self.last_change = self.current_selection.z_data[y, x]
             # self.currentView.z_data[y, x] = 0.0
-            self.figure_canvas_2d.draw_graph(self.currentView)
+            self.figure_canvas_2d.draw_graph(self.current_selection)
         else:
             print("Last: %s" % self.last_change)
-            self.currentView.z_data[self.Y, self.X] = self.last_change
+            self.current_selection.z_data[self.Y, self.X] = self.last_change
             # self.last_change = self.currentView.z_data[y, x]
-            self.currentView.z_data[y, x] = 0.0
+            self.current_selection.z_data[y, x] = 0.0
             self.X = x
             self.Y = y
-            self.figure_canvas_2d.draw_graph(self.currentView)
+            self.figure_canvas_2d.draw_graph(self.current_selection)
             print(self.X, self.Y)
-        print(self.currentView.z_data[x, y])
+        print(self.current_selection.z_data[x, y])
 
 
 
@@ -95,4 +95,4 @@ def about():
 
 def get_data_from_point(self, point: QPoint):
     """"""
-    return self.currentView.z_data[point.y(), point.x()]
+    return self.current_selection.z_data[point.y(), point.x()]

@@ -7,6 +7,7 @@ from matplotlib.lines import Line2D
 from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from sicm_analyzer.mouse_events import MouseInteraction
+from sicm_analyzer.sicm_data import SICMdata
 from sicm_analyzer.view import View
 
 SURFACE_PLOT = "surface"
@@ -26,9 +27,9 @@ class GraphCanvas(FigureCanvasQTAgg):
         #self.toolbar = NavigationToolbar(canvas=self, parent=self)
         self.mi = MouseInteraction()
         self.function_after_mouse_events = None
-        self.current_view: View = None
+        self.current_view: SICMdata = None
 
-    def draw_graph(self, view_object: View, graph_type: str = ""):
+    def draw_graph(self, data: SICMdata, graph_type: str = ""):
         """
         Draws a 3D or 2D graph depending on the type. Three types are supported at the moment:
             SURFACE_PLOT: a 3-dimensional figure which can be rotated by mouse interaction
@@ -37,29 +38,31 @@ class GraphCanvas(FigureCanvasQTAgg):
 
         Data needs to be checked before calling this function!
 
-        :param view_object: View object which contains the data and display settings for the graph
+        :param data: View object which contains the data and display settings for the graph
         :param graph_type: type of graph to be drawn. If no type is given, an empty canvas will be drawn
         """
         self.figure.clear()
 
         if graph_type == SURFACE_PLOT:
-            self.draw_3d_plot(view_object)
+            self.draw_3d_plot(data)
 
         if graph_type == RASTER_IMAGE:
-            self.draw_2d_plot_raster_image(view_object)
+            self.draw_2d_plot_raster_image(data)
 
         if graph_type == APPROACH_CURVE:
-            self.draw_approach_curve(view_object)
+            self.draw_approach_curve(data)
 
         self.figure.tight_layout()
         self.draw()
 
-    def convert_axes_labels_from_px_to_microns(self, view_object: View, axes):
-        """"""
-        x_size = view_object.sicm_data.x_size
-        x_px = view_object.sicm_data.x_px
-        y_size = view_object.sicm_data.y_size
-        y_px = view_object.sicm_data.y_px
+    def convert_axes_labels_from_px_to_microns(self, data: SICMdata, axes):
+        """
+
+        """
+        x_size = data.x_size
+        x_px = data.x_px
+        y_size = data.y_size
+        y_px = data.y_px
         x_ticks = axes.get_xticks()
         y_ticks = axes.get_yticks()
         if x_px != x_size:
@@ -93,34 +96,34 @@ class GraphCanvas(FigureCanvasQTAgg):
         else:
             axes.axis(False)
 
-    def draw_3d_plot(self, view_object: View):
+    def draw_3d_plot(self, data: SICMdata):
         """Draws a 3d surface plot for scanning data."""
         axes = self.figure.add_subplot(1, 1, 1, projection='3d')
-        axes.plot_surface(*view_object.get_modified_data(), cmap=view_object.color_map)
-        axes.set_box_aspect(aspect=view_object.aspect_ratio)
-        axes.azim = view_object.azim
-        axes.elev = view_object.elev
-        self.show_or_hide_axis(view_object, axes)
+        axes.plot_surface(*data.get_data())#, cmap=data.color_map)
+        #axes.set_box_aspect(aspect=data.aspect_ratio)
+        #axes.azim = data.azim
+        #axes.elev = data.elev
+        #self.show_or_hide_axis(data, axes)
 
-    def draw_2d_plot_raster_image(self, view_object: View):
+    def draw_2d_plot_raster_image(self, data: SICMdata):
         """Draws a 2D raster image for 3-dimensional scanning data."""
         axes = self.figure.add_subplot(1, 1, 1)
         # use pcolormesh for scalable pixelmaps
-        img = axes.pcolormesh(view_object.z_data, cmap=view_object.color_map)
+        img = axes.pcolormesh(data.z)#, cmap=data.color_map)
         # img = self.axes.imshow(view_object.z_data, cmap=view_object.color_map)
         axes.set_aspect("equal")
 
-        if view_object.rois:
-            self.draw_roi(view_object)
+        #if data.rois:
+        #    self.draw_roi(data)
 
-        self.show_or_hide_axis(view_object, axes)
+        #self.show_or_hide_axis(data, axes)
         divider = make_axes_locatable(axes)
         cax = divider.append_axes("right", size="5%", pad=0.2)
         #cb = self.figure.colorbar(img)
         cb = self.figure.colorbar(img, cax=cax)
         cb.set_label(label="height in µm")
 
-    def draw_roi(self, view_object: View):
+    def draw_roi(self, data: SICMdata):
         """This function should be generalised to prevent code duplication.
         At the moment it is a quick and dirty implementation for testing
         ROIs."""
@@ -148,10 +151,10 @@ class GraphCanvas(FigureCanvasQTAgg):
         except:
             pass
 
-    def draw_approach_curve(self, view_object: View):
+    def draw_approach_curve(self, data: SICMdata):
         self.axes = self.figure.add_subplot(111)
-        self.axes.plot(*view_object.get_modified_data())
-        self.axes.axis(view_object.axes_shown)
+        self.axes.plot(*data.get_data())
+        #self.axes.axis(data.axes_shown)
 
     def draw_line_profile(self, view_object: View, *args):
         """Draw line profile plot.
@@ -165,7 +168,7 @@ class GraphCanvas(FigureCanvasQTAgg):
         elev = self.figure.get_axes()[0].elev
         return azim, elev
 
-    def draw_rectangle_on_raster_image(self, current_view: View, func=None):
+    def draw_rectangle_on_raster_image(self, current_view: SICMdata, func=None):
         self._bind_mouse_events(self._draw_rectangle_and_call_func)
         self.function_after_mouse_events = func
         self.current_view = current_view

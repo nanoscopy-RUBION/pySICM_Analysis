@@ -19,6 +19,7 @@ if __name__ == "__main__":
     window = MainWindow()
     controller = Controller(window)
     controller.add_canvases_to_main_window()
+    controller.set_listener_function_in_data_manager()
     controller.connect_actions()
 
     # import some sicm files
