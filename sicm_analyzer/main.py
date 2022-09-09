@@ -26,6 +26,7 @@ from sicm_analyzer.sicm_data import SICMDataFactory, ApproachCurve, ScanBackstep
 from sicm_analyzer.view import View
 from sicm_analyzer.graph_canvas import SURFACE_PLOT, RASTER_IMAGE, APPROACH_CURVE
 from sicm_analyzer.set_rois_dialog import ROIsDialog
+from sicm_analyzer.measurements import polynomial_fifth_degree
 
 # APP CONSTANTS
 APP_NAME = "pySICM Analysis"
@@ -90,6 +91,7 @@ class Controller:
         self.main_window.action_data_level_plane.triggered.connect(self.plane_correction)
         self.main_window.action_data_crop_input.triggered.connect(self.crop_by_input)
         self.main_window.action_data_crop_select.triggered.connect(self.crop_by_selection)
+        self.main_window.action_data_poly.triggered.connect(self.fit_to_polyXX)
 
         # Measurement
         self.main_window.action_set_rois.triggered.connect(self.show_roi_dialog)
@@ -193,6 +195,13 @@ class Controller:
     def plane_correction(self):
         """TODO: implement more functions"""
         self.undo_wrapper_test(level_data, "Leveling (plane)")(self.currentView)
+
+    def fit_to_polyXX(self):
+        """TODO: implement more functions"""
+        self.undo_wrapper_test(self._helper_for_fit, "Leveling (polyXX)")()
+
+    def _helper_for_fit(self):
+        self.currentView.z_data = self.currentView.z_data - polynomial_fifth_degree(self.currentView.x_data, self.currentView.y_data, self.currentView.z_data)
 
     def quit_application(self, event):
         # TODO dialogue unsaved changes
