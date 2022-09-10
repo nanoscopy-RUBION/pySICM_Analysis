@@ -24,6 +24,7 @@ class DataManager:
                                                 list[UndoRedoData],
                                                 list[UndoRedoData]]
                                    ] = {}
+        self.current_data_key: str = ""
 
     def __empty_function(self):
         """This is a placeholder in case no function
@@ -168,6 +169,7 @@ class DataManager:
         return wrapper
 
 
+
 class UndoRedoData:
     """This is a simple class to hold information for
     undo and redo actions. This implementation of undo/redo
@@ -184,3 +186,29 @@ class UndoRedoData:
     def __init__(self, data: sicm_data.SICMdata, name: str = ""):
         self.data = copy.deepcopy(data)
         self.name = name
+
+
+
+
+
+
+class DataStack(list):
+    def __int__(self, *args, **kwargs):
+        super(DataStack, self).__int__()
+
+    class ManipulatedData:
+        def __int__(self, data, name):
+            self.data: sicm_data.SICMdata = data
+            self.name: str = name
+
+    def new_data_manipulation(self, data: sicm_data.SICMdata, name: str) -> None:
+        self.append(self.ManipulatedData(data, name))
+
+
+    def peek(self):
+        """Returns the 'top' element of the stack or
+        None if the stack is empty."""
+        try:
+            return self[-1].data
+        except IndexError:
+            return None

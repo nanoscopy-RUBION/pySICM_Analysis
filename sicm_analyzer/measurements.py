@@ -1,16 +1,48 @@
 import math
 
 import numpy as np
+import symfit.core.minimizers
+from symfit.core.minimizers import BFGS, NelderMead, LBFGSB, DifferentialEvolution, BaseMinimizer, BasinHopping
 from symfit import Poly, variables, parameters, Model, Fit
+from symfit.core.argument import Parameter
+from symfit.core.objectives import LeastSquares, LogLikelihood
 
 
 def polynomial_fifth_degree(x_data, y_data, z_data: np.array):
     """Returns data fitted to a polynomial of 5th degree with two
     variables x and y."""
     x, y, z = variables('x, y, z')
+    #k = Parameter('k', value=4, min=3, max=3)
     p00, p10, p01, p20, p11, p02, p30, p21, p12, p03, p40, p31, p22, p13, p04, p50, p41, p32, p23, p14, p05 = parameters(
         "p00, p10, p01, p20, p11, p02, p30, p21, p12, p03, p40, p31, p22, p13, p04, p50, p41, p32, p23, p14, p05"
     )
+    p00.value = 1
+    p10.value = 0.01
+    p20.value = 0.01
+    p30.value = 0.01
+    p40.value = 0.01
+    p50.value = 0.01
+    p01.value = 0.01
+    p02.value = 0.01
+    p03.value = 0.01
+    p04.value = 0.01
+    p05.value = 0.01
+    p11.value = 0.01
+    p21.value = 0.01
+    p31.value = 0.01
+    p41.value = 0.01
+    p11.value = 0.01
+    p12.value = 0.01
+    p13.value = 0.01
+    p14.value = 0.01
+
+    p22.value = 0.01
+    p32.value = 0.01
+    p41.value = 0.01
+    p23.value = 0.01
+
+
+
     model_dict = {
         z: Poly(
             {
@@ -42,9 +74,10 @@ def polynomial_fifth_degree(x_data, y_data, z_data: np.array):
     model = Model(model_dict)
 
     # perform fit
-    fit = Fit(model, x=x_data, y=y_data, z=z_data)
+    fit = Fit(model, x=x_data, y=y_data, z=z_data, objective=LeastSquares, minimizer=[BFGS])
     fit_result = fit.execute()
     print(fit_result)
+    print(fit.initial_guesses)
     z_fitted = model(x=x_data, y=y_data, **fit_result.params).z
     return z_fitted
     # Remove outliers
