@@ -198,8 +198,8 @@ class MainWindow(QMainWindow):
         action_data_linemean.setEnabled(False)  # TODO
         action_data_liney = QAction('Linewise Y', self)
         action_data_liney.setEnabled(False)  # TODO
-        action_data_poly = QAction('polyXX', self)
-        action_data_poly.setEnabled(False)  # TODO
+        self.action_data_poly = QAction('polyXX (5th)', self)
+
         action_data_splines = QAction('by cubic splines', self)
         action_data_splines.setEnabled(False)  # TODO
         action_data_neighbor = QAction('by nearest neighbor', self)
@@ -220,7 +220,7 @@ class MainWindow(QMainWindow):
         flatten_menu.addAction(action_data_line)
         flatten_menu.addAction(action_data_linemean)
         flatten_menu.addAction(action_data_liney)
-        flatten_menu.addAction(action_data_poly)
+        flatten_menu.addAction(self.action_data_poly)
         interpolation_menu = self.data_menu.addMenu('Interpolation')
         interpolation_menu.addAction(action_data_splines)
         interpolation_menu.addAction(action_data_neighbor)

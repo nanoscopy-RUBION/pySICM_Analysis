@@ -1,6 +1,6 @@
 from unittest import TestCase
 import numpy as np
-from sicm_analyzer.measurements import root_mean_square_error
+from sicm_analyzer.measurements import root_mean_square_error, polynomial_fifth_degree
 
 
 class RoughnessTests(TestCase):
@@ -26,15 +26,18 @@ class RoughnessTests(TestCase):
             [40.523, 43.567, 31.469, 31.5, 31.219, 31.521, 34.571, 32.068, 35.263, 38.45],
             [31.39, 34.592, 37.69, 31.884, 35.096, 30.807, 31.583, 31.443, 31.098, 33.845]
         ])
-        data = data * 1000
+        data = data
+        #data = data - np.min(data)
         data = np.reshape(data, (10, 10))
         x = np.linspace(0, 9, num=10)
         y = np.linspace(0, 45, num=10)
         x, y = np.meshgrid(x, y)
+
         print(x)
         print(y)
 
         # polynomial features based on input mesh
+        zfit = polynomial_fifth_degree(x, y, data)
 
-        f = np.polyfit
+
 

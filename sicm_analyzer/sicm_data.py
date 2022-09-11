@@ -19,7 +19,6 @@ of either ApproachCurve or ScanBackstepMode.
 import tarfile
 from tarfile import TarFile
 import json
-from typing import Any
 import numpy as np
 import struct
 
@@ -43,24 +42,28 @@ class SICMdata:
     """
     def __init__(self):
         # data containing fields
-        self.x: np.ndarray
-        self.y: np.ndarray
-        self.z: np.ndarray
+        self.x: np.ndarray = np.zeros(1)
+        self.y: np.ndarray = np.zeros(1)
+        self.z: np.ndarray = np.zeros(1)
         # metadata fields
-        self.x_size: int
-        self.y_size: int
-        self.z_size: int
-        self.scan_mode: str
-        self.info: dict
-        self.settings: dict
+        self.x_size: int = 0
+        self.y_size: int = 0
+        self.z_size: int = 0
+        self.x_px: int = 0
+        self.y_px: int = 0
+        self.z_px: int = 0
+        self.scan_mode: str = ""
+        self.info: dict = {}
+        self.settings: dict = {}
 
     def set_settings(self, settings: dict):
         """Sets metadata obtained from settings.json
         and .mode."""
         pass
 
-    def set_data(self):
-        """Sets data used for plotting."""
+    def get_data(self):
+        """Returns x and z data for ApproachCurves and
+         x, y and z for Scan data."""
         pass
 
 
@@ -71,12 +74,12 @@ class ApproachCurve(SICMdata):
     def __init__(self):
         super(ApproachCurve, self).__init__()
 
-    def set_plot_values(self, data: list[int]):
-        """TODO add doc string"""
+    def set_data(self, data: list[int]):
         self.x = np.array(range(len(data)))
+        self.y = np.zeros(1)
         self.z = np.array(data)
 
-    def set_data(self):
+    def get_data(self):
         return self.x, self.z
 
 
@@ -98,12 +101,13 @@ class ScanBackstepMode(SICMdata):
             self.x_size = self.x_px
             self.y_size = self.y_px
 
-    def set_plot_values(self, data: list[int]):
+    def set_data(self, data: list[int]):
         """Rearranges scan data for 3-dimensional plotting."""
-        self.z = np.reshape(data, (self.x_px, self.y_px)) / 1000  # to have z data in µm
+        self.z = np.reshape(data, (self.x_px, self.y_px)) / 1000  # to have z data in µm instead of nm
         self.x, self.y = np.meshgrid(range(self.x_px), range(self.y_px))
 
-    def set_data(self):
+    def get_data(self):
+        """"""
         return self.x, self.y, self.z
 
 
@@ -111,7 +115,7 @@ class SICMDataFactory:
     """
     Factory to return SICMData objects according to the scan mode.
     """
-    def get_sicm_data(self, file_path: str):
+    def get_sicm_data(self, file_path: str) -> SICMdata:
         """Read all data from the tar-like .sicm-file format"""
         tar = tarfile.open(file_path, "r:gz")
         scan_mode = get_sicm_mode(tar)
@@ -121,19 +125,21 @@ class SICMDataFactory:
 
         if scan_mode == BACKSTEP:
             sicm_data = ScanBackstepMode()
-        else:
+        elif scan_mode == APPROACH:
             sicm_data = ApproachCurve()
+        else:
+            sicm_data = SICMdata()
 
         sicm_data.scan_mode = scan_mode
         sicm_data.set_settings(settings)
 
         sicm_data.info = info
-        sicm_data.set_plot_values(data)
+        sicm_data.set_data(data)
 
         return sicm_data
 
 
-def read_byte_data(tar: TarFile) -> list[tuple[Any, ...]]:
+def read_byte_data(tar: TarFile) -> list[int]:
     """Return z data from file as list"""
     data = []
     name = get_name_of_tar_member_containing_scan_data(tar)
@@ -141,7 +147,9 @@ def read_byte_data(tar: TarFile) -> list[tuple[Any, ...]]:
         data_file = tar.extractfile(tar.getmember(name))
         two_bytes = data_file.read(2)
         while two_bytes:
-            data.append(struct.unpack('<H', two_bytes))
+            pack = struct.unpack('<H', two_bytes)
+            # type(pack) is tuple(int,)
+            data.append(pack[0])
             two_bytes = data_file.read(2)
     return data
 

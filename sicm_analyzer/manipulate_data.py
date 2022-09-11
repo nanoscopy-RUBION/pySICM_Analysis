@@ -3,19 +3,19 @@ from PyQt6.QtCore import QPoint
 from scipy.interpolate import griddata
 from skimage.draw import disk
 
-from sicm_analyzer.view import View
+from sicm_analyzer.sicm_data import SICMdata
 
 
 # Simple Manipulations
 # ______________________________________
-def crop(view_ob: View, point1: QPoint, point2: QPoint):
+def crop(data: SICMdata, point1: QPoint, point2: QPoint):
     """Reduces the view object's data to the area of a rectangle
     formed by the two points 1 and 2.
 
     Note: If the gui framework is changed and PyQt (Qt) is no longer used
     the data type of point1 and 2 must be changed.
     """
-    view_ob.rois = (QPoint(), QPoint())
+    data.rois = (QPoint(), QPoint())
 
     width = abs(point1.x() - point2.x())
     height = abs(point1.y() - point2.y())
@@ -29,25 +29,25 @@ def crop(view_ob: View, point1: QPoint, point2: QPoint):
     else:
         orig_y = point2.y()
 
-    view_ob.x_data, view_ob.y_data = np.meshgrid(range(orig_x, orig_x + width), range(orig_y, orig_y + height))
+    data.x, data.y = np.meshgrid(range(orig_x, orig_x + width), range(orig_y, orig_y + height))
     # For some reason the shape must be Y * X and not X * Y
-    view_ob.z_data = view_ob.z_data[orig_y:orig_y + height, orig_x:orig_x + width]
+    data.z = data.z[orig_y:orig_y + height, orig_x:orig_x + width]
 
 
-def subtract_z_minimum(view: View):
-    """Subtracts the minimum of a data set
-    from all data points."""
-    view.z_data = view.z_data - np.min(view.z_data)
+def subtract_z_minimum(data: SICMdata):
+    """Subtracts the z minimum of a data
+    from all z data points."""
+    data.z = data.z - np.min(data.z)
 
 
-def transpose_z_data(view: View):
+def transpose_z_data(data: SICMdata):
     """Transposes the z array."""
-    view.z_data = view.z_data.transpose()
+    data.z = data.z.transpose()
 
 
 # Filter Manipulations
 # ______________________________________
-def filter_median_temporal(view: View, px_neighbours=1):
+def filter_median_temporal(data: SICMdata, px_neighbours=1):
     """
     Sets each pixel equal to the median of itself, the l pixel measurements immediately before, and the l pixel 
     measurements immediately afterwards (2l+1 pixels in total).
@@ -59,21 +59,21 @@ def filter_median_temporal(view: View, px_neighbours=1):
     Note: This function is only valid if data was scanned line-wise and each line beginning on the same end.
     This feature may be extended to support different scan modes.
 
-    :param view: This is the Z data that is to be smoothed. It can either be as a single array or in an ndarray.
+    :param data: This is the Z data that is to be smoothed. It can either be as a single array or in an ndarray.
     :param px_neighbours: This is the number of measurements on either side (taken either immediately before or after) used to
     adjust each pixel. 
     :returns: new Z data adjusted using the described method. The existing object is not modified.
     """
-    shape = view.z_data.shape
-    flattened = view.z_data.flatten('C')
+    shape = data.z.shape
+    flattened = data.z.flatten('C')
     z = np.zeros(len(flattened))
 
     for i in np.arange(0, len(flattened)):
         z[i] = np.median(flattened[np.max([i - px_neighbours, 0]):np.min([i + (px_neighbours + 1), len(flattened)])])
-    view.z_data = z.reshape(shape, order='C')
+    data.z = z.reshape(shape, order='C')
 
 
-def filter_average_temporal(view: View, px_neighbours=1):
+def filter_average_temporal(data: SICMdata, px_neighbours=1):
     """
     Sets each pixel equal to the average of itself, the l pixel measurements immediately before, and the l pixel 
     measurements immediately afterwards (2l+1 pixels in total).
@@ -85,58 +85,58 @@ def filter_average_temporal(view: View, px_neighbours=1):
     Note: This function is only valid if data was scanned line-wise and each line beginning on the same end.
     This feature may be extended to support different scan modes.
 
-    :param view: This is the Z data that is to be smoothed. It can either be as a single array or in an ndarray.
+    :param data: This is the Z data that is to be smoothed. It can either be as a single array or in an ndarray.
     :param px_neighbours: This is the number of measurements on either side (taken either immediately before or after) used to
     adjust each pixel.
     :returns: new Z data adjusted using the described method. The existing object is not modified.
     """
-    shape = view.z_data.shape
-    flattened = view.z_data.flatten('C')
+    shape = data.z.shape
+    flattened = data.z.flatten('C')
     z = np.zeros(len(flattened))
 
     for i in np.arange(0, len(flattened)):
         z[i] = np.mean(flattened[np.max([i - px_neighbours, 0]):np.min([i + (px_neighbours + 1), len(flattened)])])
-    view.z_data = z.reshape(shape, order='C')
+    data.z = z.reshape(shape, order='C')
 
 
-def filter_median_spatial(view: View, px_radius=1):
+def filter_median_spatial(data: SICMdata, px_radius=1):
     """
     Sets each pixel equal to the median of all points included in a disc-shaped field centered on the point itself with
     a given px_radius.
     If the pixel radius equals 1, the data will not be changed.
 
-    :param view: This is the Z data that is to be smoothed. It can either be as a single array or in an ndarray.
+    :param data: This is the Z data that is to be smoothed. It can either be as a single array or in an ndarray.
     :param px_radius: This is the number of measurements on either side (taken either immediately before or after) used to
     adjust each pixel.
     :returns: new Z data adjusted using the described method. The existing object is not modified.
     """
-    shape = view.z_data.shape
+    shape = data.z.shape
     z = np.zeros(shape)
 
     for i in np.arange(shape[0]):
         for j in np.arange(shape[1]):
-            z[i, j] = np.median(view.z_data[disk((i, j), px_radius, shape=shape)])
-    view.z_data = z
+            z[i, j] = np.median(data.z[disk((i, j), px_radius, shape=shape)])
+    data.z = z
 
 
-def filter_average_spatial(view: View, px_radius=1):
+def filter_average_spatial(data: SICMdata, px_radius=1):
     """
     Sets each pixel equal to the average of all points included in a disc-shaped field centered on the point itself with
     a given px_radius.
     If the pixel radius equals 1, the data will not be changed.
 
-    :param view: This is the Z data that is to be smoothed. It can either be as a single array or in an ndarray.
+    :param data: This is the Z data that is to be smoothed. It can either be as a single array or in an ndarray.
     :param px_radius: This is the number of measurements on either side (taken either immediately before or after) used to
     adjust each pixel.
     :returns: new Z data adjusted using the described method. The existing object is not modified.
     """
-    shape = view.z_data.shape
+    shape = data.z.shape
     z = np.zeros(shape)
 
     for i in np.arange(shape[0]):
         for j in np.arange(shape[1]):
-            z[i, j] = np.mean(view.z_data[disk((i, j), px_radius, shape=shape)])
-    view.z_data = z
+            z[i, j] = np.mean(data.z[disk((i, j), px_radius, shape=shape)])
+    data.z = z
 
 
 def fitting_objective(real, pred):
@@ -178,20 +178,20 @@ def level_plane(view_ob,guess = [0,0,0]):
     return view_ob.get_z_data()'''
 
 
-def level_data(view_ob: View, method='plane'):
+def level_data(data: SICMdata, method='plane'):
     """
     This method is intended to correct for a variety of possible shapes that . 
 
-    :param view_ob: View object which contains the data
+    :param data: View object which contains the data
     :param method: TODO
     :returns: An adjusted NDArray of z-data which corresponds to the original data with the specified geometry subtracted.
     This NDArray will be the 
     """
     # TODO reorganize the code... this function is too large
     # reshape data to vector
-    real_z = view_ob.z_data.flatten('F')
-    real_x = view_ob.x_data.flatten('F')
-    real_y = view_ob.y_data.flatten('F')
+    real_z = data.z.flatten('F')
+    real_x = data.x.flatten('F')
+    real_y = data.y.flatten('F')
 
     if method == 'plane' or method == 'linewise' or method == 'linewise_mean' or method == 'linewise_y':
         eq = np.array([np.ones(real_z.shape[0]), real_x, real_y]).transpose()
@@ -203,7 +203,7 @@ def level_data(view_ob: View, method='plane'):
         eq = np.array([np.ones(real_z.shape[0]), np.reciprocal(real_x) ** 2, np.reciprocal(real_y) ** 2]).transpose()
     coeff, r, rank, s = np.linalg.lstsq(eq, real_z, rcond=1)
 
-    xy_coord = np.array([view_ob.x_data.flatten('F'), view_ob.y_data.flatten('F')]).transpose()
+    xy_coord = np.array([data.x.flatten('F'), data.y.flatten('F')]).transpose()
 
     # The coefficients calculated above are then used to create a . This will be
     if method == 'plane' or method == 'linewise' or method == 'linewise_mean' or method == 'linewise_y':
@@ -230,7 +230,7 @@ def level_data(view_ob: View, method='plane'):
     if method == 'plane' or method == 'linewise' or method == 'linewise_mean' or method == 'linewise_y':
         pred_z = [coeff[0] + coeff[1] * i[0] + coeff[2] * i[1] for i in xy_coord]
     adj_z = adj_z - pred_z
-    adj_z = adj_z.reshape(view_ob.z_data.shape, order='F').transpose()
+    adj_z = adj_z.reshape(data.z.shape, order='F').transpose()
     '''if method == 'linewise':
         #xz_coord = np.array([view_ob.get_x_data(), adj_z])#.transpose()
         #adj_z = np.empty()
@@ -246,7 +246,7 @@ def level_data(view_ob: View, method='plane'):
         pass
     #print("max: %s  min: %s" % (np.max(adj_z), np.min(adj_z)))
 
-    view_ob.z_data = adj_z
+    data.z = adj_z
 
 
 '''def level_2D_poly(view_ob):
@@ -280,18 +280,19 @@ def level_data(view_ob: View, method='plane'):
     return view_ob.get_z_data()'''
 
 
-def interpolate_cubic(view_ob, num_points, method='nearest'):
+def interpolate_cubic(data: SICMdata, num_points, method='nearest'):
     """
     Interpolate Cubic
     Sets x-axis limits for the visual display of the data. This does not crop the data and the rest can still be viewed by panning.
     Will check to ensure the values are floats but does not check that the lower bound is first.
 
+    :param data:
     :param lims: List containing two floats which define the lower and upper bound of the y-axis, respectively
     :returns: 1 upon successful setting and 0 upon failure
     """
-    x = view_ob.get_x_data()  # .flatten()
-    y = view_ob.get_y_data()  # .flatten()
-    z = view_ob.get_z_data().flatten()
+    x = data.x  # .flatten()
+    y = data.y  # .flatten()
+    z = data.z.flatten()
     # grid_x, grid_y = np.mgrid[0:len(x):1/num_points, 0:len(y):1/num_points]
     grid_x_new, grid_y_new = np.mgrid[0:x.shape[0]:1 / num_points, 0:x.shape[1]:1 / (num_points + 1)]
     # rng = np.random.default_rng()
