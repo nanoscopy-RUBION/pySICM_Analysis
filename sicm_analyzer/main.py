@@ -53,6 +53,7 @@ class Controller:
         self.unsaved_changes = False
         self.current_selection: str = ""
         self.cmap_dialog = None
+        self.view = View()
         self.figure_canvas_3d = GraphCanvas()
         self.figure_canvas_2d = GraphCanvas()
         self.mi = MouseInteraction()
@@ -83,7 +84,7 @@ class Controller:
         self.main_window.action_set_axis_labels_px.triggered.connect(self.update_figures_and_status)
         self.main_window.action_set_axis_labels_micron.triggered.connect(self.update_figures_and_status)
         self.main_window.action_store_angles.triggered.connect(self.store_viewing_angles)
-        self.main_window.action_view_restore.triggered.connect(self.restore_current_view_settings)
+        self.main_window.action_view_restore.triggered.connect(self.restore_view_settings)
         self.main_window.action_view_colormap.triggered.connect(self.open_color_map_dialog)
         self.main_window.action_view_ratio.triggered.connect(self.open_aspect_ratio_input_dialog)
 
@@ -177,7 +178,7 @@ class Controller:
         return aspect_r
 
     def change_aspect_ratio_for_current_view(self, aspect_r):
-        self.current_selection.aspect_ratio = aspect_r
+        self.view.aspect_ratio = aspect_r
         self.update_figures_and_status()
 
     def filter_current_view(self):
@@ -194,17 +195,27 @@ class Controller:
                 radius = int(radius)
             except ValueError:
                 radius = 1
-            self.data_manager.execute_func_on_current_data(filters.get(selected_filter), key=self.current_selection, action_name=f"selected_filter (px-size: {radius})")(
-                self.data_manager.get_data(self.current_selection), radius)
+            self.data_manager.execute_func_on_current_data(
+                filters.get(selected_filter),
+                key=self.current_selection,
+                action_name=f"selected_filter (px-size: {radius})"
+            )(self.data_manager.get_data(self.current_selection), radius)
 
     def plane_correction(self):
         """TODO: implement more functions"""
-        self.data_manager.execute_func_on_current_data(level_data, key=self.current_selection, action_name="Leveling (plane)")(
-            self.data_manager.get_data(self.current_selection))
+        self.data_manager.execute_func_on_current_data(
+            level_data,
+            key=self.current_selection,
+            action_name="Leveling (plane)"
+        )(self.data_manager.get_data(self.current_selection))
 
     def fit_to_polyXX(self):
         """TODO: implement more functions"""
-        self.data_manager.execute_func_on_current_data(self._helper_for_fit, key=self.current_selection, action_name="Leveling (polyXX)")()
+        self.data_manager.execute_func_on_current_data(
+            self._helper_for_fit,
+            key=self.current_selection,
+            action_name="Leveling (polyXX)"
+        )()
 
     def _helper_for_fit(self):
         data = self.data_manager.get_data(self.current_selection)
@@ -224,7 +235,6 @@ class Controller:
     def import_directory(self):
         """Opens a file dialog to select a directory."""
         files = self.get_filenames_from_selected_directory()
-        self.data_manager.import_files(files)
         self.add_files_to_list(files)
 
     def get_filenames_from_selected_directory(self):
@@ -276,8 +286,6 @@ class Controller:
         """Removes all items from list widget and disables menus."""
         self.main_window.clear_list_widgets()
         self.data_manager.clear_all_data()
-        #self.views.clear()
-        self.currentView = ""
         self.main_window.set_menus_enabled(False)
         self.main_window.set_undo_menu_items()
         self.main_window.set_redo_menu_items()
@@ -286,7 +294,7 @@ class Controller:
     def toggle_axes(self):
         """Shows or hides axes in figures.
         """
-        #self.currentView.toggle_axes()
+        self.view.toggle_axes()
         self.update_figures_and_status()
 
     def item_selection_changed_event(self, item):
@@ -296,7 +304,9 @@ class Controller:
         if item:
             self.main_window.action_toggle_axes.setEnabled(True)
             self.current_selection = item.text()
-            #self.main_window.action_toggle_axes.setChecked(self.currentView.axes_shown)
+            self.main_window.set_menus_enabled(isinstance(self.data_manager.get_data(self.current_selection), ScanBackstepMode))
+
+            self.main_window.action_toggle_axes.setChecked(self.view.axes_shown)
             self.update_figures_and_status()
         else:
             self.main_window.action_toggle_axes.setEnabled(False)
@@ -307,12 +317,18 @@ class Controller:
         except ApproachCurves.
         """
         if not isinstance(self.data_manager.get_data(self.current_selection), ApproachCurve):
-            self.data_manager.execute_func_on_current_data(transpose_z_data, key=self.current_selection, action_name="Transpose z")(
-                self.data_manager.get_data(self.current_selection))
+            self.data_manager.execute_func_on_current_data(
+                transpose_z_data,
+                key=self.current_selection,
+                action_name="Transpose z"
+            )(self.data_manager.get_data(self.current_selection))
 
     def subtract_minimum_in_current_view(self):
-        self.data_manager.execute_func_on_current_data(subtract_z_minimum, key=self.current_selection, action_name="Subtract z minimum")(
-            self.data_manager.get_data(self.current_selection))
+        self.data_manager.execute_func_on_current_data(
+            subtract_z_minimum,
+            key=self.current_selection,
+            action_name="Subtract z minimum"
+        )(self.data_manager.get_data(self.current_selection))
 
     def update_figures_and_status(self, message: str = ""):
         """Redraws figures on the canvas and updates statusbar message.
@@ -321,15 +337,15 @@ class Controller:
         """
         try:
             current_data = self.data_manager.get_data(self.current_selection)
+            self.view.show_as_px = self.main_window.action_set_axis_labels_px.isChecked()
 
-            #self.currentView.show_as_px = self.main_window.action_set_axis_labels_px.isChecked()
             if isinstance(current_data, ScanBackstepMode):
-                self.figure_canvas_3d.draw_graph(current_data, SURFACE_PLOT)
-                self.figure_canvas_2d.draw_graph(current_data, RASTER_IMAGE)
+                self.figure_canvas_3d.draw_graph(current_data, SURFACE_PLOT, self.view)
+                self.figure_canvas_2d.draw_graph(current_data, RASTER_IMAGE, self.view)
 
             if isinstance(current_data, ApproachCurve):
                 self.figure_canvas_3d.draw_graph(current_data)
-                self.figure_canvas_2d.draw_graph(current_data, APPROACH_CURVE)
+                self.figure_canvas_2d.draw_graph(current_data, APPROACH_CURVE, self.view)
 
             self._update_undo_redo_menu_items()
             self.main_window.set_data_manipulation_list_items(
@@ -355,19 +371,20 @@ class Controller:
         ApproachCurve. The viewing angles can only be obtained from surface plots.
         """
         try:
-            self.current_selection.set_viewing_angles(*self.figure_canvas_3d.get_viewing_angles_from_3d_plot())
+            self.view.set_viewing_angles(*self.figure_canvas_3d.get_viewing_angles_from_3d_plot())
         except AttributeError:
             self.main_window.display_status_bar_message("ApproachCurves have no viewing angles.")
-            self.current_selection.set_viewing_angles()
+            self.view.set_viewing_angles()
 
-    def restore_current_view_settings(self):
+    def restore_view_settings(self):
         """Sets all viewing settings in the current View object
         to default values.
         """
         try:
-            #self.current_selection.restore()
-            self.update_figures_and_status()
+            self.view.restore()
             self.main_window.action_toggle_axes.setChecked(True)
+            self.main_window.action_set_axis_labels_px.setChecked(True)
+            self.update_figures_and_status()
         except Exception as e:
             print('No view to restore')
             print(str(e))
@@ -380,11 +397,12 @@ class Controller:
 
     def select_roi_with_mouse(self):
         data = self.data_manager.get_data(self.current_selection)
-        self.figure_canvas_2d.draw_rectangle_on_raster_image(current_view=data, func=self._select_area)
+        self.figure_canvas_2d.draw_rectangle_on_raster_image(data=data, view=self.view, func=self._select_area)
 
     def _select_area(self, point1: QPoint, point2: QPoint):
+        print("TODO ROI selection")
         if self._points_are_not_equal(point1, point2):
-            self.current_selection.rois = (point1, point2)
+            #self.current_selection.rois = (point1, point2)
             self.update_figures_and_status("ROI set")
         else:
             self.update_figures_and_status("No ROI set.")
@@ -398,12 +416,19 @@ class Controller:
             self.main_window.display_status_bar_message("Data not cropped.")
 
     def crop_by_selection(self):
-        self.figure_canvas_2d.draw_rectangle_on_raster_image(current_view=self.data_manager.get_data(self.current_selection), func=self._crop_data)
+        self.figure_canvas_2d.draw_rectangle_on_raster_image(
+            data=self.data_manager.get_data(self.current_selection),
+            view=self.view,
+            func=self._crop_data
+        )
 
     def _crop_data(self, point1: QPoint, point2: QPoint):
         if self._points_are_not_equal(point1, point2):
-            self.data_manager.execute_func_on_current_data(crop, self.current_selection, action_name="Crop data")(
-                self.data_manager.get_data(self.current_selection), point1, point2)
+            self.data_manager.execute_func_on_current_data(
+                crop,
+                self.current_selection,
+                action_name="Crop data"
+            )(self.data_manager.get_data(self.current_selection), point1, point2)
         else:
             self.update_figures_and_status("Data not cropped.")
 

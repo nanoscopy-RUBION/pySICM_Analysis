@@ -18,6 +18,8 @@ class View:
         self.aspect_ratio = (4, 4, 3)  # Default value by matplotlib
         self.color_map = DEFAULT_COLOR_MAP
         self.rois = (QPoint(), QPoint())
+        self.azim: float = -60.0
+        self.elev: float = 30.0
 
     def get_xlim(self):
         return self.xlims
@@ -82,6 +84,7 @@ class View:
         should be used for that purpose.
         """
         self.axes_shown = True
+        self.show_as_px = True
         #self.set_xlims(self.default_xlim)
         #self.set_ylims(self.default_ylim)
         self.aspect_ratio = (4, 4, 3)

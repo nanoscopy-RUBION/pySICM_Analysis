@@ -76,8 +76,10 @@ def polynomial_fifth_degree(x_data, y_data, z_data: np.array):
     # perform fit
     fit = Fit(model, x=x_data, y=y_data, z=z_data, objective=LeastSquares, minimizer=[BFGS])
     fit_result = fit.execute()
+    print("###############################################")
+    print("Fit results:")
     print(fit_result)
-    print(fit.initial_guesses)
+    print("###############################################")
     z_fitted = model(x=x_data, y=y_data, **fit_result.params).z
     return z_fitted
     # Remove outliers

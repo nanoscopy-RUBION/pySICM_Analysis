@@ -33,6 +33,7 @@ class DataManager:
 
     def clear_all_data(self):
         self.data_collection.clear()
+        self.current_data_key = ""
 
     # Import and add data
     ####################################################################################################################
