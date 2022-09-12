@@ -1,4 +1,6 @@
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QWidget, QComboBox, QPushButton, QVBoxLayout, QHBoxLayout
+
 from matplotlib import cm
 
 COLOR_MAPS = {
@@ -28,6 +30,7 @@ class ColorMapDialog(QWidget):
         self.setWindowTitle("Color Map Chooser")
         self.setFixedSize(300, 150)
         self.controller = controller
+        self.setWindowModality(Qt.WindowModality.ApplicationModal)
 
         layout = QVBoxLayout()
         self.setLayout(layout)
