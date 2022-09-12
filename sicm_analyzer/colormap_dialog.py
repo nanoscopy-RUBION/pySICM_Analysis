@@ -11,7 +11,8 @@ COLOR_MAPS = {
     "Jet (reverse)": cm.jet_r,
     "Summer": cm.summer,
     "Summer (reverse)": cm.summer_r,
-    "Viridis": cm.viridis
+    "Viridis": cm.viridis,
+    "Seriös cool": cm.YlGnBu_r
 }
 
 
