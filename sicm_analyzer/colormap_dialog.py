@@ -30,7 +30,7 @@ class ColorMapDialog(QWidget):
         self.setWindowTitle("Color Map Chooser")
         self.setFixedSize(300, 150)
         self.controller = controller
-        self.setWindowModality(Qt.WindowModality.ApplicationModal)
+        self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
 
         layout = QVBoxLayout()
         self.setLayout(layout)
