@@ -1,6 +1,7 @@
 from unittest import TestCase
 import numpy as np
-from sicm_analyzer.measurements import root_mean_square_error, polynomial_fifth_degree
+from sicm_analyzer.measurements import get_roughness, root_mean_square_error, polynomial_fifth_degree
+from sicm_analyzer.sicm_data import SICMdata, SICMDataFactory
 
 
 class RoughnessTests(TestCase):
@@ -28,16 +29,34 @@ class RoughnessTests(TestCase):
         ])
         data = data
         #data = data - np.min(data)
-        data = np.reshape(data, (10, 10))
+        z = np.reshape(data, (10, 10))
         x = np.linspace(0, 9, num=10)
         y = np.linspace(0, 45, num=10)
         x, y = np.meshgrid(x, y)
 
-        print(x)
-        print(y)
+        sicm_data = SICMdata()
+        sicm_data.x = x
+        sicm_data.y = y
+        sicm_data.z = z
 
-        # polynomial features based on input mesh
-        zfit = polynomial_fifth_degree(x, y, data)
+        print(get_roughness(sicm_data))
 
+    def test_calculate_roughness(self):
+        path = "./tests/sample_sicm_files/Zelle3 PFA.sicm"
+        sicm_data = SICMDataFactory().get_sicm_data(path)
+        print(get_roughness(sicm_data))
 
+    def test_calculate_roughness_2(self):
+        path = "./tests/sample_sicm_files/Zelle2 PFA.sicm"
+        sicm_data = SICMDataFactory().get_sicm_data(path)
+        print(get_roughness(sicm_data))
 
+    def test_calculate_roughness_3(self):
+        path = "./tests/sample_sicm_files/Zelle3 30x30_30 PFA.sicm"
+        sicm_data = SICMDataFactory().get_sicm_data(path)
+        print(get_roughness(sicm_data))
+
+    def test_calculate_roughness_4(self):
+        path = "./tests/sample_sicm_files/Zelle2Membran PFA.sicm"
+        sicm_data = SICMDataFactory().get_sicm_data(path)
+        print(get_roughness(sicm_data))

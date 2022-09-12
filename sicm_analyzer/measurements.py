@@ -1,22 +1,54 @@
 import math
 
 import numpy as np
-import symfit.core.minimizers
-from symfit.core.minimizers import BFGS, NelderMead, LBFGSB, DifferentialEvolution, BaseMinimizer, BasinHopping
+from symfit.core.minimizers import BFGS
 from symfit import Poly, variables, parameters, Model, Fit
-from symfit.core.argument import Parameter
-from symfit.core.objectives import LeastSquares, LogLikelihood
+from symfit.core.objectives import LeastSquares
+from sicm_analyzer.sicm_data import SICMdata
 
+
+# TODO generalization of polynomial fit functions
+def polynomial_second_degree(x_data, y_data, z_data: np.array):
+    """Returns data fitted to a polynomial of 2nd degree with two
+    variables x and y."""
+    x, y, z = variables('x, y, z')
+    p00, p10, p01, p20, p11, p02 = parameters(
+        "p00, p10, p01, p20, p11, p02"
+    )
+
+    model_dict = {
+        z: Poly(
+            {
+                (0, 0): p00,
+                (1, 0): p10,
+                (0, 1): p01,
+                (2, 0): p20,
+                (1, 1): p11,
+                (0, 2): p02,
+            },
+            x, y
+        ).as_expr()
+    }
+    model = Model(model_dict)
+
+    # perform fit
+    fit = Fit(model, x=x_data, y=y_data, z=z_data, objective=LeastSquares, minimizer=[BFGS])
+    fit_result = fit.execute()
+    print("###############################################")
+    print("Fit results:")
+    print(fit_result)
+    print("###############################################")
+    z_fitted = model(x=x_data, y=y_data, **fit_result.params).z
+    return z_fitted
 
 def polynomial_fifth_degree(x_data, y_data, z_data: np.array):
     """Returns data fitted to a polynomial of 5th degree with two
     variables x and y."""
     x, y, z = variables('x, y, z')
-    #k = Parameter('k', value=4, min=3, max=3)
     p00, p10, p01, p20, p11, p02, p30, p21, p12, p03, p40, p31, p22, p13, p04, p50, p41, p32, p23, p14, p05 = parameters(
         "p00, p10, p01, p20, p11, p02, p30, p21, p12, p03, p40, p31, p22, p13, p04, p50, p41, p32, p23, p14, p05"
     )
-    p00.value = 1
+    p00.value = 10
     p10.value = 0.01
     p20.value = 0.01
     p30.value = 0.01
@@ -40,6 +72,7 @@ def polynomial_fifth_degree(x_data, y_data, z_data: np.array):
     p32.value = 0.01
     p41.value = 0.01
     p23.value = 0.01
+
 
 
 
@@ -82,36 +115,6 @@ def polynomial_fifth_degree(x_data, y_data, z_data: np.array):
     print("###############################################")
     z_fitted = model(x=x_data, y=y_data, **fit_result.params).z
     return z_fitted
-    # Remove outliers
-    pc75 = np.percentile(z_fitted.flatten('F'), 75)
-    pc25 = np.percentile(z_fitted.flatten('F'), 25)
-    print(pc75)
-    print(pc25)
-
-
-    # Every data point beyond 1.5 IQRs is an outlier
-    iqr = pc75 - pc25  # interquartile range
-    upper_limit = pc75 + 1.5 * iqr
-    lower_limit = pc25 - 1.5 * iqr
-    print("upper: %s" % upper_limit)
-    print("lower: %s" % lower_limit)
-    print("mean before: %s" % np.mean(z_fitted))
-    print(len(z_fitted[np.where((z_fitted < lower_limit) | (z_fitted > upper_limit))]))
-    print(len(z_fitted[np.where((z_fitted >= lower_limit) & (z_fitted <= upper_limit))]))
-    print(z_fitted[np.where((z_fitted < lower_limit) | (z_fitted > upper_limit))])
-    print(z_fitted[np.where((z_fitted >= lower_limit) & (z_fitted <= upper_limit))])
-    print("mean after: %s" % np.mean(z_fitted[np.where((z_fitted < lower_limit) | (z_fitted > upper_limit))]))
-
-    #no_outliers = flat(flat >= lowerlimit & flat <= upperlimit)
-
-    print(root_mean_square_error(z_fitted[np.where((z_fitted >= lower_limit) & (z_fitted <= upper_limit))]))
-
-
-    import matplotlib.pyplot as plt
-    fig, (ax1, ax2) = plt.subplots(1, 2)
-    ax1.pcolormesh(z_data)
-    ax2.pcolormesh(z_fitted)
-    plt.show()
 
 
 def get_grid(view):
@@ -139,13 +142,12 @@ def root_mean_square_error(data: np.array) -> float:
 
     FORMEL einfügen
     """
-
     mean = np.mean(data)
     diff = data - mean
     rmse = math.sqrt(np.mean(diff**2))
     return rmse
 
-def get_roughness(data) -> float:
+def get_roughness(data: SICMdata) -> float:
     """Compute roughness.
 
 
@@ -197,7 +199,7 @@ def get_roughness(data) -> float:
     # RMSE calculation
     r = root_mean_square_error(no_outliers(:))
 
-
+    
 
     if nargout > 1:
         tmp = flat
@@ -210,6 +212,38 @@ def get_roughness(data) -> float:
     if nargout > 3:
         varargout{3} = go
     '''
+    fitted_data = polynomial_fifth_degree(data.x, data.y, data.z)
+    corrected_data = data.z - fitted_data
+
+    roughness = root_mean_square_error(corrected_data)
+    return roughness
+
+def get_lower_and_upper_limit_for_outlier_determination(values: np.array):
+    """Calculates the lower and upper limits for
+    outlier determination. For this purpose, 25% and 75%
+    percentiles are determined. These values are adjusted by
+    1.5-times the interquartile range (IQR)"""
+    # determine 25% and 75% quartiles
+    pc75 = np.percentile(values.flatten('F'), 75)
+    pc25 = np.percentile(values.flatten('F'), 25)
+
+    # interquartile range
+    iqr = pc75 - pc25
+
+    # Every data point beyond 1.5 IQRs is an outlier
+    upper_limit = pc75 + 1.5 * iqr
+    lower_limit = pc25 - 1.5 * iqr
+
+    print("upper: %s" % upper_limit)
+    print("lower: %s" % lower_limit)
+    print(z_fitted[np.where((z_fitted < lower_limit) | (z_fitted > upper_limit))])
+    print(z_fitted[np.where((z_fitted >= lower_limit) & (z_fitted <= upper_limit))])
+    print("mean after: %s" % np.mean(z_fitted[np.where((z_fitted < lower_limit) | (z_fitted > upper_limit))]))
+
+    # no_outliers = flat(flat >= lowerlimit & flat <= upperlimit)
+
+    print(root_mean_square_error(z_fitted[np.where((z_fitted >= lower_limit) & (z_fitted <= upper_limit))]))
+
 
 def measure_distance():
     pass
