@@ -1,8 +1,5 @@
 import os
 import sys
-
-from sicm_analyzer.results import ResultsWindow
-
 sys.path.append("")
 import traceback
 import numpy as np
@@ -16,6 +13,7 @@ from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication, QFileDialog, QInputDialog
 
 from sicm_analyzer.data_manager import DataManager
+from sicm_analyzer.results import ResultsWindow
 from sicm_analyzer.colormap_dialog import ColorMapDialog
 from sicm_analyzer.enter_area_dialog import EnterAreaDialog
 from sicm_analyzer.gui_main import MainWindow
