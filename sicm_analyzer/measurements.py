@@ -1,4 +1,5 @@
 import math
+from typing import Any
 
 import numpy as np
 from symfit.core.minimizers import BFGS
@@ -114,7 +115,7 @@ def polynomial_fifth_degree(x_data, y_data, z_data: np.array):
     print(fit_result)
     print("###############################################")
     z_fitted = model(x=x_data, y=y_data, **fit_result.params).z
-    return z_fitted
+    return z_fitted, fit_result
 
 
 def get_grid(view):
@@ -147,8 +148,8 @@ def root_mean_square_error(data: np.array) -> float:
     rmse = math.sqrt(np.mean(diff**2))
     return rmse
 
-def get_roughness(data: SICMdata) -> float:
-    """Compute roughness.
+def get_roughness(data: SICMdata) -> tuple[float, Any]:
+    """Returns roughness and optionally the fit results..
 
 
     Compute the roughness of the data
@@ -212,11 +213,11 @@ def get_roughness(data: SICMdata) -> float:
     if nargout > 3:
         varargout{3} = go
     '''
-    fitted_data = polynomial_fifth_degree(data.x, data.y, data.z)
+    fitted_data, fit_results = polynomial_fifth_degree(data.x, data.y, data.z)
     corrected_data = data.z - fitted_data
 
     roughness = root_mean_square_error(corrected_data)
-    return roughness
+    return roughness, fit_results
 
 def get_lower_and_upper_limit_for_outlier_determination(values: np.array):
     """Calculates the lower and upper limits for

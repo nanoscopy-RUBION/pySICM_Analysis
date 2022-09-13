@@ -1,5 +1,8 @@
 import os
 import sys
+
+from sicm_analyzer.results import ResultsWindow
+
 sys.path.append("")
 import traceback
 import numpy as np
@@ -23,7 +26,7 @@ from sicm_analyzer.manipulate_data import filter_median_temporal, filter_median_
     filter_average_spatial
 from sicm_analyzer.manipulate_data import level_data
 from sicm_analyzer.mouse_events import MouseInteraction
-from sicm_analyzer.sicm_data import SICMDataFactory, ApproachCurve, ScanBackstepMode, SICMdata
+from sicm_analyzer.sicm_data import ApproachCurve, ScanBackstepMode
 from sicm_analyzer.view import View
 from sicm_analyzer.graph_canvas import SURFACE_PLOT, RASTER_IMAGE, APPROACH_CURVE
 from sicm_analyzer.set_rois_dialog import ROIsDialog
@@ -53,6 +56,7 @@ class Controller:
         self.unsaved_changes = False
         self.current_selection: str = ""
         self.cmap_dialog = None
+        self.results_window: ResultsWindow = None
         self.view = View()
         self.figure_canvas_3d = GraphCanvas()
         self.figure_canvas_2d = GraphCanvas()
@@ -103,6 +107,7 @@ class Controller:
         self.main_window.action_set_roi.triggered.connect(self.select_roi_with_mouse)
         # Other
         self.main_window.imported_files_list.currentItemChanged.connect(self.item_selection_changed_event)
+        self.main_window.action_results.triggered.connect(self.show_results)
         # self.main_window.action_about.triggered.connect(self.about)
         self.main_window.closeEvent = self.quit_application
 
@@ -439,6 +444,12 @@ class Controller:
     def show_roi_dialog(self):
         self.roi_dialog = ROIsDialog(controller=self, parent=self.main_window)
         self.roi_dialog.open_window()
+
+    def show_results(self):
+        self.results_window = ResultsWindow(self,
+                                            data=self.data_manager.get_data(self.current_selection),
+                                            parent=self.main_window)
+        self.results_window.open_window()
 
 
 def main():

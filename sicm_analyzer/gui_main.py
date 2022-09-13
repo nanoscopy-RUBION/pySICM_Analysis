@@ -242,8 +242,9 @@ class MainWindow(QMainWindow):
         self.measure_menu.addAction(self.action_set_roi)
 
         # Properties menu
-        self.properties_menu = menubar.addMenu("&Properties")
-        self.properties_menu.setEnabled(False)  # TODO
+        self.action_results = QAction("Results")
+        menubar.addAction(self.action_results)
+        self.action_results.setEnabled(False)
 
         # About menu
         self.about_menu = menubar.addMenu("&About")
@@ -283,7 +284,7 @@ class MainWindow(QMainWindow):
         self.view_menu.setEnabled(enable)
         self.data_menu.setEnabled(enable)
         self.measure_menu.setEnabled(enable)
-        #self.properties_menu.setEnabled(enable)
+        self.action_results.setEnabled(enable)
         self.about_menu.setEnabled(enable)
 
     def toggle_show_toolbar(self):
