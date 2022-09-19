@@ -228,6 +228,8 @@ class MainWindow(QMainWindow):
         self.data_menu.addAction(self.action_data_reset)
 
         # Measurements menu
+        self.action_roughness = QAction("Roughness")
+        self.action_roughness.setEnabled(False)
         action_measure_dist = QAction('&Measure distance', self)
         action_measure_dist.setEnabled(False)  # TODO
         action_measure_profile = QAction('&Measure profile', self)
@@ -236,15 +238,11 @@ class MainWindow(QMainWindow):
         self.action_set_roi = QAction("Set ROI", self)
 
         self.measure_menu = menubar.addMenu("&Measurements")
+        self.measure_menu.addAction(self.action_roughness)
         self.measure_menu.addAction(action_measure_dist)
         self.measure_menu.addAction(action_measure_profile)
         self.measure_menu.addAction(self.action_set_rois)
         self.measure_menu.addAction(self.action_set_roi)
-
-        # Properties menu
-        self.action_results = QAction("Results")
-        menubar.addAction(self.action_results)
-        self.action_results.setEnabled(False)
 
         # About menu
         self.about_menu = menubar.addMenu("&About")
@@ -284,7 +282,7 @@ class MainWindow(QMainWindow):
         self.view_menu.setEnabled(enable)
         self.data_menu.setEnabled(enable)
         self.measure_menu.setEnabled(enable)
-        self.action_results.setEnabled(enable)
+        self.action_roughness.setEnabled(enable)
         self.about_menu.setEnabled(enable)
 
     def toggle_show_toolbar(self):

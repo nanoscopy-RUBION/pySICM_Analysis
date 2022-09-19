@@ -105,7 +105,7 @@ class Controller:
         self.main_window.action_set_roi.triggered.connect(self.select_roi_with_mouse)
         # Other
         self.main_window.imported_files_list.currentItemChanged.connect(self.item_selection_changed_event)
-        self.main_window.action_results.triggered.connect(self.show_results)
+        self.main_window.action_roughness.triggered.connect(self.show_results)
         # self.main_window.action_about.triggered.connect(self.about)
         self.main_window.closeEvent = self.quit_application
 
