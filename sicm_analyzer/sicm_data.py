@@ -154,6 +154,20 @@ def read_byte_data(tar: TarFile) -> list[int]:
     return data
 
 
+def get_data_as_bytes(data: np.array):
+    """Packs and returns data as list of bytes.
+
+
+    """
+    byte_data = []
+    for pixel in data:
+        byte_data.append(struct.pack(pixel, "<H"))
+    return byte_data
+
+
+def export_sicm_file():
+    """"""
+
 def get_sicm_mode(tar: TarFile) -> str:
     """Return a string representation of the scan mode.
     The scan mode can be found in the file '.mode' which is part

@@ -8,9 +8,9 @@ from os import listdir
 from os.path import join, isfile
 from matplotlib.figure import Figure
 
-from PyQt6.QtCore import QPoint
-from PyQt6.QtGui import QIcon
-from PyQt6.QtWidgets import QApplication, QFileDialog, QInputDialog
+from PyQt6.QtCore import QPoint, QEvent, Qt
+from PyQt6.QtGui import QIcon, QKeyEvent
+from PyQt6.QtWidgets import QApplication, QFileDialog, QInputDialog, QListWidget
 
 from sicm_analyzer.data_manager import DataManager
 from sicm_analyzer.results import ResultsWindow
@@ -106,8 +106,19 @@ class Controller:
         # Other
         self.main_window.imported_files_list.currentItemChanged.connect(self.item_selection_changed_event)
         self.main_window.action_roughness.triggered.connect(self.show_results)
+        self.main_window.imported_files_list.eventFilter = self.eventFilter
         # self.main_window.action_about.triggered.connect(self.about)
         self.main_window.closeEvent = self.quit_application
+
+    def eventFilter(self, object, event):
+        print(event.type())
+        if event.type() == QKeyEvent:
+
+            self.remove_selection(event)
+            return True
+        else:
+            return False
+
 
     def export_figure(self, figure: Figure):
         options = QFileDialog.Option(QFileDialog.Option.DontUseNativeDialog)
@@ -266,6 +277,15 @@ class Controller:
                                                     )
         return filenames
 
+    def remove_selection(self, event):
+        print(event)
+        try:
+            index = self.main_window.imported_files_list.selectionModel().currentIndex().row()
+            print(index)
+        except:
+            pass
+
+
     def add_files_to_list(self, files):
         """
         Adds file paths to the list widget.
@@ -313,7 +333,6 @@ class Controller:
             self.update_figures_and_status()
         else:
             self.main_window.action_toggle_axes.setEnabled(False)
-
 
     def transpose_z_of_current_view(self):
         """Transposes z data of current measurement of all types
