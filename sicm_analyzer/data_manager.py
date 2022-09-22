@@ -147,6 +147,9 @@ class DataManager:
         raw_data = UndoRedoData(name="Reset data", data=undo_stack[0].data)
         undo_stack.append(raw_data)
 
+    def remove_data(self, key: str):
+        del self.data_collection[key]
+
     def execute_func_on_current_data(self, func, key:str, action_name: str = "action"):
         """This wrapper function is used to make other functions undo/redoable.
         Wrap the function and pass a name for that action.
