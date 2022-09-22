@@ -137,6 +137,7 @@ class Controller:
             self.main_window.display_status_bar_message("Figure saved")
 
     def export_sicm_data(self):
+        """Exports the z data of the current selection as a .sicm file."""
         options = QFileDialog.Option(QFileDialog.Option.DontUseNativeDialog)
         file_path = QFileDialog.getSaveFileName(parent=self.main_window,
                                                 caption="Export manipulated data as .sicm file",

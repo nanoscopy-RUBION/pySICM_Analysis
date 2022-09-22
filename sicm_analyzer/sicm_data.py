@@ -189,10 +189,10 @@ def temporary_files_for_sicm_data_package(sicm_data: SICMdata):
     x_px, y_px = sicm_data.z.shape
     old_x_px = sicm_data.x_px
     old_y_px = sicm_data.y_px
-    print(sicm_data.settings)
+
     sicm_data.settings["x-px"] = str(x_px)
     sicm_data.settings["y-px"] = str(y_px)
-    print(sicm_data.settings)
+
     sjson = json.dumps(sicm_data.settings, separators=(',', ':'))
     with open(os.path.join(path, "settings.json"), "w") as f:
         f.write(sjson)
