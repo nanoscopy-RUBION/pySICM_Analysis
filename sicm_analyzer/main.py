@@ -24,7 +24,7 @@ from sicm_analyzer.manipulate_data import filter_median_temporal, filter_median_
     filter_average_spatial
 from sicm_analyzer.manipulate_data import level_data
 from sicm_analyzer.mouse_events import MouseInteraction
-from sicm_analyzer.sicm_data import ApproachCurve, ScanBackstepMode
+from sicm_analyzer.sicm_data import ApproachCurve, ScanBackstepMode, export_sicm_file
 from sicm_analyzer.view import View
 from sicm_analyzer.graph_canvas import SURFACE_PLOT, RASTER_IMAGE, APPROACH_CURVE
 from sicm_analyzer.set_rois_dialog import ROIsDialog
@@ -75,6 +75,7 @@ class Controller:
         self.main_window.action_import_directory.triggered.connect(self.import_directory)
         self.main_window.action_export_2d.triggered.connect(lambda: self.export_figure(self.figure_canvas_2d.figure))
         self.main_window.action_export_3d.triggered.connect(lambda: self.export_figure(self.figure_canvas_3d.figure))
+        self.main_window.action_export_sicm_data.triggered.connect(self.export_sicm_data)
         self.main_window.action_exit.triggered.connect(self.quit_application)
 
         # Edit menu
@@ -106,21 +107,23 @@ class Controller:
         # Other
         self.main_window.imported_files_list.currentItemChanged.connect(self.item_selection_changed_event)
         self.main_window.action_roughness.triggered.connect(self.show_results)
-        self.main_window.imported_files_list.eventFilter = self.eventFilter
+        #self.main_window.imported_files_list.eventFilter = self.eventFilter
         # self.main_window.action_about.triggered.connect(self.about)
         self.main_window.closeEvent = self.quit_application
 
     def eventFilter(self, object, event):
-        print(event.type())
+        """Add key events here:
+        At the moment the following key events are recognized:
+        Todo
+        """
         if event.type() == QKeyEvent:
-
             self.remove_selection(event)
             return True
         else:
             return False
 
-
     def export_figure(self, figure: Figure):
+        """Exports the current view of a figure."""
         options = QFileDialog.Option(QFileDialog.Option.DontUseNativeDialog)
         file_path = QFileDialog.getSaveFileName(parent=self.main_window,
                                                 caption="Export figure as...",
@@ -129,9 +132,25 @@ class Controller:
                                                 initialFilter="SVG (*.svg)",
                                                 options=options
                                                 )
-        if file_path:
+        if file_path[0]:
             figure.savefig(fname=file_path[0])
             self.main_window.display_status_bar_message("Figure saved")
+
+    def export_sicm_data(self):
+        options = QFileDialog.Option(QFileDialog.Option.DontUseNativeDialog)
+        file_path = QFileDialog.getSaveFileName(parent=self.main_window,
+                                                caption="Export manipulated data as .sicm file",
+                                                filter="All files (*.*);;SICM (*.sicm)",
+                                                directory=DEFAULT_FILE_PATH,
+                                                initialFilter="SICM (*.sicm)",
+                                                options=options
+                                                )
+        if file_path[0]:
+            if file_path[0].lower().endswith(".sicm"):
+                file_path = file_path[0]
+            else:
+                file_path = file_path[0] + ".sicm"
+            export_sicm_file(file_path, self.data_manager.get_data(self.current_selection))
 
     def undo(self):
         self.data_manager.undo_manipulation(self.current_selection)

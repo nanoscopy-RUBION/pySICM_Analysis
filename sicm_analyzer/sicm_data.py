@@ -16,6 +16,7 @@ only approach curves and backstep scans are supported. A factory class which tak
 the file path as an argument enables import of .sicm files and returns an object
 of either ApproachCurve or ScanBackstepMode.
 """
+import os
 import tarfile
 from tarfile import TarFile
 import json
@@ -90,6 +91,7 @@ class ScanBackstepMode(SICMdata):
         super(ScanBackstepMode, self).__init__()
 
     def set_settings(self, settings: dict):
+        self.settings = settings
         self.x_px = int(settings[Xpx])
         self.y_px = int(settings[Ypx])
         try:
@@ -148,25 +150,86 @@ def read_byte_data(tar: TarFile) -> list[int]:
         two_bytes = data_file.read(2)
         while two_bytes:
             pack = struct.unpack('<H', two_bytes)
-            # type(pack) is tuple(int,)
             data.append(pack[0])
             two_bytes = data_file.read(2)
     return data
 
 
-def get_data_as_bytes(data: np.array):
+def get_data_as_bytes(data: SICMdata):
     """Packs and returns data as list of bytes.
 
-
     """
+    z_data = data.z.flatten("C") * 1000
     byte_data = []
-    for pixel in data:
-        byte_data.append(struct.pack(pixel, "<H"))
+    for pixel in z_data:
+        byte_data.append(struct.pack("<H", int(pixel)))
     return byte_data
 
 
-def export_sicm_file():
-    """"""
+def export_sicm_file(file_to_save, sicm_data: SICMdata):
+    """
+
+    """
+    temporary_files_for_sicm_data_package(sicm_data)
+    create_targz_from_list_of_files(file_to_save)
+    _clear_temporary_files()
+
+
+def temporary_files_for_sicm_data_package(sicm_data: SICMdata):
+    """Writes all necessary files for the sicm file format package.
+    """
+    path = os.getcwd()
+
+    with open(os.path.join(path, "cropped.info"), "w") as f:
+        json.dump(sicm_data.info, f)
+        f.close()
+    with open(os.path.join(path, ".mode"), "w") as f:
+        f.write(sicm_data.scan_mode)
+        f.close()
+    x_px, y_px = sicm_data.z.shape
+    old_x_px = sicm_data.x_px
+    old_y_px = sicm_data.y_px
+    print(sicm_data.settings)
+    sicm_data.settings["x-px"] = str(x_px)
+    sicm_data.settings["y-px"] = str(y_px)
+    print(sicm_data.settings)
+    sjson = json.dumps(sicm_data.settings, separators=(',', ':'))
+    with open(os.path.join(path, "settings.json"), "w") as f:
+        f.write(sjson)
+        f.close()
+    sicm_data.settings["x-px"] = old_x_px
+    sicm_data.settings["y-px"] = old_y_px
+    byte_data = get_data_as_bytes(sicm_data)
+
+    with open(os.path.join(path, "cropped"), "wb") as f:
+        for byte in byte_data:
+            f.write(byte)
+        f.close()
+
+
+def create_targz_from_list_of_files(filename: str):
+    """Writes a tar.gz file and adds a list of files to it.
+
+    filename: a string cocntaining the file path and file name
+    """
+    files = ["cropped.info", "cropped", ".mode", "settings.json"]
+    path = os.getcwd()
+    with tarfile.open(filename, "w:gz") as tar:
+        for f in files:
+            tar.add(os.path.join(path, f), arcname=f)
+        tar.close()
+
+
+def _clear_temporary_files():
+    """Deletes all four temporary files which were
+    created during sicm data export."""
+    try:
+        os.remove("cropped.info")
+        os.remove(".mode")
+        os.remove("settings.json")
+        os.remove("cropped")
+    except OSError:
+        print("Error - File was not deleted")
 
 def get_sicm_mode(tar: TarFile) -> str:
     """Return a string representation of the scan mode.
