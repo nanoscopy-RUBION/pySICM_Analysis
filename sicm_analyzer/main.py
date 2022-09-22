@@ -107,20 +107,11 @@ class Controller:
         # Other
         self.main_window.imported_files_list.currentItemChanged.connect(self.item_selection_changed_event)
         self.main_window.action_roughness.triggered.connect(self.show_results)
-        #self.main_window.imported_files_list.eventFilter = self.eventFilter
         # self.main_window.action_about.triggered.connect(self.about)
         self.main_window.closeEvent = self.quit_application
 
-    def eventFilter(self, object, event):
-        """Add key events here:
-        At the moment the following key events are recognized:
-        Todo
-        """
-        if event.type() == QKeyEvent:
-            self.remove_selection(event)
-            return True
-        else:
-            return False
+        # Key Events
+        self.main_window.delete_key = self.remove_selection
 
     def export_figure(self, figure: Figure):
         """Exports the current view of a figure."""
@@ -297,11 +288,13 @@ class Controller:
                                                     )
         return filenames
 
-    def remove_selection(self, event):
-        print(event)
+    def remove_selection(self):
         try:
             index = self.main_window.imported_files_list.selectionModel().currentIndex().row()
-            print(index)
+            item = self.main_window.imported_files_list.currentItem()
+            data_key = item.text()
+            self.data_manager.remove_data(data_key)
+            self.main_window.imported_files_list.takeItem(index)
         except:
             pass
 

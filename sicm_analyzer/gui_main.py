@@ -5,7 +5,7 @@ import os
 from os.path import join
 from PyQt6 import QtWidgets
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QIcon, QAction, QActionGroup
+from PyQt6.QtGui import QIcon, QAction, QActionGroup, QKeyEvent
 
 from PyQt6.QtWidgets import QHBoxLayout, QListWidget, QLabel, QWidget, QVBoxLayout, QSplitter, QStyle, \
     QMainWindow, QToolBar, QAbstractItemView, QDockWidget
@@ -256,6 +256,11 @@ class MainWindow(QMainWindow):
         # this menu should contain instruction how to use the software
         # and information about algorithms used in data analysis
 
+        # Key events
+        self.imported_files_list.installEventFilter(self)
+        self.delete_key = None
+
+
         self.toolbar = QToolBar()
         self.toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
         self.toolbar.setMovable(False)
@@ -273,6 +278,20 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage('Ready')
         self.setMinimumSize(300, 300)
         self.show()
+
+    def eventFilter(self, source, event):
+        """Add key events here:
+        At the moment the following key events are recognized:
+
+        Key_Delete
+        """
+        if event.type() is QKeyEvent.Type.KeyPress:
+            if event.key() == Qt.Key.Key_Delete:
+                try:
+                    self.delete_key()
+                except:
+                    pass
+        return super().eventFilter(source, event)
 
     def show_graphs(self):
         if not self.dock_3d_plot.isVisible():
