@@ -300,7 +300,6 @@ class GraphCanvas(FigureCanvasQTAgg):
                 self.mi.mouse_point1 = QPoint(int(event.xdata), int(event.ydata))
 
             if event.name == "button_release_event":
-                self.mi.mouse_point1 = QPoint(int(event.xdata), int(event.ydata))
                 self.figure.clear()
                 self.draw_2d_plot_raster_image(self.current_data, self.current_view)
                 self.draw()
