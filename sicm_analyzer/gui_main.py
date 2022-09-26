@@ -31,7 +31,7 @@ class SecondaryWindow(QWidget):
         self.canvas = None
         self.layout = QVBoxLayout()
         self.setLayout(self.layout)
-        print(self.parent())
+        #print(self.parent())
 
     def add_canvas(self, canvas):
         self.canvas = canvas
@@ -232,6 +232,10 @@ class MainWindow(QMainWindow):
         # Measurements menu
         self.action_roughness = QAction("Roughness")
         self.action_roughness.setEnabled(False)
+        self.action_line_profile_row = QAction("row")
+        self.action_line_profile_row.setEnabled(False)
+        self.action_line_profile_column = QAction("column")
+        self.action_line_profile_column.setEnabled(False)
         action_measure_dist = QAction('&Measure distance', self)
         action_measure_dist.setEnabled(False)  # TODO
         action_measure_profile = QAction('&Measure profile', self)
@@ -241,6 +245,9 @@ class MainWindow(QMainWindow):
 
         self.measure_menu = menubar.addMenu("&Measurements")
         self.measure_menu.addAction(self.action_roughness)
+        line_profile_menu = self.measure_menu.addMenu("Show line profile")
+        line_profile_menu.addAction(self.action_line_profile_row)
+        line_profile_menu.addAction(self.action_line_profile_column)
         self.measure_menu.addAction(action_measure_dist)
         self.measure_menu.addAction(action_measure_profile)
         self.measure_menu.addAction(self.action_set_rois)
@@ -305,6 +312,7 @@ class MainWindow(QMainWindow):
         self.measure_menu.setEnabled(enable)
         self.action_roughness.setEnabled(enable)
         self.about_menu.setEnabled(enable)
+        self.action_line_profile_row.setEnabled(enable)
 
     def toggle_show_toolbar(self):
         if self.toolbar.isVisible():
