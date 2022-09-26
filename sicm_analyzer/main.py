@@ -507,9 +507,9 @@ class Controller:
                 self.line_profile.show()
                 canvas.plot_line_profile(x[index, :], z[index, :])
 
-    def _show_line_profile_column(self, index: int, selection_mode: str = "column"):
+    def _show_line_profile_column(self, index: int = -1, selection_mode: str = "column"):
         """TODO"""
-        if index and index >= 0:
+        if index >= 0:
             x = self.data_manager.get_data(self.current_selection).x
             z = self.data_manager.get_data(self.current_selection).z
             shape = z.shape
