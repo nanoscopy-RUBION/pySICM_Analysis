@@ -493,10 +493,9 @@ class Controller:
             func=self._show_line_profile_column
         )
 
-    def _show_line_profile_row(self, index: int, selection_mode: str = "row"):
+    def _show_line_profile_row(self, index: int = -1, selection_mode: str = "row"):
         """TODO"""
-        print(index)
-        if index and index >= 0:
+        if index >= 0:
             x = self.data_manager.get_data(self.current_selection).x
             z = self.data_manager.get_data(self.current_selection).z
             shape = z.shape
