@@ -171,16 +171,15 @@ class GraphCanvas(FigureCanvasQTAgg):
         if view:
             self.axes.axis(view.axes_shown)
 
-    def draw_line_profile(self, data: SICMdata, view: View = None, func=None):
+    def draw_line_profile(self, data: SICMdata, view: View = None, func=None, mode: str = "row"):
         """Draw line profile plot.
         TODO distinguish between column and row mode
         Maybe later custom drawn lines on the plot will be supported.
         """
-        self._bind_mouse_events(self._highlight_row_or_column_and_call_func)
+        self._bind_mouse_events(self._highlight_row_or_column_and_call_func, mode=mode)
         self.function_after_mouse_events = func
         self.current_data = data
         self.current_view = view
-
 
     def get_viewing_angles_from_3d_plot(self):
         azim = self.figure.get_axes()[0].azim
@@ -193,11 +192,11 @@ class GraphCanvas(FigureCanvasQTAgg):
         self.current_data = data
         self.current_view = view
 
-    def _bind_mouse_events(self, func):
-        """Binds func1 to mouse events on the canvas.
-        Function 2 is optional and will be called after the mouse button
-        release event has occurred."""
-        self.mi = MouseInteraction()
+    def _bind_mouse_events(self, func, *args, **kwargs):
+        """Binds a function to mouse events on the canvas.
+        Optional arguments may be passed to MouseInteraction.
+        """
+        self.mi = MouseInteraction(*args, **kwargs)
         self.mi.cid_press = self.figure.canvas.mpl_connect('button_press_event', func)
         self.mi.cid_move = self.figure.canvas.mpl_connect('motion_notify_event', func)
         self.mi.cid_release = self.figure.canvas.mpl_connect('button_release_event', func)
@@ -274,18 +273,30 @@ class GraphCanvas(FigureCanvasQTAgg):
             if event.name == "motion_notify_event":
                 try:
                     self.mi.mouse_point1 = QPoint(int(event.xdata), int(event.ydata))
-                    x1 = 0
-                    y1 = self.mi.mouse_point1.y()
-                    x2 = self.current_data.z.shape[0]-1
-                    y2 = y1 + 1
+                    index = -1
+                    if self.mi.kwargs.get("mode") == "row":
+                        x1 = 0
+                        y1 = self.mi.mouse_point1.y()
+                        x2 = self.current_data.z.shape[0]-1
+                        y2 = y1 + 1
+                        origin = (x1, y1)
+
+                        width = x2 + 1
+                        height = 1
+                        index = self.mi.mouse_point1.y()
+                    else:
+                        x1 = self.mi.mouse_point1.x()
+                        y1 = 0
+                        x2 = x1 + 1
+                        y2 = self.current_data.z.shape[1] - 1
+                        origin = (x1, y1)
+
+                        width = 1
+                        height = y2 + 1
+                        index = self.mi.mouse_point1.x()
 
                     self.figure.clear()
                     self.draw_2d_plot_raster_image(self.current_data, self.current_view)
-
-                    origin = (x1, y1)
-
-                    width = x2 + 1
-                    height = 1
                     rect = Rectangle(xy=origin, width=width, height=height,
                                      fill=True, facecolor='r', alpha=0.4,
                                      linewidth=2, edgecolor='r',
@@ -293,6 +304,9 @@ class GraphCanvas(FigureCanvasQTAgg):
                                      )
                     self.figure.get_axes()[0].add_patch(rect)
                     self.draw()
+
+                    if self.function_after_mouse_events:
+                        self.function_after_mouse_events(index)
                 except:
                     pass
 
@@ -308,10 +322,7 @@ class GraphCanvas(FigureCanvasQTAgg):
                     self.figure.canvas.mpl_disconnect(self.mi.cid_press)
                     self.figure.canvas.mpl_disconnect(self.mi.cid_move)
                     self.figure.canvas.mpl_disconnect(self.mi.cid_release)
-
-                    if self.function_after_mouse_events:
-                        self.function_after_mouse_events(self.mi.mouse_point1.y())
-                        self.function_after_mouse_events = None
+                    self.function_after_mouse_events = None
                     self.mi = None
 
     def plot_line_profile(self, x_data, y_data):

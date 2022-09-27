@@ -301,20 +301,30 @@ class MainWindow(QMainWindow):
         return super().eventFilter(source, event)
 
     def show_graphs(self):
+        """Shows the dock widgets containing the
+        plot canvases."""
         if not self.dock_3d_plot.isVisible():
             self.dock_3d_plot.show()
         if not self.dock_2d_plot.isVisible():
             self.dock_2d_plot.show()
 
     def set_menus_enabled(self, enable):
+        """"
+        Sets the menu items enabled status.
+
+        Add menus and menu items here which should be enabled
+        or disabled when list selection changes.
+        """
         self.view_menu.setEnabled(enable)
         self.data_menu.setEnabled(enable)
         self.measure_menu.setEnabled(enable)
         self.action_roughness.setEnabled(enable)
         self.about_menu.setEnabled(enable)
         self.action_line_profile_row.setEnabled(enable)
+        self.action_line_profile_column.setEnabled(enable)
 
     def toggle_show_toolbar(self):
+        """Show or hide toolbar."""
         if self.toolbar.isVisible():
             self.toolbar.setVisible(False)
         else:

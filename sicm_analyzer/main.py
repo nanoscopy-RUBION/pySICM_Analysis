@@ -11,15 +11,15 @@ from os import listdir
 from os.path import join, isfile
 from matplotlib.figure import Figure
 
-from PyQt6.QtCore import QPoint, QEvent, Qt
-from PyQt6.QtGui import QIcon, QKeyEvent
-from PyQt6.QtWidgets import QApplication, QFileDialog, QInputDialog, QListWidget
+from PyQt6.QtCore import QPoint
+from PyQt6.QtGui import QIcon
+from PyQt6.QtWidgets import QApplication, QFileDialog, QInputDialog
 
 from sicm_analyzer.data_manager import DataManager
 from sicm_analyzer.results import ResultsWindow
 from sicm_analyzer.colormap_dialog import ColorMapDialog
 from sicm_analyzer.enter_area_dialog import EnterAreaDialog
-from sicm_analyzer.gui_main import MainWindow, SecondaryWindow
+from sicm_analyzer.gui_main import MainWindow
 from sicm_analyzer.graph_canvas import GraphCanvas
 from sicm_analyzer.filter_dialog import FilterDialog
 from sicm_analyzer.manipulate_data import transpose_z_data, subtract_z_minimum, crop
@@ -479,47 +479,49 @@ class Controller:
 
     def select_line_profile_row(self):
         """TODO"""
+        self.line_profile = LineProfileWindow(self.main_window)
+        self.line_profile.add_canvas(GraphCanvas())
+        self.line_profile.show()
+
         self.figure_canvas_2d.draw_line_profile(
             data=self.data_manager.get_data(self.current_selection),
             view=self.view,
-            func=self._show_line_profile_row
+            func=self._show_line_profile_row,
+            mode="row"
         )
 
     def select_line_profile_column(self):
         """TODO"""
+        self.line_profile = LineProfileWindow(self.main_window)
+        self.line_profile.add_canvas(GraphCanvas())
+        self.line_profile.show()
+
         self.figure_canvas_2d.draw_line_profile(
             data=self.data_manager.get_data(self.current_selection),
             view=self.view,
-            func=self._show_line_profile_column
+            func=self._show_line_profile_column,
+            mode="columns"
         )
 
     def _show_line_profile_row(self, index: int = -1, selection_mode: str = "row"):
         """TODO"""
         if index >= 0:
-            x = self.data_manager.get_data(self.current_selection).x
-            z = self.data_manager.get_data(self.current_selection).z
+            data = self.data_manager.get_data(self.current_selection)
+            x = data.x
+            z = data.z
             shape = z.shape
             if selection_mode == "row" and index <= shape[0]:
-
-                self.line_profile = SecondaryWindow(self.main_window)
-                canvas = GraphCanvas()
-                self.line_profile.add_canvas(canvas)
-                self.line_profile.show()
-                canvas.plot_line_profile(x[index, :], z[index, :])
+                self.line_profile.update_plot(x[index, :], z[index, :])
 
     def _show_line_profile_column(self, index: int = -1, selection_mode: str = "column"):
         """TODO"""
         if index >= 0:
-            x = self.data_manager.get_data(self.current_selection).x
-            z = self.data_manager.get_data(self.current_selection).z
+            data = self.data_manager.get_data(self.current_selection)
+            y = data.y
+            z = data.z
             shape = z.shape
-            if selection_mode == "column" and index <= shape[0]:
-                self.line_profile = SecondaryWindow(self.main_window)
-                canvas = GraphCanvas()
-                self.line_profile.add_canvas(canvas)
-                self.line_profile.show()
-                canvas.plot_line_profile(x[index, :], z[index, :])
-
+            if selection_mode == "column" and index <= shape[1]:
+                self.line_profile.update_plot(y[:, index], z[:, index])
 
     def show_roi_dialog(self):
         self.roi_dialog = ROIsDialog(controller=self, parent=self.main_window)
