@@ -1,8 +1,5 @@
 import os
 import sys
-
-from sicm_analyzer.line_profile_window import LineProfileWindow
-
 sys.path.append("")
 import traceback
 import numpy as np
@@ -32,6 +29,7 @@ from sicm_analyzer.view import View
 from sicm_analyzer.graph_canvas import SURFACE_PLOT, RASTER_IMAGE, APPROACH_CURVE
 from sicm_analyzer.set_rois_dialog import ROIsDialog
 from sicm_analyzer.measurements import polynomial_fifth_degree
+from sicm_analyzer.line_profile_window import LineProfileWindow
 
 # APP CONSTANTS
 APP_NAME = "pySICM Analysis"
