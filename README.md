@@ -9,11 +9,6 @@
 
 ## To Do
 - General:
-  - info block which contains meta data
-    - scan duration
-    - date
-    - pixel sizes
-    - scan sizes
   - add checkbox to list items
   - clean up existing py files
 - New Functions:
@@ -38,3 +33,5 @@
   - Distance between two points
   - Profile
 - About window
+  - program version info screen and licence
+  - user manual

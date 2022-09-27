@@ -389,6 +389,15 @@ class Controller:
                 self.figure_canvas_3d.draw_graph(current_data)
                 self.figure_canvas_2d.draw_graph(current_data, APPROACH_CURVE, self.view)
 
+            self.main_window.update_info_labels(
+                scan_date=current_data.get_scan_date(),
+                scan_time=current_data.get_scan_time(),
+                x_px=current_data.x_px,
+                y_px=current_data.y_px,
+                x_size=current_data.x_size,
+                y_size=current_data.y_size
+            )
+
             self._update_undo_redo_menu_items()
             self.main_window.set_data_manipulation_list_items(
                 self.data_manager.get_undoable_manipulations_list(self.current_selection)

@@ -8,7 +8,7 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QIcon, QAction, QActionGroup, QKeyEvent
 
 from PyQt6.QtWidgets import QHBoxLayout, QListWidget, QLabel, QWidget, QVBoxLayout, QSplitter, QStyle, \
-    QMainWindow, QToolBar, QAbstractItemView, QDockWidget
+    QMainWindow, QToolBar, QAbstractItemView, QDockWidget, QGridLayout, QPlainTextEdit, QTextEdit
 
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 import matplotlib
@@ -81,10 +81,24 @@ class MainWindow(QMainWindow):
 
         self.horizontal_splitter = QSplitter(Qt.Orientation.Horizontal)
 
+        # info widget
+        info_layout = QVBoxLayout()
+        info_label = QLabel("Metadata:")
+        self.info_text = QTextEdit()
+        self.info_text.setReadOnly(True)
+        self.info_text.setFixedHeight(140)
+        info_layout.addWidget(info_label)
+        info_layout.addWidget(self.info_text)
+        info_widget = QWidget()
+        info_widget.setLayout(info_layout)
+
         self.vertical_splitter = QSplitter(Qt.Orientation.Vertical)
+        self.vertical_splitter.addWidget(info_widget)
         self.vertical_splitter.addWidget(top)
         self.vertical_splitter.addWidget(bottom)
-        self.vertical_splitter.setStretchFactor(0, 6)
+        self.vertical_splitter.setStretchFactor(0, 1)
+        self.vertical_splitter.setStretchFactor(1, 5)
+        self.vertical_splitter.setStretchFactor(2, 2)
 
         self.statusBar()
         menubar = self.menuBar()
@@ -101,7 +115,6 @@ class MainWindow(QMainWindow):
         self.central_widget.setLayout(horizontal_layout)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.dock_3d_plot)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.dock_2d_plot)
-
 
         # File menu
         self.action_clear = QAction(QIcon(join(self.resource_dir, "pySICM64.png")), '&Clear list', self)
@@ -374,3 +387,29 @@ class MainWindow(QMainWindow):
     def set_data_manipulation_list_items(self, items):
         self.data_manipulation_list.clear()
         self.data_manipulation_list.addItems(items)
+
+    def update_info_labels(self, scan_date, scan_time, x_px, y_px, x_size, y_size):
+        text = f"<html>" \
+               f"<table style='width:100%'>" \
+               f"<tr>" \
+               f"<td><b>Scan date:</b></td> <td>{scan_date}</td>" \
+               f"</tr>" \
+               f"<tr>" \
+               f"<td><b>Scan time:</b></td> <td>{scan_time}</td>" \
+               f"</tr>" \
+               f"<tr>" \
+               f"<td><b>x pixels:</b></td> <td>{x_px}</td>" \
+               f"</tr>" \
+               f"<tr>" \
+               f"<td><b>y pixels:</b></td> <td>{y_px}</td>" \
+               f"</tr>" \
+               f"<tr>" \
+               f"<td><b>x size:</b></td> <td>{x_size}</td>" \
+               f"</tr>" \
+               f"<tr>" \
+               f"<td><b>y size:</b></td> <td>{y_size}</td>" \
+               f"</tr>" \
+               f"</table>" \
+               "</html>"
+        self.info_text.clear()
+        self.info_text.setHtml(text)

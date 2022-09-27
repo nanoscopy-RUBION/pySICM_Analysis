@@ -1,5 +1,5 @@
 """This module handles import of raw data obtained from our custom build scanning
-ion conductance microsope (SICM) which was recorded with the homebrew software pySICM.
+ion conductance microscope (SICM) which was recorded with the homebrew software pySICM.
 pySICM recordings are stored in a custom file format: .sicm
 
 Some information on the supported file format (.sicm):
@@ -9,6 +9,11 @@ Some information on the supported file format (.sicm):
         - <FILENAME>: the actual measurement data. This is a binary file containing
                       unsigned 16-bit integers (little endian!).
         - <FILENAME>.info: Some information on scan times.
+            client_start_time = datetime.datetime.now()
+            client_start_timestamp = int(round(time.time() * 1e3))
+            client_end_timestamp = int(round(time.time() * 1e3))
+            client_duration = client_end_timestamp - client_start_timestamp
+            This means that the scan duration is saved as milliseconds
         - settings.json: A JSON file containing scan settings.
 
 It is planned to support multiple scanning modes. At this moment (2022-09-05)
@@ -18,6 +23,7 @@ of either ApproachCurve or ScanBackstepMode.
 """
 import os
 import tarfile
+import time
 from tarfile import TarFile
 import json
 import numpy as np
@@ -67,6 +73,29 @@ class SICMdata:
          x, y and z for Scan data."""
         pass
 
+    def get_scan_time(self) -> str:
+        """Returns the scan time as a string.
+        The format is hours:minutes:seconds."""
+        try:
+            time_in_s = round(self.info.get("client_duration") / 1000)
+        except TypeError:
+            time_in_s = 0
+        return time.strftime("%H:%M:%S", time.gmtime(time_in_s))
+
+    def get_scan_date(self) -> str:
+        """
+        Returns the date of the scan as a string.
+
+        For some reason, no time information are stored in .info
+        files of approach curve recordings.
+        """
+        try:
+            date = self.info.get("client_start_time")
+            date = date[:date.index(".")]
+        except AttributeError:
+            date = "n/a"
+        return date
+
 
 class ApproachCurve(SICMdata):
     """ApproachCurves are two-dimensional data sets.
@@ -74,6 +103,9 @@ class ApproachCurve(SICMdata):
 
     def __init__(self):
         super(ApproachCurve, self).__init__()
+
+    def set_settings(self, settings: dict):
+        self.settings = settings
 
     def set_data(self, data: list[int]):
         self.x = np.array(range(len(data)))
@@ -97,7 +129,7 @@ class ScanBackstepMode(SICMdata):
         try:
             self.x_size = int(settings[X_size])
             self.y_size = int(settings[Y_size])
-        except ValueError as e:
+        except ValueError:
             # there seem to be cases in which no x_size value is set in settings.json
             print("No x_size or y_size value in settings.json.")
             self.x_size = self.x_px
@@ -109,7 +141,7 @@ class ScanBackstepMode(SICMdata):
         self.x, self.y = np.meshgrid(range(self.x_px), range(self.y_px))
 
     def get_data(self):
-        """"""
+        """Return x, y, and z data."""
         return self.x, self.y, self.z
 
 
@@ -210,7 +242,7 @@ def temporary_files_for_sicm_data_package(sicm_data: SICMdata):
 def create_targz_from_list_of_files(filename: str):
     """Writes a tar.gz file and adds a list of files to it.
 
-    filename: a string cocntaining the file path and file name
+    filename: a string containing the file path and file name
     """
     files = ["cropped.info", "cropped", ".mode", "settings.json"]
     path = os.getcwd()
@@ -230,6 +262,7 @@ def _clear_temporary_files():
         os.remove("cropped")
     except OSError:
         print("Error - File was not deleted")
+
 
 def get_sicm_mode(tar: TarFile) -> str:
     """Return a string representation of the scan mode.
