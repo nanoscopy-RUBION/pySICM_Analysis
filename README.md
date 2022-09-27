@@ -21,7 +21,6 @@
 - Colormap window
   - Create custom color maps
 - Show Line profile of selection
-  - Column/row
   - custom line defined by drawing into the plot
 - Measurement of:
   - Distance between two points

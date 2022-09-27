@@ -5,13 +5,15 @@ from PyQt6.QtCore import QPoint
 
 class MouseInteraction:
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         self.cid_move = None
         self.cid_press = None
         self.cid_release = None
 
         self.mouse_point1 = None
         self.mouse_point2 = None
+        self.args = args
+        self.kwargs = kwargs
 
     def set_point_1_on_click(self, event):
         if event.name == "button_press_event":

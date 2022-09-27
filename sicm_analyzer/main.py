@@ -1,5 +1,8 @@
 import os
 import sys
+
+from sicm_analyzer.line_profile_window import LineProfileWindow
+
 sys.path.append("")
 import traceback
 import numpy as np
@@ -8,9 +11,9 @@ from os import listdir
 from os.path import join, isfile
 from matplotlib.figure import Figure
 
-from PyQt6.QtCore import QPoint, QEvent, Qt
-from PyQt6.QtGui import QIcon, QKeyEvent
-from PyQt6.QtWidgets import QApplication, QFileDialog, QInputDialog, QListWidget
+from PyQt6.QtCore import QPoint
+from PyQt6.QtGui import QIcon
+from PyQt6.QtWidgets import QApplication, QFileDialog, QInputDialog
 
 from sicm_analyzer.data_manager import DataManager
 from sicm_analyzer.results import ResultsWindow
@@ -104,6 +107,9 @@ class Controller:
         # Measurement
         self.main_window.action_set_rois.triggered.connect(self.show_roi_dialog)
         self.main_window.action_set_roi.triggered.connect(self.select_roi_with_mouse)
+        self.main_window.action_line_profile_row.triggered.connect(self.select_line_profile_row)
+        self.main_window.action_line_profile_column.triggered.connect(self.select_line_profile_column)
+
         # Other
         self.main_window.imported_files_list.currentItemChanged.connect(self.item_selection_changed_event)
         self.main_window.action_roughness.triggered.connect(self.show_results)
@@ -289,6 +295,7 @@ class Controller:
         return filenames
 
     def remove_selection(self):
+        """TODO doc"""
         try:
             index = self.main_window.imported_files_list.selectionModel().currentIndex().row()
             item = self.main_window.imported_files_list.currentItem()
@@ -297,7 +304,6 @@ class Controller:
             self.main_window.imported_files_list.takeItem(index)
         except:
             pass
-
 
     def add_files_to_list(self, files):
         """
@@ -470,6 +476,52 @@ class Controller:
     def _points_are_not_equal(self, point1: QPoint, point2: QPoint) -> bool:
         """Checks if two points have the same coordinates."""
         return point1.x() != point2.x() and point1.y() != point2.y()
+
+    def select_line_profile_row(self):
+        """TODO"""
+        self.line_profile = LineProfileWindow(self.main_window)
+        self.line_profile.add_canvas(GraphCanvas())
+        self.line_profile.show()
+
+        self.figure_canvas_2d.draw_line_profile(
+            data=self.data_manager.get_data(self.current_selection),
+            view=self.view,
+            func=self._show_line_profile_row,
+            mode="row"
+        )
+
+    def select_line_profile_column(self):
+        """TODO"""
+        self.line_profile = LineProfileWindow(self.main_window)
+        self.line_profile.add_canvas(GraphCanvas())
+        self.line_profile.show()
+
+        self.figure_canvas_2d.draw_line_profile(
+            data=self.data_manager.get_data(self.current_selection),
+            view=self.view,
+            func=self._show_line_profile_column,
+            mode="columns"
+        )
+
+    def _show_line_profile_row(self, index: int = -1, selection_mode: str = "row"):
+        """TODO"""
+        if index >= 0:
+            data = self.data_manager.get_data(self.current_selection)
+            x = data.x
+            z = data.z
+            shape = z.shape
+            if selection_mode == "row" and index <= shape[0]:
+                self.line_profile.update_plot(x[index, :], z[index, :])
+
+    def _show_line_profile_column(self, index: int = -1, selection_mode: str = "column"):
+        """TODO"""
+        if index >= 0:
+            data = self.data_manager.get_data(self.current_selection)
+            y = data.y
+            z = data.z
+            shape = z.shape
+            if selection_mode == "column" and index <= shape[1]:
+                self.line_profile.update_plot(y[:, index], z[:, index])
 
     def show_roi_dialog(self):
         self.roi_dialog = ROIsDialog(controller=self, parent=self.main_window)
