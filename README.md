@@ -4,8 +4,6 @@
 - Crop
   - it is possible to enter values which are too large for the scan
   - hints for input (px or µm, index begins at 0)
-- Line profile
-  - width and height do not fit in rectangular scans
 
 ## To Do
 - General:
