@@ -105,7 +105,9 @@ class MainWindow(QMainWindow):
 
 
         # File menu
-        self.action_clear = QAction(QIcon(join(self.resource_dir, "pySICM64.png")), '&Clear', self)
+        self.action_clear = QAction(QIcon(join(self.resource_dir, "pySICM64.png")), '&Clear list', self)
+        self.action_remove_selection = QAction("Remove selection", self)
+        self.action_remove_selection.setShortcut("Ctrl+D")
         self.action_import_files = QAction(icon_files, "&Import Files...", self)
         self.action_import_directory = QAction(icon_directory, '&Import Directory...', self)
         self.action_export_sicm_data = QAction(icon_export, 'Export sicm data', self)
@@ -116,6 +118,7 @@ class MainWindow(QMainWindow):
         self.action_exit = QAction('&Exit', self)
 
         file_menu.addAction(self.action_clear)
+        file_menu.addAction(self.action_remove_selection)
         file_menu.addSeparator()
         file_menu.addAction(self.action_import_files)
         file_menu.addAction(self.action_import_directory)

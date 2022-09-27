@@ -73,6 +73,7 @@ class Controller:
         """Connect functions with actions in the main window's menu."""
         # File menu
         self.main_window.action_clear.triggered.connect(self.clear_lists)
+        self.main_window.action_remove_selection.triggered.connect(self.remove_selection)
         self.main_window.action_import_files.triggered.connect(self.import_files)
         self.main_window.action_import_directory.triggered.connect(self.import_directory)
         self.main_window.action_export_2d.triggered.connect(lambda: self.export_figure(self.figure_canvas_2d.figure))
