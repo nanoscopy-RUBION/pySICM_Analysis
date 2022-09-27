@@ -31,7 +31,6 @@ class SecondaryWindow(QWidget):
         self.canvas = None
         self.layout = QVBoxLayout()
         self.setLayout(self.layout)
-        #print(self.parent())
 
     def add_canvas(self, canvas):
         self.canvas = canvas

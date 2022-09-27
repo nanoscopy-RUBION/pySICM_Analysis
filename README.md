@@ -1,7 +1,19 @@
 # pySICM Analysis
 
-# To Do
+## Known Bugs
+- Crop
+  - it is possible to enter values which are too large for the scan
+  - hints for input (px or µm, index begins at 0)
+- Line profile
+  - width and height do not fit in rectangular scans
+
+## To Do
 - General:
+  - info block which contains meta data
+    - scan duration
+    - date
+    - pixel sizes
+    - scan sizes
   - add checkbox to list items
   - clean up existing py files
 - New Functions:

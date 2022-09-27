@@ -186,7 +186,8 @@ class Controller:
         )
         aspect_r = self._extract_aspect_ratio_tuple_from_string(input_string)
         try:
-            self.change_aspect_ratio_for_current_view(aspect_r)
+            if aspect_r:
+                self.change_aspect_ratio_for_current_view(aspect_r)
         except ValueError:
             self.main_window.display_status_bar_message("Invalid input for aspect ratio")
 
@@ -295,7 +296,7 @@ class Controller:
         return filenames
 
     def remove_selection(self):
-        """TODO doc"""
+        """Remove selected item imported."""
         try:
             index = self.main_window.imported_files_list.selectionModel().currentIndex().row()
             item = self.main_window.imported_files_list.currentItem()
