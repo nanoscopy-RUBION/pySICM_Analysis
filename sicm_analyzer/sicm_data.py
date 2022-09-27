@@ -131,7 +131,7 @@ class ScanBackstepMode(SICMdata):
             self.y_size = int(settings[Y_size])
         except ValueError:
             # there seem to be cases in which no x_size value is set in settings.json
-            print("No x_size or y_size value in settings.json.")
+            print("No x_size or y_size value found in settings.json.")
             self.x_size = self.x_px
             self.y_size = self.y_px
 
