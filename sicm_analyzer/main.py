@@ -32,6 +32,7 @@ from sicm_analyzer.set_rois_dialog import ROIsDialog
 from sicm_analyzer.measurements import polynomial_fifth_degree
 from sicm_analyzer.line_profile_window import LineProfileWindow
 
+
 # APP CONSTANTS
 APP_NAME = "pySICM Analysis"
 APP_PATH = os.getcwd()
@@ -462,9 +463,20 @@ class Controller:
         dialog = EnterAreaDialog(controller=self, parent=self.main_window)
         if dialog.exec():
             point1, point2 = dialog.get_input_as_points()
-            self._crop_data(point1, point2)
+            z_array = self.data_manager.get_data(self.current_selection).z
+            if self.is_in_range(point1, z_array) and self.is_in_range(point2, z_array):
+                self._crop_data(point1, point2)
+            else:
+                self.main_window.display_status_bar_message("Invalid input: Data not cropped.")
         else:
-            self.main_window.display_status_bar_message("Data not cropped.")
+            self.main_window.display_status_bar_message("Invalid input: Data not cropped.")
+
+    def is_in_range(self, point: QPoint, array: np.ndarray) -> bool:
+        """
+        Checks if point coordinates are within the array size.
+        Note: ndarray.shape[0] is y and [1] is x!
+        """
+        return 0 <= point.x() <= array.shape[1] - 1 and 0 <= point.y() <= array.shape[0] - 1
 
     def crop_by_selection(self):
         self.figure_canvas_2d.draw_rectangle_on_raster_image(

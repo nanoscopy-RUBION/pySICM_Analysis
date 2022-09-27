@@ -15,6 +15,7 @@ def crop(data: SICMdata, point1: QPoint, point2: QPoint):
     Note: If the gui framework is changed and PyQt (Qt) is no longer used
     the data type of point1 and 2 must be changed.
     """
+
     data.rois = (QPoint(), QPoint())
 
     width = abs(point1.x() - point2.x())
