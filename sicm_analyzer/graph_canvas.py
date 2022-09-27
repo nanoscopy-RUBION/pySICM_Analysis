@@ -274,10 +274,12 @@ class GraphCanvas(FigureCanvasQTAgg):
                 try:
                     self.mi.mouse_point1 = QPoint(int(event.xdata), int(event.ydata))
                     index = -1
+
                     if self.mi.kwargs.get("mode") == "row":
                         x1 = 0
                         y1 = self.mi.mouse_point1.y()
-                        x2 = self.current_data.z.shape[0]-1
+
+                        x2 = self.current_data.z.shape[1]-1
                         y2 = y1 + 1
                         origin = (x1, y1)
 
@@ -288,7 +290,7 @@ class GraphCanvas(FigureCanvasQTAgg):
                         x1 = self.mi.mouse_point1.x()
                         y1 = 0
                         x2 = x1 + 1
-                        y2 = self.current_data.z.shape[1] - 1
+                        y2 = self.current_data.z.shape[0] - 1
                         origin = (x1, y1)
 
                         width = 1
