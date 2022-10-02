@@ -21,8 +21,10 @@ only approach curves and backstep scans are supported. A factory class which tak
 the file path as an argument enables import of .sicm files and returns an object
 of either ApproachCurve or ScanBackstepMode.
 """
+import copy
 import os
 import tarfile
+import tempfile
 import time
 from tarfile import TarFile
 import json
@@ -42,16 +44,22 @@ Y_size = "y-Size"
 
 class SICMdata:
     """
-    This class works as an interface for SICM data recorded in different scan modes.
-    Each scan mode should be implemented as a subclass inheriting from SICMdata.
-    set_data() should be overridden in the subclass to set the correct data fields.
-    Data fields in all three dimensions represent numpy arrays.
+    This class works as an interface for SICM data recorded in different scan modes
+    on our home-build scanning ion conductance microscope (SICM).
+
+    The setup as well as the control software, which has been developed by Dr. Patrick
+    Happel, support different scan modes.
+    When the functionality of pySCIM_analyzer is to be extended, implemented new scan modes
+    as a subclass inheriting from SICMdata.
+
+    set_data() and get_data() should be overridden in the subclass to set the correct data fields.
+    Data fields in all three dimensions are represented as numpy arrays.
     """
     def __init__(self):
         # data containing fields
-        self.x: np.ndarray = np.zeros(1)
-        self.y: np.ndarray = np.zeros(1)
-        self.z: np.ndarray = np.zeros(1)
+        self.x: np.ndarray = np.zeros((1, 1))
+        self.y: np.ndarray = np.zeros((1, 1))
+        self.z: np.ndarray = np.zeros((1, 1))
         # metadata fields
         self.x_size: int = 0
         self.y_size: int = 0
@@ -66,12 +74,12 @@ class SICMdata:
     def set_settings(self, settings: dict):
         """Sets metadata obtained from settings.json
         and .mode."""
-        pass
+        self.settings = settings
 
     def get_data(self):
         """Returns x and z data for ApproachCurves and
          x, y and z for Scan data."""
-        pass
+        return self.x, self.y, self.z
 
     def get_scan_time(self) -> str:
         """Returns the scan time as a string.
@@ -104,9 +112,6 @@ class ApproachCurve(SICMdata):
     def __init__(self):
         super(ApproachCurve, self).__init__()
 
-    def set_settings(self, settings: dict):
-        self.settings = settings
-
     def set_data(self, data: list[int]):
         self.x = np.array(range(len(data)))
         self.y = np.zeros(1)
@@ -117,60 +122,94 @@ class ApproachCurve(SICMdata):
 
 
 class ScanBackstepMode(SICMdata):
-    """TODO add doc string"""
+    """A class for 3-dimensional SICM scans."""
 
     def __init__(self):
         super(ScanBackstepMode, self).__init__()
 
     def set_settings(self, settings: dict):
-        self.settings = settings
+        super().set_settings(settings)
         self.x_px = int(settings[Xpx])
         self.y_px = int(settings[Ypx])
         try:
             self.x_size = int(settings[X_size])
             self.y_size = int(settings[Y_size])
         except ValueError:
-            # there seem to be cases in which no x_size value is set in settings.json
+            # There might be cases in which no x_size or y_size has
+            # been set in the control software
             print("No x_size or y_size value found in settings.json.")
             self.x_size = self.x_px
             self.y_size = self.y_px
 
     def set_data(self, data: list[int]):
         """Rearranges scan data for 3-dimensional plotting."""
-        self.z = np.reshape(data, (self.x_px, self.y_px)) / 1000  # to have z data in µm instead of nm
+        self.z = np.reshape(data, (self.y_px, self.x_px)) / 1000  # to have z data in µm instead of nm
+        self.reshape_xy_meshgrids()
+
+    def reshape_xy_meshgrids(self):
         self.x, self.y = np.meshgrid(range(self.x_px), range(self.y_px))
 
-    def get_data(self):
+    def get_data(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Return x, y, and z data."""
         return self.x, self.y, self.z
 
+    def get_pixel_dimensions(self) -> (int, int):
+        """Returns the number of x and y pixel for the scan."""
+        return self.x_px, self.y_px
 
-class SICMDataFactory:
+    def set_pixel_dimensions(self, x: int, y: int):
+        """
+        Sets numbers of pixels.
+
+        This function should be called when the size of the scan has been changed,
+        e.g., after a crop.
+        The original values in the settings dict of SICMdata remain unchanged.
+
+        :param int x: number of pixels in x
+        :param int y: number of pixels in y
+        """
+        self.x_px = x
+        self.y_px = y
+
+    def update_dimensions(self):
+        """Updates the number of pixel in x and y dimensions. Mesh grids for
+        x and y are also reshaped.
+
+        This function should be called when the scan size has changed, e.g.,
+        after crop.
+        """
+        self.y_px, self.x_px = self.z.shape
+        self.reshape_xy_meshgrids()
+
+
+def get_sicm_data(file_path: str) -> SICMdata:
+    """Read all data from the tar.gz-like .sicm-file format and stores it in
+    an instance of SICMdata.
+
+    Depending on the scan mode of the file one of the following
+    subclasses will be instantiated:
+        - ApproachCurve
+        - ScanBackstepMode
     """
-    Factory to return SICMData objects according to the scan mode.
-    """
-    def get_sicm_data(self, file_path: str) -> SICMdata:
-        """Read all data from the tar-like .sicm-file format"""
-        tar = tarfile.open(file_path, "r:gz")
-        scan_mode = get_sicm_mode(tar)
-        info = get_sicm_info(tar)
-        settings = get_sicm_settings(tar)
-        data = read_byte_data(tar)
+    tar = tarfile.open(file_path, "r:gz")
+    scan_mode = get_sicm_mode(tar)
+    info = get_sicm_info(tar)
+    settings = get_sicm_settings(tar)
+    data = read_byte_data(tar)
 
-        if scan_mode == BACKSTEP:
-            sicm_data = ScanBackstepMode()
-        elif scan_mode == APPROACH:
-            sicm_data = ApproachCurve()
-        else:
-            sicm_data = SICMdata()
+    if scan_mode == BACKSTEP:
+        sicm_data = ScanBackstepMode()
+    elif scan_mode == APPROACH:
+        sicm_data = ApproachCurve()
+    else:
+        sicm_data = SICMdata()
 
-        sicm_data.scan_mode = scan_mode
-        sicm_data.set_settings(settings)
+    sicm_data.scan_mode = scan_mode
+    sicm_data.set_settings(settings)
+    sicm_data.info = info
+    sicm_data.set_data(data)
 
-        sicm_data.info = info
-        sicm_data.set_data(data)
-
-        return sicm_data
+    return sicm_data
 
 
 def read_byte_data(tar: TarFile) -> list[int]:
@@ -187,9 +226,10 @@ def read_byte_data(tar: TarFile) -> list[int]:
     return data
 
 
-def get_data_as_bytes(data: SICMdata):
+def get_data_as_bytes(data: SICMdata) -> list[bytes]:
     """Packs and returns data as list of bytes.
-
+    All values will be converted from micrometer to nanometer.
+    Values are packed as unsigned 2-byte integers.
     """
     z_data = data.z.flatten("C") * 1000
     byte_data = []
@@ -198,70 +238,112 @@ def get_data_as_bytes(data: SICMdata):
     return byte_data
 
 
-def export_sicm_file(file_to_save, sicm_data: SICMdata):
+def export_sicm_file(file_path: str, sicm_data: SICMdata):
     """
+    Export an instance of SICMdata as a .sicm file.
 
+    This file will be readable by the MATLAB SICMapp written
+    by Patrick Happel and by pySICM_analyzer.
+
+    Dev note: At the moment only export of BackstepScans is implemented as
+    static functions. In the future these functions should be made class methods
+    of the different scan mode subclasses.
     """
-    temporary_files_for_sicm_data_package(sicm_data)
-    create_targz_from_list_of_files(file_to_save)
-    _clear_temporary_files()
+    # create a tempory directory to which files will be written before
+    # storing in tar.gz-like .sicm file
+    directory = tempfile.TemporaryDirectory()
+    path_temp_dir = directory.name
+    file_names = []
+    try:
+        # write files to temp directory
+        file_name = _write_byte_data_file(path_temp_dir, sicm_data)
+        file_names.append(file_name)
+        file_name = _write_data_info_file(path_temp_dir, sicm_data)
+        file_names.append(file_name)
+        file_name = _write_mode_file(path_temp_dir, sicm_data)
+        file_names.append(file_name)
+        file_name = _write_settings_file(path_temp_dir, sicm_data)
+        file_names.append(file_name)
+    except FileNotFoundError as e:
+        print("Error during file export as .sicm.")
+    create_targz_from_list_of_files(file_path, file_names)
 
 
-def temporary_files_for_sicm_data_package(sicm_data: SICMdata):
-    """Writes all necessary files for the sicm file format package.
+def _write_byte_data_file(path: str, sicm_data: SICMdata) -> str:
     """
-    path = os.getcwd()
+    Creates a file in the given directory path containing the byte data
+    of the SICMdata instance.
 
-    with open(os.path.join(path, "cropped.info"), "w") as f:
-        json.dump(sicm_data.info, f)
-        f.close()
-    with open(os.path.join(path, ".mode"), "w") as f:
-        f.write(sicm_data.scan_mode)
-        f.close()
-    x_px, y_px = sicm_data.z.shape
-    old_x_px = sicm_data.x_px
-    old_y_px = sicm_data.y_px
-
-    sicm_data.settings["x-px"] = str(x_px)
-    sicm_data.settings["y-px"] = str(y_px)
-
-    sjson = json.dumps(sicm_data.settings, separators=(',', ':'))
-    with open(os.path.join(path, "settings.json"), "w") as f:
-        f.write(sjson)
-        f.close()
-    sicm_data.settings["x-px"] = old_x_px
-    sicm_data.settings["y-px"] = old_y_px
+    :param str path: path to a directory
+    :return: full path to the file as a string.
+    """
     byte_data = get_data_as_bytes(sicm_data)
 
-    with open(os.path.join(path, "cropped"), "wb") as f:
+    with open(os.path.join(path, "data"), "wb") as f:
         for byte in byte_data:
             f.write(byte)
         f.close()
+    return f.name
 
 
-def create_targz_from_list_of_files(filename: str):
-    """Writes a tar.gz file and adds a list of files to it.
-
-    filename: a string containing the file path and file name
+def _write_data_info_file(path: str, sicm_data: SICMdata) -> str:
     """
-    files = ["cropped.info", "cropped", ".mode", "settings.json"]
-    path = os.getcwd()
-    with tarfile.open(filename, "w:gz") as tar:
-        for f in files:
-            tar.add(os.path.join(path, f), arcname=f)
-        tar.close()
+    Creates a file in the given directory path containing the scan info
+    of the SICMdata instance.
+
+    :param str path: path to a directory
+    :return: full path to the file as a string.
+    """
+    with open(os.path.join(path, "data.info"), "w") as f:
+        json.dump(sicm_data.info, f)
+        f.close()
+    return f.name
 
 
-def _clear_temporary_files():
-    """Deletes all four temporary files which were
-    created during sicm data export."""
-    try:
-        os.remove("cropped.info")
-        os.remove(".mode")
-        os.remove("settings.json")
-        os.remove("cropped")
-    except OSError:
-        print("Error - File was not deleted")
+def _write_mode_file(path: str, sicm_data: SICMdata) -> str:
+    """
+    Creates a file in the given directory path containing the scan mode
+    of the SICMdata instance.
+
+    :param str path: path to a directory
+    :return: full path to the file as a string.
+    """
+    with open(os.path.join(path, ".mode"), "w") as f:
+        f.write(sicm_data.scan_mode)
+        f.close()
+    return f.name
+
+
+def _write_settings_file(path: str, sicm_data: SICMdata) -> str:
+    """
+    Creates a file in the given directory path containing the scan settings
+    of the SICMdata instance.
+
+    :param str path: path to a directory
+    :return: full path to the file as a string.
+    """
+    settings_copy = copy.deepcopy(sicm_data.settings)
+    settings_copy[Xpx] = str(sicm_data.x_px)
+    settings_copy[Ypx] = str(sicm_data.y_px)
+    sjson = json.dumps(settings_copy, separators=(',', ':'))
+    with open(os.path.join(path, "settings.json"), "w") as f:
+        f.write(sjson)
+        f.close()
+    return f.name
+
+
+def create_targz_from_list_of_files(export_filename: str, files: list[str]):
+    """Writes a tar.gz-like .sicm file.
+     Extension check for the file name should have been handled before calling this method.
+
+    :param str export_filename: a string containing the full path including filename for the tar.gz-like .sicm file.
+    :param list[str] files: list of filesto be included in the .sicm file
+    """
+    with tarfile.open(export_filename, "w:gz") as tar:
+        for file in files:
+            path = os.path.dirname(file)
+            name = os.path.basename(file)
+            tar.add(os.path.join(path, name), arcname=name)
 
 
 def get_sicm_mode(tar: TarFile) -> str:

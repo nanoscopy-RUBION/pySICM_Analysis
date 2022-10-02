@@ -337,6 +337,7 @@ class MainWindow(QMainWindow):
         self.about_menu.setEnabled(enable)
         self.action_line_profile_row.setEnabled(enable)
         self.action_line_profile_column.setEnabled(enable)
+        self.action_export_sicm_data.setEnabled(enable)
 
     def toggle_show_toolbar(self):
         """Show or hide toolbar."""

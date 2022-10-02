@@ -3,21 +3,18 @@ from PyQt6.QtCore import QPoint
 from scipy.interpolate import griddata
 from skimage.draw import disk
 
-from sicm_analyzer.sicm_data import SICMdata
+from sicm_analyzer.sicm_data import SICMdata, ScanBackstepMode
 
 
 # Simple Manipulations
 # ______________________________________
-def crop(data: SICMdata, point1: QPoint, point2: QPoint):
-    """Reduces the view object's data to the area of a rectangle
+def crop(data: ScanBackstepMode, point1: QPoint, point2: QPoint):
+    """Reduces the dimensions of the data to the area of a rectangle
     formed by the two points 1 and 2.
 
-    Note: If the gui framework is changed and PyQt (Qt) is no longer used
+    Dev note: If the gui framework is changed and PyQt (Qt) is no longer used
     the data type of point1 and 2 must be changed.
     """
-
-    data.rois = (QPoint(), QPoint())
-
     width = abs(point1.x() - point2.x())
     height = abs(point1.y() - point2.y())
 
@@ -30,9 +27,9 @@ def crop(data: SICMdata, point1: QPoint, point2: QPoint):
     else:
         orig_y = point2.y()
 
-    data.x, data.y = np.meshgrid(range(orig_x, orig_x + width), range(orig_y, orig_y + height))
-    # For some reason the shape must be Y * X and not X * Y
+    # note: the shape in 2D arrays is defined as Y * X
     data.z = data.z[orig_y:orig_y + height, orig_x:orig_x + width]
+    data.update_dimensions()
 
 
 def subtract_z_minimum(data: SICMdata):
@@ -41,14 +38,15 @@ def subtract_z_minimum(data: SICMdata):
     data.z = data.z - np.min(data.z)
 
 
-def transpose_z_data(data: SICMdata):
+def transpose_z_data(data: ScanBackstepMode):
     """Transposes the z array."""
     data.z = data.z.transpose()
+    data.update_dimensions()
 
 
 # Filter Manipulations
 # ______________________________________
-def filter_median_temporal(data: SICMdata, px_neighbours=1):
+def filter_median_temporal(data: ScanBackstepMode, px_neighbours=1):
     """
     Sets each pixel equal to the median of itself, the l pixel measurements immediately before, and the l pixel 
     measurements immediately afterwards (2l+1 pixels in total).
@@ -74,7 +72,7 @@ def filter_median_temporal(data: SICMdata, px_neighbours=1):
     data.z = z.reshape(shape, order='C')
 
 
-def filter_average_temporal(data: SICMdata, px_neighbours=1):
+def filter_average_temporal(data: ScanBackstepMode, px_neighbours=1):
     """
     Sets each pixel equal to the average of itself, the l pixel measurements immediately before, and the l pixel 
     measurements immediately afterwards (2l+1 pixels in total).
@@ -100,7 +98,7 @@ def filter_average_temporal(data: SICMdata, px_neighbours=1):
     data.z = z.reshape(shape, order='C')
 
 
-def filter_median_spatial(data: SICMdata, px_radius=1):
+def filter_median_spatial(data: ScanBackstepMode, px_radius=1):
     """
     Sets each pixel equal to the median of all points included in a disc-shaped field centered on the point itself with
     a given px_radius.
@@ -120,7 +118,7 @@ def filter_median_spatial(data: SICMdata, px_radius=1):
     data.z = z
 
 
-def filter_average_spatial(data: SICMdata, px_radius=1):
+def filter_average_spatial(data: ScanBackstepMode, px_radius=1):
     """
     Sets each pixel equal to the average of all points included in a disc-shaped field centered on the point itself with
     a given px_radius.
@@ -179,7 +177,7 @@ def level_plane(view_ob,guess = [0,0,0]):
     return view_ob.get_z_data()'''
 
 
-def level_data(data: SICMdata, method='plane'):
+def level_data(data: ScanBackstepMode, method='plane'):
     """
     This method is intended to correct for a variety of possible shapes that . 
 

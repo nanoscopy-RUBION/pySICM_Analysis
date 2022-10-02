@@ -25,6 +25,7 @@ from sicm_analyzer.manipulate_data import filter_median_temporal, filter_median_
     filter_average_spatial
 from sicm_analyzer.manipulate_data import level_data
 from sicm_analyzer.mouse_events import MouseInteraction
+from sicm_analyzer import sicm_data
 from sicm_analyzer.sicm_data import ApproachCurve, ScanBackstepMode, export_sicm_file
 from sicm_analyzer.view import View
 from sicm_analyzer.graph_canvas import SURFACE_PLOT, RASTER_IMAGE, APPROACH_CURVE
@@ -136,20 +137,27 @@ class Controller:
 
     def export_sicm_data(self):
         """Exports the z data of the current selection as a .sicm file."""
-        options = QFileDialog.Option(QFileDialog.Option.DontUseNativeDialog)
-        file_path = QFileDialog.getSaveFileName(parent=self.main_window,
-                                                caption="Export manipulated data as .sicm file",
-                                                filter="All files (*.*);;SICM (*.sicm)",
-                                                directory=DEFAULT_FILE_PATH,
-                                                initialFilter="SICM (*.sicm)",
-                                                options=options
-                                                )
-        if file_path[0]:
-            if file_path[0].lower().endswith(".sicm"):
-                file_path = file_path[0]
+        try:
+            data = self.data_manager.get_data(self.current_selection)
+            if data and data.scan_mode == sicm_data.BACKSTEP:
+                options = QFileDialog.Option(QFileDialog.Option.DontUseNativeDialog)
+                file_path = QFileDialog.getSaveFileName(parent=self.main_window,
+                                                        caption="Export manipulated data as .sicm file",
+                                                        filter="All files (*.*);;SICM (*.sicm)",
+                                                        directory=DEFAULT_FILE_PATH,
+                                                        initialFilter="SICM (*.sicm)",
+                                                        options=options
+                                                        )
+                if file_path[0]:
+                    if file_path[0].lower().endswith(".sicm"):
+                        file_path = file_path[0]
+                    else:
+                        file_path = file_path[0] + ".sicm"
+                    export_sicm_file(file_path, sicm_data=data)
             else:
-                file_path = file_path[0] + ".sicm"
-            export_sicm_file(file_path, self.data_manager.get_data(self.current_selection))
+                self.main_window.display_status_bar_message("No file exported.")
+        except TypeError:
+            self.main_window.display_status_bar_message("No file selected for export.")
 
     def undo(self):
         self.data_manager.undo_manipulation(self.current_selection)

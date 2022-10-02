@@ -2,8 +2,8 @@ import os
 import tarfile
 from unittest import TestCase
 import numpy as np
-from sicm_analyzer.sicm_data import get_data_as_bytes
-from sicm_analyzer.sicm_data import SICMDataFactory, get_name_of_tar_member_containing_scan_data
+from sicm_analyzer.sicm_data import get_data_as_bytes, get_sicm_data
+from sicm_analyzer.sicm_data import get_name_of_tar_member_containing_scan_data
 
 
 class SicmDataExport(TestCase):
@@ -11,7 +11,7 @@ class SicmDataExport(TestCase):
     def test_data_to_bytes(self):
         cwd = os.getcwd()
         testfile = os.path.join(cwd, "tests/sample_sicm_files/Zelle1 PFA.sicm")
-        sicm = SICMDataFactory().get_sicm_data(testfile)
+        sicm = get_sicm_data(testfile)
         data = self.get_raw_data_from_file()
         raw_data = np.array(data)
         converted_bytes = get_data_as_bytes(sicm)
@@ -31,3 +31,8 @@ class SicmDataExport(TestCase):
                 data.append(two_bytes)
                 two_bytes = data_file.read(2)
         return data
+
+    def test_temp_directory(self):
+        import tempfile
+        dir = tempfile.TemporaryDirectory()
+        print(dir.name)
