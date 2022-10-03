@@ -38,6 +38,7 @@ class GraphCanvas(FigureCanvasQTAgg):
         Define a method which takes a callable and maybe some arguments as parameters.
         In this method bind the callable to an instance of MouseInteraction.
 
+    TODO: implement blitting to improve performance of interactive plots
     TODO: Plot settings should be controlled by a View object.
     TODO: add navigation toolbar?
     """
