@@ -18,8 +18,10 @@ class LineProfileWindow(QWidget):
     """
     def __init__(self, parent=None):
         super().__init__()
-        self.x = []
-        self.y = []
+        self.x1 = []
+        self.y1 = []
+        self.x2 = []
+        self.y2 = []
         self.parent = parent
         self.toolbar = None
         self.canvas = None
@@ -52,8 +54,8 @@ class LineProfileWindow(QWidget):
 
             with open(file_path, "w", encoding="UTF8", newline="") as f:
                 writer = csv.writer(f)
-                for i in range(len(self.x)):
-                    writer.writerow([self.x[i], self.y[i]])
+                for i in range(len(self.x1)):
+                    writer.writerow([self.x1[i], self.y1[i]])
 
     def add_canvas(self, canvas: GraphCanvas):
         self.canvas = canvas
@@ -62,6 +64,13 @@ class LineProfileWindow(QWidget):
         self.layout.addWidget(self.canvas)
 
     def update_plot(self, x: numpy.ndarray, y: numpy.ndarray):
-        self.x = x.tolist()
-        self.y = y.tolist()
+        self.x1 = x.tolist()
+        self.y1 = y.tolist()
         self.canvas.draw_line_plot(x, y)
+
+    def update_cross_section_plot(self, x_x, x_y, y_x, y_y):
+        self.x1 = x_x.tolist()
+        self.y1 = x_y.tolist()
+        self.x2 = y_x.tolist()
+        self.y2 = y_y.tolist()
+        self.canvas.draw_cross_section_line_profiles(x_x, x_y, y_x, y_y)

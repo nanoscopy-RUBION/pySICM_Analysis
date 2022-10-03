@@ -1,3 +1,5 @@
+import traceback
+
 from PyQt6.QtCore import QPoint
 from typing import Callable
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
@@ -7,7 +9,7 @@ from matplotlib.patches import Rectangle
 from matplotlib.lines import Line2D
 from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from sicm_analyzer.mouse_events import MouseInteraction, COLUMN, ROW
+from sicm_analyzer.mouse_events import MouseInteraction, COLUMN, ROW, CROSS
 from sicm_analyzer.sicm_data import SICMdata
 from sicm_analyzer.view import View
 
@@ -264,7 +266,7 @@ class GraphCanvas(FigureCanvasQTAgg):
                     height = abs(self.mi.mouse_point1.y() - self.mi.mouse_point2.y()) + 1
 
                     rect = self.get_rectangle(origin=origin, width=width, height=height)
-                    self._add_rectangle_to_raster_image(rectangle=rect)
+                    self._add_rectangle_to_raster_image(rectangles=[rect])
 
             if event.name == "button_release_event":
                 if self.mi.mouse_point1 is not None and self.mi.mouse_point2 is not None:
@@ -300,6 +302,8 @@ class GraphCanvas(FigureCanvasQTAgg):
             if event.name == "motion_notify_event":
                 index = -1
                 rect = None
+                rect1 = None
+                rect2 = None
                 try:
                     self.mi.mouse_point1 = QPoint(int(event.xdata), int(event.ydata))
 
@@ -309,13 +313,23 @@ class GraphCanvas(FigureCanvasQTAgg):
                     if self.mi.kwargs.get("mode") == COLUMN:
                         index = self.mi.mouse_point1.x()
                         rect = self.get_column_rectangle(self.mi.mouse_point1)
+                    if self.mi.kwargs.get("mode") == CROSS:
+                        y_index = self.mi.mouse_point1.x()
+                        rect1 = self.get_column_rectangle(self.mi.mouse_point1)
+                        x_index = self.mi.mouse_point1.y()
+                        rect2 = self.get_row_rectangle(self.mi.mouse_point1)
 
-                    if rect:
-                        self._add_rectangle_to_raster_image(rectangle=rect)
+                    if self.mi.kwargs.get("mode") == CROSS:
+                        self._add_rectangle_to_raster_image(rectangles=[rect1, rect2])
+                        self.function_after_mouse_events(y_index, x_index)
+                    else:
+                        if rect:
+                            self._add_rectangle_to_raster_image(rectangles=[rect])
+                        if self.function_after_mouse_events:
+                            self.function_after_mouse_events(self.mi.kwargs.get("mode"), index)
 
-                    if self.function_after_mouse_events:
-                        self.function_after_mouse_events(self.mi.kwargs.get("mode"), index)
                 except Exception as e:
+                    print(traceback.format_exc())
                     print(type(e))
 
             if event.name == "button_press_event":
@@ -372,10 +386,11 @@ class GraphCanvas(FigureCanvasQTAgg):
         except TypeError:
             return None
 
-    def _add_rectangle_to_raster_image(self, rectangle: Rectangle):
+    def _add_rectangle_to_raster_image(self, rectangles: list[Rectangle]):
         """Adds a rectangle shape to the current 2D plot."""
         self.draw_graph(self.current_data, RASTER_IMAGE, self.current_view)
-        self.figure.get_axes()[0].add_patch(rectangle)
+        for rectangle in rectangles:
+            self.figure.get_axes()[0].add_patch(rectangle)
         self.draw()
 
     def _unbind_mouse_events(self):
@@ -400,4 +415,11 @@ class GraphCanvas(FigureCanvasQTAgg):
         self.figure.clear()
         axes = self.figure.add_subplot(1, 1, 1)
         axes.plot(x_data, y_data)
+        self.draw()
+
+    def draw_cross_section_line_profiles(self, x_x_data, x_y_data, y_x_data, y_y_data):
+        self.figure.clear()
+        axes = self.figure.add_subplot(1, 1, 1)
+        axes.plot(x_x_data, x_y_data)
+        axes.plot(y_x_data, y_y_data)
         self.draw()

@@ -3,6 +3,7 @@ import numpy
 
 ROW = "row"
 COLUMN = "column"
+CROSS = "cross"
 
 
 class MouseInteraction:

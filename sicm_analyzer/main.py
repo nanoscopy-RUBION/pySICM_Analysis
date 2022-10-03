@@ -24,7 +24,7 @@ from sicm_analyzer.manipulate_data import transpose_z_data, subtract_z_minimum, 
 from sicm_analyzer.manipulate_data import filter_median_temporal, filter_median_spatial, filter_average_temporal, \
     filter_average_spatial
 from sicm_analyzer.manipulate_data import level_data
-from sicm_analyzer.mouse_events import MouseInteraction, points_are_not_equal, is_in_range, ROW, COLUMN
+from sicm_analyzer.mouse_events import MouseInteraction, points_are_not_equal, is_in_range, ROW, COLUMN, CROSS
 from sicm_analyzer import sicm_data
 from sicm_analyzer.sicm_data import ApproachCurve, ScanBackstepMode, export_sicm_file
 from sicm_analyzer.view import View
@@ -111,6 +111,7 @@ class Controller:
         self.main_window.action_set_roi.triggered.connect(self.select_roi_with_mouse)
         self.main_window.action_line_profile_row.triggered.connect(self.select_line_profile_row)
         self.main_window.action_line_profile_column.triggered.connect(self.select_line_profile_column)
+        self.main_window.action_cross_section.triggered.connect(self.show_cross_section)
 
         # Other
         self.main_window.imported_files_list.currentItemChanged.connect(self.item_selection_changed_event)
@@ -564,6 +565,20 @@ class Controller:
                 mode=COLUMN
             )
 
+    def show_cross_section(self):
+        """Show a window displaying a line plot which is
+        updated on mouse movement over the 2D canvas.
+        """
+        if self.current_selection:
+            self._show_line_profile_window()
+
+            self.figure_canvas_2d.bind_mouse_events_for_showing_line_profile(
+                data=self.data_manager.get_data(self.current_selection),
+                view=self.view,
+                func=self._show_cross_section_line_profiles,
+                mode=CROSS
+            )
+
     def _show_line_profile_window(self):
         """Show a small window including a line plot."""
         self.line_profile = LineProfileWindow(self.main_window)
@@ -582,6 +597,15 @@ class Controller:
                 y = data.y
                 z = data.z
                 self.line_profile.update_plot(y[:, index], z[:, index])
+
+    def _show_cross_section_line_profiles(self, y_index: int = -1, x_index: int = -1):
+        data = self.data_manager.get_data(self.current_selection)
+        shape = data.z.shape
+        if 0 <= x_index <= shape[1] and 0 <= y_index <= shape[0]:
+            x = data.x
+            y = data.y
+            z = data.z
+            self.line_profile.update_cross_section_plot(x[x_index, :], z[x_index, :], y[:, y_index], z[:, y_index])
 
     def show_roi_dialog(self):
         """TODO not implemented yet"""
