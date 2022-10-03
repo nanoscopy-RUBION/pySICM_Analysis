@@ -251,7 +251,7 @@ class MainWindow(QMainWindow):
         self.action_line_profile_row.setEnabled(False)
         self.action_line_profile_column = QAction("column")
         self.action_line_profile_column.setEnabled(False)
-        self.action_cross_section = QAction("cross section")
+        self.action_line_profile_xy = QAction("xy")
         self.action_line_profile_column.setEnabled(False)
         action_measure_dist = QAction('&Measure distance', self)
         action_measure_dist.setEnabled(False)  # TODO
@@ -265,7 +265,7 @@ class MainWindow(QMainWindow):
         line_profile_menu = self.measure_menu.addMenu("Show line profile")
         line_profile_menu.addAction(self.action_line_profile_row)
         line_profile_menu.addAction(self.action_line_profile_column)
-        line_profile_menu.addAction(self.action_cross_section)
+        line_profile_menu.addAction(self.action_line_profile_xy)
         self.measure_menu.addAction(action_measure_dist)
         self.measure_menu.addAction(action_measure_profile)
         self.measure_menu.addAction(self.action_set_rois)

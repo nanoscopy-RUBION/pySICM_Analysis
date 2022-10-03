@@ -417,7 +417,7 @@ class GraphCanvas(FigureCanvasQTAgg):
         axes.plot(x_data, y_data)
         self.draw()
 
-    def draw_cross_section_line_profiles(self, x_x_data, x_y_data, y_x_data, y_y_data):
+    def draw_xy_line_profiles(self, x_x_data, x_y_data, y_x_data, y_y_data):
         self.figure.clear()
         axes = self.figure.add_subplot(1, 1, 1)
         axes.plot(x_x_data, x_y_data)

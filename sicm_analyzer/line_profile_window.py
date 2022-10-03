@@ -13,8 +13,6 @@ class LineProfileWindow(QWidget):
 
     A button for exporting the displayed data as
     a csv file is included.
-
-    TODO maybe move t
     """
     def __init__(self, parent=None):
         super().__init__()
@@ -68,9 +66,9 @@ class LineProfileWindow(QWidget):
         self.y1 = y.tolist()
         self.canvas.draw_line_plot(x, y)
 
-    def update_cross_section_plot(self, x_x, x_y, y_x, y_y):
+    def update_xy_line_profile_plot(self, x_x, x_y, y_x, y_y):
         self.x1 = x_x.tolist()
         self.y1 = x_y.tolist()
         self.x2 = y_x.tolist()
         self.y2 = y_y.tolist()
-        self.canvas.draw_cross_section_line_profiles(x_x, x_y, y_x, y_y)
+        self.canvas.draw_xy_line_profiles(x_x, x_y, y_x, y_y)

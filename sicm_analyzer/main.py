@@ -111,7 +111,7 @@ class Controller:
         self.main_window.action_set_roi.triggered.connect(self.select_roi_with_mouse)
         self.main_window.action_line_profile_row.triggered.connect(self.select_line_profile_row)
         self.main_window.action_line_profile_column.triggered.connect(self.select_line_profile_column)
-        self.main_window.action_cross_section.triggered.connect(self.show_cross_section)
+        self.main_window.action_line_profile_xy.triggered.connect(self.show_xy_profile)
 
         # Other
         self.main_window.imported_files_list.currentItemChanged.connect(self.item_selection_changed_event)
@@ -565,7 +565,7 @@ class Controller:
                 mode=COLUMN
             )
 
-    def show_cross_section(self):
+    def show_xy_profile(self):
         """Show a window displaying a line plot which is
         updated on mouse movement over the 2D canvas.
         """
@@ -575,7 +575,7 @@ class Controller:
             self.figure_canvas_2d.bind_mouse_events_for_showing_line_profile(
                 data=self.data_manager.get_data(self.current_selection),
                 view=self.view,
-                func=self._show_cross_section_line_profiles,
+                func=self._show_xy_line_profiles,
                 mode=CROSS
             )
 
@@ -598,14 +598,14 @@ class Controller:
                 z = data.z
                 self.line_profile.update_plot(y[:, index], z[:, index])
 
-    def _show_cross_section_line_profiles(self, y_index: int = -1, x_index: int = -1):
+    def _show_xy_line_profiles(self, y_index: int = -1, x_index: int = -1):
         data = self.data_manager.get_data(self.current_selection)
         shape = data.z.shape
         if 0 <= x_index <= shape[1] and 0 <= y_index <= shape[0]:
             x = data.x
             y = data.y
             z = data.z
-            self.line_profile.update_cross_section_plot(x[x_index, :], z[x_index, :], y[:, y_index], z[:, y_index])
+            self.line_profile.update_xy_line_profile_plot(x[x_index, :], z[x_index, :], y[:, y_index], z[:, y_index])
 
     def show_roi_dialog(self):
         """TODO not implemented yet"""
