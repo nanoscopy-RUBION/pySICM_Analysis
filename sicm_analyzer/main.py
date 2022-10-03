@@ -445,6 +445,7 @@ class Controller:
         except Exception as e:
             # TODO use specific type of exception
             print(type(e))
+            print(traceback.format_exc())
         try:
             self.main_window.display_status_bar_message(
                 "Max: %s  Min: %s, x_px: %s, x_size: %s µm, Message:  %s" % (
