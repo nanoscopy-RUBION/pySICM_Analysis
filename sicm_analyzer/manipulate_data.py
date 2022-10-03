@@ -229,7 +229,7 @@ def level_data(data: ScanBackstepMode, method='plane'):
     if method == 'plane' or method == 'linewise' or method == 'linewise_mean' or method == 'linewise_y':
         pred_z = [coeff[0] + coeff[1] * i[0] + coeff[2] * i[1] for i in xy_coord]
     adj_z = adj_z - pred_z
-    adj_z = adj_z.reshape(data.z.shape, order='F').transpose()
+    adj_z = adj_z.reshape(data.z.shape, order='F')#.transpose()
     '''if method == 'linewise':
         #xz_coord = np.array([view_ob.get_x_data(), adj_z])#.transpose()
         #adj_z = np.empty()
