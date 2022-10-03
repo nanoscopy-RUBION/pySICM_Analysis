@@ -1,8 +1,10 @@
 # pySICM Analysis
 
 ## Known Bugs
-- Crop
-  - hints for input (px or µm, index begins at 0)
+- ...
+
+## minor issues
+  - add hints for input (px or µm, index begins at 0)
 
 ## To Do
 - General:
@@ -19,6 +21,11 @@
   - axis limits
 - Data manipulations:
   - add more level/flatten functions
+    - linewise leveling
+    - polynomial
+    - area exlcusion
+    - three point
+    - histogram
   - interpolation
 - Batch mode:
   - store a list of actions which can be applied to selected sicm measurements
