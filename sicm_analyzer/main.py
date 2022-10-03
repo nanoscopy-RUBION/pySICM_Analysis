@@ -24,7 +24,8 @@ from sicm_analyzer.manipulate_data import transpose_z_data, subtract_z_minimum, 
 from sicm_analyzer.manipulate_data import filter_median_temporal, filter_median_spatial, filter_average_temporal, \
     filter_average_spatial
 from sicm_analyzer.manipulate_data import level_data
-from sicm_analyzer.mouse_events import MouseInteraction
+from sicm_analyzer.mouse_events import MouseInteraction, points_are_not_equal, is_in_range, ROW, COLUMN
+from sicm_analyzer import sicm_data
 from sicm_analyzer.sicm_data import ApproachCurve, ScanBackstepMode, export_sicm_file
 from sicm_analyzer.view import View
 from sicm_analyzer.graph_canvas import SURFACE_PLOT, RASTER_IMAGE, APPROACH_CURVE
@@ -125,31 +126,60 @@ class Controller:
         options = QFileDialog.Option(QFileDialog.Option.DontUseNativeDialog)
         file_path = QFileDialog.getSaveFileName(parent=self.main_window,
                                                 caption="Export figure as...",
-                                                filter="All files (*.*);;BMP (*.bmp);;GIF (*.gif);;JPEG (*.jpeg);;JPG (*.jpg);;PNG (*.png);;SVG (*.svg);;TIF (*.tif);;TIFF (*.tiff)",
+                                                filter="All files (*.*);;EPS (*.eps);;PDF (*.pdf);;JPEG (*.jpeg);;JPG (*.jpg);;PNG (*.png);;SVG (*.svg);;TIF (*.tif);;TIFF (*.tiff)",
                                                 directory=DEFAULT_FILE_PATH,
                                                 initialFilter="SVG (*.svg)",
                                                 options=options
                                                 )
         if file_path[0]:
-            figure.savefig(fname=file_path[0])
-            self.main_window.display_status_bar_message("Figure saved")
+            file, extension = self._get_file_name_with_extension(file_path)
+            try:
+                figure.savefig(fname=file, format=extension)
+                self.main_window.display_status_bar_message(f"Figure saved as: {file}")
+            except ValueError as e:
+                message = str(e)
+                self.main_window.display_status_bar_message(f"Figure not exported: {message}")
 
     def export_sicm_data(self):
-        """Exports the z data of the current selection as a .sicm file."""
-        options = QFileDialog.Option(QFileDialog.Option.DontUseNativeDialog)
-        file_path = QFileDialog.getSaveFileName(parent=self.main_window,
-                                                caption="Export manipulated data as .sicm file",
-                                                filter="All files (*.*);;SICM (*.sicm)",
-                                                directory=DEFAULT_FILE_PATH,
-                                                initialFilter="SICM (*.sicm)",
-                                                options=options
-                                                )
-        if file_path[0]:
-            if file_path[0].lower().endswith(".sicm"):
-                file_path = file_path[0]
+        """Exports the z data of the current selection as a .sicm file.
+
+        File extension is added when file name does not end with
+        .sicm."""
+        try:
+            data = self.data_manager.get_data(self.current_selection)
+            if data and data.scan_mode == sicm_data.BACKSTEP:
+                options = QFileDialog.Option(QFileDialog.Option.DontUseNativeDialog)
+                file_path = QFileDialog.getSaveFileName(parent=self.main_window,
+                                                        caption="Export manipulated data as .sicm file",
+                                                        filter="SICM (*.sicm)",
+                                                        directory=DEFAULT_FILE_PATH,
+                                                        initialFilter="SICM (*.sicm)",
+                                                        options=options
+                                                        )
+                if file_path[0]:
+                    file, _ = self._get_file_name_with_extension(file_path)
+                    export_sicm_file(file, sicm_data=data)
             else:
-                file_path = file_path[0] + ".sicm"
-            export_sicm_file(file_path, self.data_manager.get_data(self.current_selection))
+                self.main_window.display_status_bar_message("No file exported.")
+        except TypeError:
+            self.main_window.display_status_bar_message("No file selected for export.")
+
+    def _get_file_name_with_extension(self, file_dialog_path: tuple[str, str]) -> (str, str):
+        """Checks the file path from a QFileDialog and returns
+        the full path of the file with the correct file extension.
+        Additionally, the file extension without . is returned
+        which can be used for matplotlib's savefig function.
+
+        This function removes leading and trailing whitespaces.
+        File extensions are always in lower case.
+        """
+        file = file_dialog_path[0].strip()
+        if os.path.splitext(file_dialog_path[0])[1]:
+            extension = os.path.splitext(file_dialog_path[0])[1][1:]
+        else:
+            extension = file_dialog_path[1][:file_dialog_path[1].index(" ")]
+            file = file + "." + extension.lower()
+        return file, extension
 
     def undo(self):
         self.data_manager.undo_manipulation(self.current_selection)
@@ -215,40 +245,43 @@ class Controller:
         self.update_figures_and_status()
 
     def filter_current_view(self):
-        filters = {
-            MEDIAN_TEMPORAL: filter_median_temporal,
-            MEDIAN_SPATIAL: filter_median_spatial,
-            AVERAGE_TEMPORAL: filter_average_temporal,
-            AVERAGE_SPATIAL: filter_average_spatial,
-        }
-        dialog = FilterDialog(self.main_window, filters.keys())
-        if dialog.exec():
-            selected_filter, radius = dialog.get_inputs()
-            try:
-                radius = int(radius)
-            except ValueError:
-                radius = 1
-            self.data_manager.execute_func_on_current_data(
-                filters.get(selected_filter),
-                key=self.current_selection,
-                action_name=f"selected_filter (px-size: {radius})"
-            )(self.data_manager.get_data(self.current_selection), radius)
+        if self.current_selection:
+            filters = {
+                MEDIAN_TEMPORAL: filter_median_temporal,
+                MEDIAN_SPATIAL: filter_median_spatial,
+                AVERAGE_TEMPORAL: filter_average_temporal,
+                AVERAGE_SPATIAL: filter_average_spatial,
+            }
+            dialog = FilterDialog(self.main_window, filters.keys())
+            if dialog.exec():
+                selected_filter, radius = dialog.get_inputs()
+                try:
+                    radius = int(radius)
+                except ValueError:
+                    radius = 1
+                self.data_manager.execute_func_on_current_data(
+                    filters.get(selected_filter),
+                    key=self.current_selection,
+                    action_name=f"selected_filter (px-size: {radius})"
+                )(self.data_manager.get_data(self.current_selection), radius)
 
     def plane_correction(self):
         """TODO: implement more functions"""
-        self.data_manager.execute_func_on_current_data(
-            level_data,
-            key=self.current_selection,
-            action_name="Leveling (plane)"
-        )(self.data_manager.get_data(self.current_selection))
+        if self.current_selection:
+            self.data_manager.execute_func_on_current_data(
+                level_data,
+                key=self.current_selection,
+                action_name="Leveling (plane)"
+            )(self.data_manager.get_data(self.current_selection))
 
     def fit_to_polyXX(self):
         """TODO: implement more functions"""
-        self.data_manager.execute_func_on_current_data(
-            self._helper_for_fit,
-            key=self.current_selection,
-            action_name="Leveling (polyXX)"
-        )()
+        if self.current_selection:
+            self.data_manager.execute_func_on_current_data(
+                self._helper_for_fit,
+                key=self.current_selection,
+                action_name="Leveling (polyXX)"
+            )()
 
     def _helper_for_fit(self):
         data = self.data_manager.get_data(self.current_selection)
@@ -304,12 +337,13 @@ class Controller:
             data_key = item.text()
             self.data_manager.remove_data(data_key)
             self.main_window.imported_files_list.takeItem(index)
-        except:
-            pass
+        except AttributeError:
+            self.main_window.display_status_bar_message("No item selected.")
 
     def add_files_to_list(self, files):
         """
         Adds file paths to the list widget.
+
         :param files: list of files
         """
         new_files = self.data_manager.get_files_without_duplicates(files)
@@ -328,12 +362,15 @@ class Controller:
 
     def clear_lists(self):
         """Removes all items from list widget and disables menus."""
-        self.main_window.clear_list_widgets()
-        self.data_manager.clear_all_data()
-        self.main_window.set_menus_enabled(False)
-        self.main_window.set_undo_menu_items()
-        self.main_window.set_redo_menu_items()
-        self.main_window.display_status_bar_message("Files removed from the list.")
+        if self.main_window.imported_files_list.count() > 0:
+            self.main_window.clear_list_widgets()
+            self.data_manager.clear_all_data()
+            self.main_window.set_menus_enabled(False)
+            self.main_window.set_undo_menu_items()
+            self.main_window.set_redo_menu_items()
+            self.main_window.display_status_bar_message("Files removed from the list.")
+        else:
+            self.main_window.display_status_bar_message("No files to remove")
 
     def toggle_axes(self):
         """Shows or hides axes in figures.
@@ -359,19 +396,21 @@ class Controller:
         """Transposes z data of current measurement of all types
         except ApproachCurves.
         """
-        if not isinstance(self.data_manager.get_data(self.current_selection), ApproachCurve):
-            self.data_manager.execute_func_on_current_data(
-                transpose_z_data,
-                key=self.current_selection,
-                action_name="Transpose z"
-            )(self.data_manager.get_data(self.current_selection))
+        if self.current_selection:
+            if not isinstance(self.data_manager.get_data(self.current_selection), ApproachCurve):
+                self.data_manager.execute_func_on_current_data(
+                    transpose_z_data,
+                    key=self.current_selection,
+                    action_name="Transpose z"
+                )(self.data_manager.get_data(self.current_selection))
 
     def subtract_minimum_in_current_view(self):
-        self.data_manager.execute_func_on_current_data(
-            subtract_z_minimum,
-            key=self.current_selection,
-            action_name="Subtract z minimum"
-        )(self.data_manager.get_data(self.current_selection))
+        if self.current_selection:
+            self.data_manager.execute_func_on_current_data(
+                subtract_z_minimum,
+                key=self.current_selection,
+                action_name="Subtract z minimum"
+            )(self.data_manager.get_data(self.current_selection))
 
     def update_figures_and_status(self, message: str = ""):
         """Redraws figures on the canvas and updates statusbar message.
@@ -403,8 +442,9 @@ class Controller:
             self.main_window.set_data_manipulation_list_items(
                 self.data_manager.get_undoable_manipulations_list(self.current_selection)
             )
-        except:
-            pass
+        except Exception as e:
+            # TODO use specific type of exception
+            print(type(e))
         try:
             self.main_window.display_status_bar_message(
                 "Max: %s  Min: %s, x_px: %s, x_size: %s µm, Message:  %s" % (
@@ -437,15 +477,16 @@ class Controller:
             self.main_window.action_toggle_axes.setChecked(True)
             self.main_window.action_set_axis_labels_px.setChecked(True)
             self.update_figures_and_status()
-        except Exception as e:
+        except TypeError as e:
             print('No view to restore')
             print(str(e))
             print(traceback.format_exc())
             print(sys.exc_info()[2])
 
     def reset_current_data_manipulations(self):
-        self.data_manager.reset_manipulations(self.current_selection)
-        self.update_figures_and_status("Reset data of View object.")
+        if self.current_selection:
+            self.data_manager.reset_manipulations(self.current_selection)
+            self.update_figures_and_status("Reset data of View object.")
 
     def select_roi_with_mouse(self):
         data = self.data_manager.get_data(self.current_selection)
@@ -453,40 +494,35 @@ class Controller:
 
     def _select_area(self, point1: QPoint, point2: QPoint):
         print("TODO ROI selection")
-        if self._points_are_not_equal(point1, point2):
+        if points_are_not_equal(point1, point2):
             #self.current_selection.rois = (point1, point2)
             self.update_figures_and_status("ROI set")
         else:
             self.update_figures_and_status("No ROI set.")
 
     def crop_by_input(self):
-        dialog = EnterAreaDialog(controller=self, parent=self.main_window)
-        if dialog.exec():
-            point1, point2 = dialog.get_input_as_points()
-            z_array = self.data_manager.get_data(self.current_selection).z
-            if self.is_in_range(point1, z_array) and self.is_in_range(point2, z_array):
-                self._crop_data(point1, point2)
+        if self.current_selection:
+            dialog = EnterAreaDialog(controller=self, parent=self.main_window)
+            if dialog.exec():
+                point1, point2 = dialog.get_input_as_points()
+                z_array = self.data_manager.get_data(self.current_selection).z
+                if is_in_range(point1, z_array) and is_in_range(point2, z_array):
+                    self._crop_data(point1, point2)
+                else:
+                    self.main_window.display_status_bar_message("Invalid input: Data not cropped.")
             else:
                 self.main_window.display_status_bar_message("Invalid input: Data not cropped.")
-        else:
-            self.main_window.display_status_bar_message("Invalid input: Data not cropped.")
-
-    def is_in_range(self, point: QPoint, array: np.ndarray) -> bool:
-        """
-        Checks if point coordinates are within the array size.
-        Note: ndarray.shape[0] is y and [1] is x!
-        """
-        return 0 <= point.x() <= array.shape[1] - 1 and 0 <= point.y() <= array.shape[0] - 1
 
     def crop_by_selection(self):
-        self.figure_canvas_2d.draw_rectangle_on_raster_image(
-            data=self.data_manager.get_data(self.current_selection),
-            view=self.view,
-            func=self._crop_data
-        )
+        if self.current_selection:
+            self.figure_canvas_2d.draw_rectangle_on_raster_image(
+                data=self.data_manager.get_data(self.current_selection),
+                view=self.view,
+                func=self._crop_data
+            )
 
     def _crop_data(self, point1: QPoint, point2: QPoint):
-        if self._points_are_not_equal(point1, point2):
+        if points_are_not_equal(point1, point2):
             self.data_manager.execute_func_on_current_data(
                 crop,
                 self.current_selection,
@@ -495,61 +531,68 @@ class Controller:
         else:
             self.update_figures_and_status("Data not cropped.")
 
-    def _points_are_not_equal(self, point1: QPoint, point2: QPoint) -> bool:
-        """Checks if two points have the same coordinates."""
-        return point1.x() != point2.x() and point1.y() != point2.y()
-
     def select_line_profile_row(self):
-        """TODO"""
-        self.line_profile = LineProfileWindow(self.main_window)
-        self.line_profile.add_canvas(GraphCanvas())
-        self.line_profile.show()
+        """Show a window displaying a line plot which is
+        updated on mouse movement over the 2D canvas.
 
-        self.figure_canvas_2d.draw_line_profile(
-            data=self.data_manager.get_data(self.current_selection),
-            view=self.view,
-            func=self._show_line_profile_row,
-            mode="row"
-        )
+        Selection mode is row.
+        """
+        if self.current_selection:
+            self._show_line_profile_window()
+
+            self.figure_canvas_2d.bind_mouse_events_for_showing_line_profile(
+                data=self.data_manager.get_data(self.current_selection),
+                view=self.view,
+                func=self._show_line_profile,
+                mode=ROW
+            )
 
     def select_line_profile_column(self):
-        """TODO"""
+        """Show a window displaying a line plot which is
+        updated on mouse movement over the 2D canvas.
+
+        Selection mode is column.
+        """
+        if self.current_selection:
+            self._show_line_profile_window()
+
+            self.figure_canvas_2d.bind_mouse_events_for_showing_line_profile(
+                data=self.data_manager.get_data(self.current_selection),
+                view=self.view,
+                func=self._show_line_profile,
+                mode=COLUMN
+            )
+
+    def _show_line_profile_window(self):
+        """Show a small window including a line plot."""
         self.line_profile = LineProfileWindow(self.main_window)
         self.line_profile.add_canvas(GraphCanvas())
         self.line_profile.show()
 
-        self.figure_canvas_2d.draw_line_profile(
-            data=self.data_manager.get_data(self.current_selection),
-            view=self.view,
-            func=self._show_line_profile_column,
-            mode="columns"
-        )
-
-    def _show_line_profile_row(self, index: int = -1, selection_mode: str = "row"):
-        """TODO"""
+    def _show_line_profile(self, selection_mode: str, index: int = -1):
         if index >= 0:
             data = self.data_manager.get_data(self.current_selection)
-            x = data.x
-            z = data.z
-            shape = z.shape
-            if selection_mode == "row" and index <= shape[0]:
+            shape = data.z.shape
+            if selection_mode == ROW and index <= shape[0]:
+                x = data.x
+                z = data.z
                 self.line_profile.update_plot(x[index, :], z[index, :])
-
-    def _show_line_profile_column(self, index: int = -1, selection_mode: str = "column"):
-        """TODO"""
-        if index >= 0:
-            data = self.data_manager.get_data(self.current_selection)
-            y = data.y
-            z = data.z
-            shape = z.shape
-            if selection_mode == "column" and index <= shape[1]:
+            if selection_mode == COLUMN and index <= shape[1]:
+                y = data.y
+                z = data.z
                 self.line_profile.update_plot(y[:, index], z[:, index])
 
     def show_roi_dialog(self):
+        """TODO not implemented yet"""
         self.roi_dialog = ROIsDialog(controller=self, parent=self.main_window)
         self.roi_dialog.open_window()
 
     def show_results(self):
+        """Shows a small window displaying the results
+        of roughness calculation.
+
+        TODO add more data
+        """
         self.results_window = ResultsWindow(self,
                                             data=self.data_manager.get_data(self.current_selection),
                                             parent=self.main_window)

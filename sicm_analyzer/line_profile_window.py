@@ -1,11 +1,21 @@
 import csv
-
+import numpy
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QPushButton, QFileDialog
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+from sicm_analyzer.graph_canvas import GraphCanvas
 
 
 class LineProfileWindow(QWidget):
+    """A small window for displaying line profile data.
 
+    The canvas is an instance of GraphCanvas and thus
+    supports all functionality of the class.
+
+    A button for exporting the displayed data as
+    a csv file is included.
+
+    TODO maybe move t
+    """
     def __init__(self, parent=None):
         super().__init__()
         self.x = []
@@ -21,6 +31,11 @@ class LineProfileWindow(QWidget):
         self.export_button.clicked.connect(self.export_as_csv)
 
     def export_as_csv(self):
+        """Exports x and y data as csv file.
+
+        For convenience .csv extension is added
+        to the file name.
+        """
         options = QFileDialog.Option(QFileDialog.Option.DontUseNativeDialog)
         file_path = QFileDialog.getSaveFileName(parent=self.parent,
                                                 caption="Export line profile data as csv file",
@@ -37,18 +52,16 @@ class LineProfileWindow(QWidget):
 
             with open(file_path, "w", encoding="UTF8", newline="") as f:
                 writer = csv.writer(f)
-                data1 = self.x.tolist()
-                data2 = self.y.tolist()
-                for i in range(len(data1)):
-                    writer.writerow([data1[i], data2[i]])
+                for i in range(len(self.x)):
+                    writer.writerow([self.x[i], self.y[i]])
 
-    def add_canvas(self, canvas):
+    def add_canvas(self, canvas: GraphCanvas):
         self.canvas = canvas
         self.toolbar = NavigationToolbar(self.canvas, self)
         self.layout.addWidget(self.toolbar)
         self.layout.addWidget(self.canvas)
 
-    def update_plot(self, x, y):
-        self.x = x
-        self.y = y
-        self.canvas.plot_line_profile(x, y)
+    def update_plot(self, x: numpy.ndarray, y: numpy.ndarray):
+        self.x = x.tolist()
+        self.y = y.tolist()
+        self.canvas.draw_line_plot(x, y)

@@ -1,7 +1,7 @@
 from unittest import TestCase
 import numpy as np
-from sicm_analyzer.measurements import get_roughness, root_mean_square_error, polynomial_fifth_degree
-from sicm_analyzer.sicm_data import SICMdata, SICMDataFactory
+from sicm_analyzer.measurements import get_roughness, root_mean_square_error
+from sicm_analyzer.sicm_data import SICMdata, get_sicm_data
 
 
 class RoughnessTests(TestCase):
@@ -43,20 +43,20 @@ class RoughnessTests(TestCase):
 
     def test_calculate_roughness(self):
         path = "./tests/sample_sicm_files/Zelle3 PFA.sicm"
-        sicm_data = SICMDataFactory().get_sicm_data(path)
+        sicm_data = get_sicm_data(path)
         print(get_roughness(sicm_data))
 
     def test_calculate_roughness_2(self):
         path = "./tests/sample_sicm_files/Zelle2 PFA.sicm"
-        sicm_data = SICMDataFactory().get_sicm_data(path)
+        sicm_data = get_sicm_data(path)
         print(get_roughness(sicm_data))
 
     def test_calculate_roughness_3(self):
         path = "./tests/sample_sicm_files/Zelle3 30x30_30 PFA.sicm"
-        sicm_data = SICMDataFactory().get_sicm_data(path)
+        sicm_data = get_sicm_data(path)
         print(get_roughness(sicm_data))
 
     def test_calculate_roughness_4(self):
         path = "./tests/sample_sicm_files/Zelle2Membran PFA.sicm"
-        sicm_data = SICMDataFactory().get_sicm_data(path)
+        sicm_data = get_sicm_data(path)
         print(get_roughness(sicm_data))

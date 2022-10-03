@@ -270,9 +270,10 @@ class MainWindow(QMainWindow):
 
         # About menu
         self.about_menu = menubar.addMenu("&About")
+        self.about_menu.setEnabled(False)
         self.action_about = QAction('click test', self)
 
-        self.about_menu.addAction(self.action_about)
+        #self.about_menu.addAction(self.action_about)
 
         # Help menu
         # this menu should contain instruction how to use the software
@@ -281,7 +282,6 @@ class MainWindow(QMainWindow):
         # Key events
         self.imported_files_list.installEventFilter(self)
         self.delete_key = None
-
 
         self.toolbar = QToolBar()
         self.toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
@@ -337,6 +337,7 @@ class MainWindow(QMainWindow):
         self.about_menu.setEnabled(enable)
         self.action_line_profile_row.setEnabled(enable)
         self.action_line_profile_column.setEnabled(enable)
+        self.action_export_sicm_data.setEnabled(enable)
 
     def toggle_show_toolbar(self):
         """Show or hide toolbar."""

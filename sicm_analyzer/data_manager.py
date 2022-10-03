@@ -1,10 +1,10 @@
 from sicm_analyzer import sicm_data
 import copy
+from typing import Callable
 
 # Constants for data collection value indexing
-DATA_UNDO = 0
-REDO = 1
-
+UNDO_STACK = 0
+REDO_STACK = 1
 
 
 class DataManager:
@@ -13,8 +13,10 @@ class DataManager:
     individual SICMData objects and handles function calls which manipulate the data.
     If a function is passed as an optional argument this function will be called each
     time data manipulations occur.
+
+    :param Callable func:
     """
-    def __init__(self, func=None):
+    def __init__(self, func: Callable = None):
         if func:
             self.listener_function = func
         else:
@@ -53,14 +55,13 @@ class DataManager:
         [1] list[SICMdata]: This list is handled as a stack and holds copies of the data. The
                             first object are the raw data and should never be manipulated or
                             removed!
-        [2] list[SICMdata]: This list is also handled as a stack and stores undone data manipulations.
+        [2] list[SICMdata]: This list is also handled as a stack and stores undone data (redoable)
+        manipulations.
 
         Note: SICM data files should always be imported using this function!
         """
-        data = UndoRedoData(sicm_data.SICMDataFactory().get_sicm_data(file), "raw_data")
+        data = UndoRedoData(sicm_data.get_sicm_data(file), "raw_data")
         self.data_collection[file] = ([data], [])
-
-
 
     def get_files_without_duplicates(self, files):
         """Returns a list which only includes files that
@@ -74,97 +75,127 @@ class DataManager:
                 new_files.append(file)
         return new_files
 
-
-
     # Undo/Redo data manipulations
     ####################################################################################################################
     def undo_manipulation(self, key):
         dataset = self.data_collection.get(key)
-        if len(dataset[DATA_UNDO]) > 1:
-            data = dataset[DATA_UNDO].pop()
-            dataset[REDO].append(data)
+        if len(dataset[UNDO_STACK]) > 1:
+            data = dataset[UNDO_STACK].pop()
+            dataset[REDO_STACK].append(data)
 
     def redo_manipulation(self, key):
         dataset = self.data_collection.get(key)
-        data = dataset[REDO].pop()
-        dataset[DATA_UNDO].append(data)
+        data = dataset[REDO_STACK].pop()
+        dataset[UNDO_STACK].append(data)
 
-    def is_undoable(self, key):
-        return len(self.data_collection.get(key)[DATA_UNDO]) > 1
+    def is_undoable(self, key) -> bool:
+        """Returns true if actions can be undone."""
+        return len(self.data_collection.get(key)[UNDO_STACK]) > 1
 
-    def is_redoable(self, key):
-        return len(self.data_collection.get(key)[REDO]) > 0
+    def is_redoable(self, key) -> bool:
+        """Returns true if actions can be redone."""
+        return len(self.data_collection.get(key)[REDO_STACK]) > 0
 
-    def get_undo_text(self, key):
+    def get_undo_text(self, key) -> str:
+        """Returns the action name for the last element on the
+        undo stack or an empty string if there is no action to
+        be made undone."""
         try:
-            if len(self.data_collection.get(key)[DATA_UNDO]) > 1:
-                return self.data_collection.get(key)[DATA_UNDO][-1].name
+            if len(self.data_collection.get(key)[UNDO_STACK]) > 1:
+                return self.data_collection.get(key)[UNDO_STACK][-1].name
             return ""
         except IndexError:
             return ""
 
-    def get_redo_text(self, key):
+    def get_redo_text(self, key) -> str:
+        """Returns the action name for the last element on the
+        redo stack or an empty string if there is no action to
+        be made redone."""
         try:
-            return self.data_collection.get(key)[REDO][-1].name
+            return self.data_collection.get(key)[REDO_STACK][-1].name
         except IndexError:
             return ""
 
     def get_undoable_manipulations_list(self, key) -> list[str]:
-        """Returns a list with all data manipulations that can be made undone."""
+        """Returns a list with all data manipulations names
+        that can be made undone.
+
+        If there are no undoable manipulations an empty list
+        will be returned."""
         items = []
         try:
             # The first item in the undo stack contains raw data
             # Therefore, all items but the first should be listed
-            for item in self.data_collection.get(key)[DATA_UNDO][1:]:
+            for item in self.data_collection.get(key)[UNDO_STACK][1:]:
                 items.append(item.name)
         except IndexError:
             pass
         return items
 
     def _make_undoable_data_copy(self, key, action_name="action"):
-        """Creates a new UndoRedoData object and clears the redo stack. The new object
-        contains a copy of the top element of the undo stack.
-        Since a new operation has been executed on the data, previous redos
-        would cause errors. Therefore, the redo stack must be cleared."""
-        undo_stack = self.data_collection.get(key)[DATA_UNDO]
+        """
+        Creates a new UndoRedoData object and clears the redo stack.
+
+        The new object contains a copy of the top element of the undo stack.
+        Since a new operation has been executed on the data, previous redo
+        would cause errors. Therefore, the redo stack must be cleared.
+        """
+        undo_stack = self.data_collection.get(key)[UNDO_STACK]
         undo_stack.append(UndoRedoData(name=action_name, data=undo_stack[-1].data))
-        self.data_collection.get(key)[REDO].clear()
+        self.data_collection.get(key)[REDO_STACK].clear()
 
     # Misc
     ####################################################################################################################
+    def get_data(self, key: str) -> sicm_data.SICMdata:
+        """
+        Returns a SICMdata object.
 
-    def get_data(self, key) -> sicm_data.SICMdata:
-        """Returns a SICMdata object."""
-        # This is equivalent to peek on stack. It returns the data of
-        # the last object added to the list
-        return self.data_collection.get(key)[DATA_UNDO][-1].data
+        This method is equivalent to peek on stack since it returns
+        the data of the last object added to the list without removing
+        it from the stack.
+
+        :param str key:
+        """
+        return self.data_collection.get(key)[UNDO_STACK][-1].data
 
     def reset_manipulations(self, key: str):
-        """In this special case of undo/redo actions a copy of
+        """Clears the list of data manipulations and resets
+        the data to the original data.
+
+        In this special case of undo/redo actions a copy of
         the first element is stored in an UndoRedoData object. This is
-        because the first element contains the raw data."""
-        undo_stack = self.data_collection.get(key)[DATA_UNDO]
+        because the first element contains the raw data.
+        """
+        undo_stack = self.data_collection.get(key)[UNDO_STACK]
         raw_data = UndoRedoData(name="Reset data", data=undo_stack[0].data)
         undo_stack.append(raw_data)
 
     def remove_data(self, key: str):
+        """Removes the data from the collection."""
         del self.data_collection[key]
 
-    def execute_func_on_current_data(self, func, key:str, action_name: str = "action"):
+    def execute_func_on_current_data(self, func: Callable, key: str, action_name: str = "action"):
         """This wrapper function is used to make other functions undo/redoable.
         Wrap the function and pass a name for that action.
 
-        Before calling the function, store_undoable_action will be called to store the
-        state of the current view object. After the function call, the readoable state
-        will be stored and figures will be updated.
+        Before calling the function, an UndoRedoData object will be created to store a copy
+        of the current state of the data object. A listener_function will be called directly
+        after the wrapped function.
 
         Example to use the wrapper:
-            undo_wrapper_test(function, name="Name for that function")(currentView, args)
+            execute_func_on_current_data(
+                        func=do_something_with_data,
+                        key=key_for_data_object,
+                        action_name="Name for that action"
+            )(args, kwargs)
         """
 
         # copy data and put on stack
         # do manipulation on this new data object
         def wrapper(*args, **kwargs):
+            """This wrapper will call the wrapped function first
+            and then the listener_function of the DataManager if exists.
+            """
             func(*args, **kwargs)
             self.listener_function()
 
@@ -173,46 +204,20 @@ class DataManager:
         return wrapper
 
 
-
 class UndoRedoData:
-    """This is a simple class to hold information for
-    undo and redo actions. This implementation of undo/redo
-    creates a copy of the underlying data before manipulations should
-    be performed.
-
-    It stores a string describing the performed action and a deepcopy the data
-    before it is manipulated. Although a deepcopy might be overkill for the current
-    implementation, for future extensions it might be necessary.
-
-    :param name: a name describing the performed action
-    :param data: SICMdata object
-    """
     def __init__(self, data: sicm_data.SICMdata, name: str = ""):
+        """
+        This is a simple class to hold information for
+        undo and redo actions. This implementation of undo/redo
+        creates a copy of the underlying data before manipulations should
+        be performed.
+
+        It stores a string describing the performed action and a deepcopy the data
+        before it is manipulated. Although a deepcopy might be overkill for the current
+        implementation, for future extensions it might be necessary.
+
+        :param str name: a name describing the performed action
+        :param SICMdata data: SICMdata object
+        """
         self.data = copy.deepcopy(data)
         self.name = name
-
-
-
-
-
-
-class DataStack(list):
-    def __int__(self, *args, **kwargs):
-        super(DataStack, self).__int__()
-
-    class ManipulatedData:
-        def __int__(self, data, name):
-            self.data: sicm_data.SICMdata = data
-            self.name: str = name
-
-    def new_data_manipulation(self, data: sicm_data.SICMdata, name: str) -> None:
-        self.append(self.ManipulatedData(data, name))
-
-
-    def peek(self):
-        """Returns the 'top' element of the stack or
-        None if the stack is empty."""
-        try:
-            return self[-1].data
-        except IndexError:
-            return None
