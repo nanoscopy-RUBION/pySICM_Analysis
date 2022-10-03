@@ -270,9 +270,10 @@ class MainWindow(QMainWindow):
 
         # About menu
         self.about_menu = menubar.addMenu("&About")
+        self.about_menu.setEnabled(False)
         self.action_about = QAction('click test', self)
 
-        self.about_menu.addAction(self.action_about)
+        #self.about_menu.addAction(self.action_about)
 
         # Help menu
         # this menu should contain instruction how to use the software
@@ -281,7 +282,6 @@ class MainWindow(QMainWindow):
         # Key events
         self.imported_files_list.installEventFilter(self)
         self.delete_key = None
-
 
         self.toolbar = QToolBar()
         self.toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
