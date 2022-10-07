@@ -33,7 +33,6 @@ from sicm_analyzer.set_rois_dialog import ROIsDialog
 from sicm_analyzer.measurements import polynomial_fifth_degree
 from sicm_analyzer.line_profile_window import LineProfileWindow
 
-
 # APP CONSTANTS
 APP_NAME = "pySICM Analysis"
 APP_PATH = os.getcwd()

@@ -2,6 +2,9 @@ import traceback
 
 from PyQt6.QtCore import QPoint
 from typing import Callable
+from collections.abc import Iterable
+from matplotlib.artist import Artist
+from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
@@ -18,13 +21,89 @@ RASTER_IMAGE = "raster"
 APPROACH_CURVE = "approach"
 
 
+class BlitManager:
+    def __init__(self, canvas: FigureCanvasQTAgg, animated_artists: Iterable[Artist] = ()):
+        """
+        A class to manage artists. This will improve draw performance in plots.
+        TODO more explanation
+
+        :param FigureCanvasQTAgg canvas: Blitting works with all types of canvases
+        which are subclasses of FigureCanvasAgg because they have the methods
+        copy_from_bbox and restore_region. By using the QtAgg backend this
+        program should work with OSX.
+        :param Iterable[Artist] animated_artists: List of artists to manage
+
+        This code fraction is based on the matplotlib Class-based Blitting example.
+        https://matplotlib.org/stable/tutorials/advanced/blitting.html
+        """
+        self.canvas = canvas
+        self._background = None
+        self._artists = []
+
+        for artist in animated_artists:
+            self.add_artist(artist)
+        # grab the backgroupd
+        self.cid = canvas.mpl_connect("draw_event", self.on_draw)
+
+    def on_draw(self, event):
+        """Callback to register with 'draw_event'."""
+        canvas = self.canvas
+        if event:
+            try:
+                self._background = canvas.copy_from_bbox(canvas.figure.bbox)
+                self._draw_animated()
+            except RuntimeError:
+                pass
+
+    def add_artist(self, artist: Artist):
+        """Add an artist to be managed.
+
+        :param Artist artist: The artist to be added. Will be set to
+        'animated'. artist must be in the figure associated with the canvas
+        this class is managing.
+        """
+        if artist.figure == self.canvas.figure:
+            artist.set_animated(True)
+            self._artists.append(artist)
+
+    def clear_artists(self):
+        """Removes all artists from the list."""
+        self._artists.clear()
+
+    def remove_additional_artists(self):
+        """Removes all but the first artist from the list.
+
+        The first artist is the actual plot.
+        """
+        self._artists = [self._artists[0]]
+
+    def _draw_animated(self):
+        """Draw all animated artists."""
+        fig = self.canvas.figure
+        for artist in self._artists:
+            fig.draw_artist(artist)
+
+    def update(self):
+        """Update canvas."""
+        canvas = self.canvas
+        fig = canvas.figure
+        print(self._artists)
+        if self._background is None:
+            self.on_draw(None)
+        else:
+            canvas.restore_region(self._background)
+            self._draw_animated()
+            canvas.blit(fig.bbox)
+        canvas.flush_events()
+
+
 class GraphCanvas(FigureCanvasQTAgg):
     """Canvas for drawing graphs from .sicm data.
 
     This class implements all functions for plotting SICM data. Line profiles
     can also be drawn.
 
-    Drawing of redctangles on 2D raster images for defining, for examples,
+    Drawing of rectangles on 2D raster images for defining, for examples,
     regions of interest ROI is also supported.
 
     For mouse interaction with the plots two attributes are
@@ -50,7 +129,9 @@ class GraphCanvas(FigureCanvasQTAgg):
         # NavToolbar should be customized before integrating in GraphCanvas
         # Furthermore, GraphCanvas needs a parent widget
         # self.toolbar = NavigationToolbar(canvas=self, parent=self)
-
+        self.bm = BlitManager(self)
+        self.rect = Rectangle(xy=(0.0, 0.0), width=0, height=0)
+        self.rect.set_animated(True)
         # These attributes are necessary for handling the various
         # mouse event functions
         self.mi = MouseInteraction()
@@ -72,6 +153,7 @@ class GraphCanvas(FigureCanvasQTAgg):
         :param View view: contains plot settings
         """
         self.figure.clear()
+        self.bm.clear_artists()
         self.current_data = data
         self.current_view = view
 
@@ -157,6 +239,8 @@ class GraphCanvas(FigureCanvasQTAgg):
             img = axes.pcolormesh(self.current_data.z, cmap=self.current_view.color_map)
         else:
             img = axes.pcolormesh(self.current_data.z)
+
+        self.bm.add_artist(axes)
         axes.set_aspect("equal")
         divider = make_axes_locatable(axes)
         cax = divider.append_axes("right", size="5%", pad=0.2)
@@ -204,7 +288,9 @@ class GraphCanvas(FigureCanvasQTAgg):
 
         Dev note: Maybe in the future, custom drawn lines on the plot will be supported.
         """
-        self._bind_mouse_events(self._highlight_row_or_column_and_call_func, mode=mode)
+        self.figure.get_axes()[0].add_patch(self.rect)
+        self._bind_mouse_events(self._highlight_row_or_column_and_call_func_new, mode=mode)
+
         self.function_after_mouse_events = func
         self.current_data = data
         self.current_view = view
@@ -322,10 +408,62 @@ class GraphCanvas(FigureCanvasQTAgg):
 
                     if self.mi.kwargs.get("mode") == CROSS:
                         self._add_rectangle_to_raster_image(rectangles=[rect1, rect2])
+
                         self.function_after_mouse_events(y_index, x_index)
                     else:
                         if rect:
                             self._add_rectangle_to_raster_image(rectangles=[rect])
+                        if self.function_after_mouse_events:
+                            self.function_after_mouse_events(self.mi.kwargs.get("mode"), index)
+
+                except Exception as e:
+                    print(traceback.format_exc())
+                    print(type(e))
+
+            if event.name == "button_press_event":
+                self.mi.mouse_point1 = QPoint(int(event.xdata), int(event.ydata))
+
+            if event.name == "button_release_event":
+                # remove the rectangle
+                self.draw_graph(self.current_data, RASTER_IMAGE, self.current_view)
+                self._unbind_mouse_events()
+
+    def _highlight_row_or_column_and_call_func_new(self, event):
+        """
+        Supports selection modes "row" and "column".
+        """
+        if event.inaxes:
+            if event.name == "motion_notify_event":
+                index = -1
+                rect = None
+                rect1 = None
+                rect2 = None
+                try:
+                    self.mi.mouse_point1 = QPoint(int(event.xdata), int(event.ydata))
+
+                    if self.mi.kwargs.get("mode") == ROW:
+                        index = self.mi.mouse_point1.y()
+                        self.rect.set_x(0)
+                        self.rect.set_y(self.mi.mouse_point1.y())
+                        self.rect.set_width(self.current_data.z.shape[1])
+                        self.rect.set_height(1)
+                        self.bm.update()
+                    if self.mi.kwargs.get("mode") == COLUMN:
+                        index = self.mi.mouse_point1.x()
+                        rect = self.get_column_rectangle(self.mi.mouse_point1)
+                    if self.mi.kwargs.get("mode") == CROSS:
+                        y_index = self.mi.mouse_point1.x()
+                        rect1 = self.get_column_rectangle(self.mi.mouse_point1)
+                        x_index = self.mi.mouse_point1.y()
+                        rect2 = self.get_row_rectangle(self.mi.mouse_point1)
+
+                    if self.mi.kwargs.get("mode") == CROSS:
+                        #self._add_rectangle_to_raster_image(rectangles=[rect1, rect2])
+
+                        self.function_after_mouse_events(y_index, x_index)
+                    else:
+                        #if rect:
+                        #    self._add_rectangle_to_raster_image(rectangles=[rect])
                         if self.function_after_mouse_events:
                             self.function_after_mouse_events(self.mi.kwargs.get("mode"), index)
 
