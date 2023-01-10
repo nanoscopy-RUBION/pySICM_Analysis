@@ -286,7 +286,7 @@ class Controller:
 
     def _helper_for_fit(self):
         data = self.data_manager.get_data(self.current_selection)
-        data.z = data.z - polynomial_fifth_degree(data.x, data.y, data.z)
+        data.z = data.z - polynomial_fifth_degree(data.x, data.y, data.z)[0]
 
     def quit_application(self, event):
         # TODO dialogue unsaved changes
