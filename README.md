@@ -1,5 +1,8 @@
 # pySICM Analysis
 
+## Prerequisites
+- python3.10
+
 ## Known Bugs
 - ...
 
