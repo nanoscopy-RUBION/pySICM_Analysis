@@ -217,6 +217,7 @@ def get_roughness(data: SICMdata) -> tuple[float, Any]:
     corrected_data = data.z - fitted_data
 
     roughness = root_mean_square_error(corrected_data)
+    roughness = root_mean_square_error(data.z)
     return roughness, fit_results
 
 def get_lower_and_upper_limit_for_outlier_determination(values: np.array):
