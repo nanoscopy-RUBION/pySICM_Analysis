@@ -408,10 +408,10 @@ class MainWindow(QMainWindow):
                f"<td><b>y pixels:</b></td> <td>{y_px}</td>" \
                f"</tr>" \
                f"<tr>" \
-               f"<td><b>x size:</b></td> <td>{x_size}</td>" \
+               f"<td><b>x size [µm]:</b></td> <td>{x_size}</td>" \
                f"</tr>" \
                f"<tr>" \
-               f"<td><b>y size:</b></td> <td>{y_size}</td>" \
+               f"<td><b>y size [µm]:</b></td> <td>{y_size}</td>" \
                f"</tr>" \
                f"</table>" \
                "</html>"
