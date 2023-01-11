@@ -5,7 +5,7 @@ import os
 from os.path import join
 from PyQt6 import QtWidgets
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QIcon, QAction, QActionGroup, QKeyEvent, QDragEnterEvent, QDropEvent
+from PyQt6.QtGui import QIcon, QAction, QActionGroup, QKeyEvent, QDragEnterEvent, QDropEvent, QCursor
 
 from PyQt6.QtWidgets import QHBoxLayout, QListWidget, QLabel, QWidget, QVBoxLayout, QSplitter, QStyle, \
     QMainWindow, QToolBar, QAbstractItemView, QDockWidget, QGridLayout, QPlainTextEdit, QTextEdit
@@ -307,6 +307,12 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage('Ready')
         self.setMinimumSize(300, 300)
         self.show()
+
+    def set_wait_cursor(self):
+        self.setCursor(QCursor(Qt.CursorShape.WaitCursor))
+
+    def set_default_cursor(self):
+        self.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
 
     def dragEnterEvent(self, e: QDragEnterEvent) -> None:
         if e.mimeData().hasUrls():
