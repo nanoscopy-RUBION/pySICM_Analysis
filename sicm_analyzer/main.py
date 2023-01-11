@@ -40,7 +40,7 @@ APP_PATH = os.getcwd()
 RESOURCE_DIRECTORY = "resources"
 APP_ICON = "pySICMsplash.png"
 APP_ICON_PATH = join(APP_PATH, RESOURCE_DIRECTORY, APP_ICON)
-TITLE = f"{APP_NAME} (ver. 2022-09-01)"
+TITLE = f"{APP_NAME} (ver. 2023-01-11)"
 DEFAULT_FILE_PATH = os.getcwd()
 
 # FILTERS
@@ -270,20 +270,24 @@ class Controller:
     def plane_correction(self):
         """TODO: implement more functions"""
         if self.current_selection:
+            self.main_window.set_wait_cursor()
             self.data_manager.execute_func_on_current_data(
                 level_data,
                 key=self.current_selection,
                 action_name="Leveling (plane)"
             )(self.data_manager.get_data(self.current_selection))
+            self.main_window.set_default_cursor()
 
     def fit_to_polyXX(self):
         """TODO: implement more functions"""
         if self.current_selection:
+            self.main_window.set_wait_cursor()
             self.data_manager.execute_func_on_current_data(
                 self._helper_for_fit,
                 key=self.current_selection,
                 action_name="Leveling (polyXX)"
             )()
+            self.main_window.set_default_cursor()
 
     def _helper_for_fit(self):
         data = self.data_manager.get_data(self.current_selection)
@@ -367,6 +371,7 @@ class Controller:
 
         :param files: list of files
         """
+        self.main_window.set_wait_cursor()
         new_files = self.data_manager.get_files_without_duplicates(files)
         self.data_manager.import_files(files)
         if new_files:
@@ -380,6 +385,7 @@ class Controller:
             self.main_window.display_status_bar_message("Imported " + str(len(new_files)) + message_end)
         else:
             self.main_window.display_status_bar_message("No files imported.")
+        self.main_window.set_default_cursor()
 
     def clear_lists(self):
         """Removes all items from list widget and disables menus."""

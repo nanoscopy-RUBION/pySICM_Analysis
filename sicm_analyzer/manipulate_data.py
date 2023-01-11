@@ -146,37 +146,6 @@ def fitting_objective(real, pred):
     return retVal
 
 
-'''def level_plane(view_ob,guess = [0,0,0]):
-
-    def helper_plane(guess,objective=True):
-        real = view_ob.get_z_data()
-        pred = [guess[0]*view_ob.get_x_data()+guess[1]*view_ob.get_y_data()+guess[2]*view_ob.get_z_data() for i in view_ob.get_data().transpose()]
-        if objective:
-            print(np.sum(np.abs(real-pred)))
-            return np.sum(np.abs(real-pred))
-        return real-pred
-    opt = scipy.optimize.minimize(helper_plane,guess)
-    if opt.success:
-        retVals = helper_plane(opt.x,objective=False)
-        return retVals
-    return view_ob.get_z_data()
-
-def level_plane(view_ob,guess = [0,0,0]):
-
-    def helper_plane(guess,objective=True):
-        real = view_ob.get_z_data()
-        pred = [guess[0]*view_ob.get_x_data()+guess[1]*view_ob.get_y_data()+guess[2]*view_ob.get_z_data() for i in view_ob.get_data().transpose()]
-        if objective:
-            print(np.sum(np.abs(real-pred)))
-            return np.sum(np.abs(real-pred))
-        return real-pred
-    opt = scipy.optimize.minimize(helper_plane,guess)
-    if opt.success:
-        retVals = helper_plane(opt.x,objective=False)
-        return retVals
-    return view_ob.get_z_data()'''
-
-
 def level_data(data: ScanBackstepMode, method='plane'):
     """
     This method is intended to correct for a variety of possible shapes that . 
@@ -246,37 +215,6 @@ def level_data(data: ScanBackstepMode, method='plane'):
     #print("max: %s  min: %s" % (np.max(adj_z), np.min(adj_z)))
 
     data.z = adj_z
-
-
-'''def level_2D_poly(view_ob):
-    real_z = view_ob.get_z_data().flatten()
-    eq = np.array([np.ones(real_z.shape[0]), view_ob.get_x_data().flatten(), view_ob.get_y_data().flatten()]).transpose()
-    print(real_z)
-    print(eq.shape)
-    print(real_z.shape)
-    coeff, r, rank, s = np.linalg.lstsq(eq, real_z,rcond=1)
-    print(coeff)
-    print(coeff[0])
-    xy_coord = np.array([view_ob.get_x_data().flatten(), view_ob.get_y_data().flatten()]).transpose()
-    pred_z = [coeff[0]+ coeff[1]*i[0]+coeff[2]*i[1] for i in xy_coord]
-    adj_z = real_z - pred_z 
-    adj_z = adj_z.reshape(view_ob.get_z_data().shape)
-    return adj_z'''
-
-'''def level_plane(view_ob,guess = [0,0,0]):
-
-    def helper_plane(guess,objective=True):
-        real = view_ob.get_z_data()
-        pred = [guess[0]*view_ob.get_x_data()+guess[1]*view_ob.get_y_data()+guess[2]*view_ob.get_z_data() for i in view_ob.get_data().transpose()]
-        if objective:
-            print(np.sum(np.abs(real-pred)))
-            return np.sum(np.abs(real-pred))
-        return real-pred
-    opt = scipy.optimize.minimize(helper_plane,guess)
-    if opt.success:
-        retVals = helper_plane(opt.x,objective=False)
-        return retVals
-    return view_ob.get_z_data()'''
 
 
 def interpolate_cubic(data: SICMdata, num_points, method='nearest'):
