@@ -117,6 +117,7 @@ class Controller:
         self.main_window.imported_files_list.currentItemChanged.connect(self.item_selection_changed_event)
         self.main_window.action_roughness.triggered.connect(self.show_results)
         # self.main_window.action_about.triggered.connect(self.about)
+        self.main_window.set_drop_event_function(self.import_files_by_drag_and_drop)
         self.main_window.closeEvent = self.quit_application
 
         # Key Events
@@ -304,6 +305,23 @@ class Controller:
         files = self.get_filenames_from_selected_directory()
         self.add_files_to_list(files)
 
+    def import_files_by_drag_and_drop(self, urls):
+        """Handles file import by drag and drop.
+        Files and directories are supported.
+        """
+        files = self.get_sicm_files_from_url_list(urls)
+        self.add_files_to_list(files)
+
+    def get_sicm_files_from_url_list(self, urls):
+        """Returns a list of .sicm file paths."""
+        files = []
+        for url in urls:
+            if os.path.isdir(url):
+                files = files + self.get_sicm_files_from_url_list([os.path.join(url, f) for f in os.listdir(url)])
+            if os.path.isfile(url) and url.endswith(".sicm"):
+                files.append(url)
+        return files
+
     def get_filenames_from_selected_directory(self):
         """Opens a file dialog to choose a directory."""
         options = QFileDialog.Option(QFileDialog.Option.DontUseNativeDialog)
@@ -433,6 +451,7 @@ class Controller:
             self.main_window.update_info_labels(
                 scan_date=current_data.get_scan_date(),
                 scan_time=current_data.get_scan_time(),
+                scan_mode=current_data.scan_mode,
                 x_px=current_data.x_px,
                 y_px=current_data.y_px,
                 x_size=current_data.x_size,

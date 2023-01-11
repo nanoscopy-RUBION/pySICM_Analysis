@@ -33,6 +33,7 @@ import struct
 
 APPROACH = "approach"
 BACKSTEP = "backstepScan"
+FLOATING_BACKSTEP = "floatingBackstep"
 SETTINGS = "settings.json"
 MODE = ".mode"
 INFO = ".info"
@@ -189,25 +190,32 @@ def get_sicm_data(file_path: str) -> SICMdata:
     Depending on the scan mode of the file one of the following
     subclasses will be instantiated:
         - ApproachCurve
-        - ScanBackstepMode
+        - ScanBackstepMode (for backstepScan and floatingBackstep)
     """
-    tar = tarfile.open(file_path, "r:gz")
-    scan_mode = get_sicm_mode(tar)
-    info = get_sicm_info(tar)
-    settings = get_sicm_settings(tar)
-    data = read_byte_data(tar)
+    try:
+        tar = tarfile.open(file_path, "r:gz")
+        scan_mode = get_sicm_mode(tar)
+        info = get_sicm_info(tar)
+        settings = get_sicm_settings(tar)
+        data = read_byte_data(tar)
 
-    if scan_mode == BACKSTEP:
-        sicm_data = ScanBackstepMode()
-    elif scan_mode == APPROACH:
-        sicm_data = ApproachCurve()
-    else:
+        if scan_mode == BACKSTEP or scan_mode == FLOATING_BACKSTEP:
+            sicm_data = ScanBackstepMode()
+        elif scan_mode == APPROACH:
+            sicm_data = ApproachCurve()
+        else:
+            sicm_data = SICMdata()
+            sicm_data.scan_mode = "unknown scan mode"
+
+        sicm_data.scan_mode = scan_mode
+        sicm_data.set_settings(settings)
+        sicm_data.info = info
+        sicm_data.set_data(data)
+    except Exception as e:
+        print(e)
+        print("file: " + file_path)
         sicm_data = SICMdata()
-
-    sicm_data.scan_mode = scan_mode
-    sicm_data.set_settings(settings)
-    sicm_data.info = info
-    sicm_data.set_data(data)
+        sicm_data.scan_mode = "invalid file"
 
     return sicm_data
 

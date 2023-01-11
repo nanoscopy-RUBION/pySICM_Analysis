@@ -35,12 +35,10 @@ def polynomial_second_degree(x_data, y_data, z_data: np.array):
     # perform fit
     fit = Fit(model, x=x_data, y=y_data, z=z_data, objective=LeastSquares, minimizer=[BFGS])
     fit_result = fit.execute()
-    print("###############################################")
-    print("Fit results:")
-    print(fit_result)
-    print("###############################################")
+    #_print_fit_results_to_console(fit_result)
     z_fitted = model(x=x_data, y=y_data, **fit_result.params).z
     return z_fitted
+
 
 def polynomial_fifth_degree(x_data, y_data, z_data: np.array):
     """Returns data fitted to a polynomial of 5th degree with two
@@ -73,9 +71,6 @@ def polynomial_fifth_degree(x_data, y_data, z_data: np.array):
     p32.value = 0.01
     p41.value = 0.01
     p23.value = 0.01
-
-
-
 
     model_dict = {
         z: Poly(
@@ -110,12 +105,17 @@ def polynomial_fifth_degree(x_data, y_data, z_data: np.array):
     # perform fit
     fit = Fit(model, x=x_data, y=y_data, z=z_data, objective=LeastSquares, minimizer=[BFGS])
     fit_result = fit.execute()
+    #_print_fit_results_to_console(fit_result)
+    z_fitted = model(x=x_data, y=y_data, **fit_result.params).z
+    return z_fitted, fit_result
+
+
+def _print_fit_results_to_console(fit_result):
+    """A helper function for debugging."""
     print("###############################################")
     print("Fit results:")
     print(fit_result)
     print("###############################################")
-    z_fitted = model(x=x_data, y=y_data, **fit_result.params).z
-    return z_fitted, fit_result
 
 
 def get_grid(view):
@@ -141,17 +141,19 @@ def get_points(window, n=2):
 def root_mean_square_error(data: np.array) -> float:
     """Returns the root mean square error of data.
 
-    FORMEL einfügen
+    TODO FORMEL einfügen
     """
     mean = np.mean(data)
     diff = data - mean
     rmse = math.sqrt(np.mean(diff**2))
     return rmse
 
+
 def get_roughness(data: SICMdata) -> tuple[float, Any]:
-    """Returns roughness and optionally the fit results..
+    """Returns the roughness of SICM data.
+    No data manipulation is performed in this step!
 
-
+    Documentation from the matlab version:
     Compute the roughness of the data
     Currently, the following method is used:
     1) Subtract a paraboloid from the data
@@ -213,12 +215,12 @@ def get_roughness(data: SICMdata) -> tuple[float, Any]:
     if nargout > 3:
         varargout{3} = go
     '''
-    fitted_data, fit_results = polynomial_fifth_degree(data.x, data.y, data.z)
-    corrected_data = data.z - fitted_data
+    #fitted_data, fit_results = polynomial_fifth_degree(data.x, data.y, data.z)
+    #corrected_data = data.z - fitted_data
 
-    roughness = root_mean_square_error(corrected_data)
+    #roughness = root_mean_square_error(corrected_data)
     roughness = root_mean_square_error(data.z)
-    return roughness, fit_results
+    return roughness#, fit_results
 
 def get_lower_and_upper_limit_for_outlier_determination(values: np.array):
     """Calculates the lower and upper limits for

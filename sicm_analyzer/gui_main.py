@@ -5,7 +5,7 @@ import os
 from os.path import join
 from PyQt6 import QtWidgets
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QIcon, QAction, QActionGroup, QKeyEvent
+from PyQt6.QtGui import QIcon, QAction, QActionGroup, QKeyEvent, QDragEnterEvent, QDropEvent
 
 from PyQt6.QtWidgets import QHBoxLayout, QListWidget, QLabel, QWidget, QVBoxLayout, QSplitter, QStyle, \
     QMainWindow, QToolBar, QAbstractItemView, QDockWidget, QGridLayout, QPlainTextEdit, QTextEdit
@@ -51,6 +51,7 @@ class MainWindow(QMainWindow):
         self.data_manipulation_list = QListWidget(self)
         self.init_ui()
         self.set_menus_enabled(False)
+        self.setAcceptDrops(True)
 
     def init_ui(self):
         pixmap = QStyle.StandardPixmap.SP_FileIcon
@@ -86,7 +87,7 @@ class MainWindow(QMainWindow):
         info_label = QLabel("Metadata:")
         self.info_text = QTextEdit()
         self.info_text.setReadOnly(True)
-        self.info_text.setFixedHeight(140)
+        self.info_text.setFixedHeight(160)
         info_layout.addWidget(info_label)
         info_layout.addWidget(self.info_text)
         info_widget = QWidget()
@@ -304,6 +305,29 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(300, 300)
         self.show()
 
+    def dragEnterEvent(self, e: QDragEnterEvent) -> None:
+        if e.mimeData().hasUrls():
+            e.accept()
+        else:
+            e.ignore()
+
+    def dropEvent(self, e: QDropEvent) -> None:
+        try:
+            files = [url.toLocalFile() for url in e.mimeData().urls()]
+            self.drop_event_function(files)
+        except:
+            print("DropEvent: no function called")
+
+    def drop_event_function(self, files):
+        """This is a placeholder function. You can reference it to any function which takes
+        a list of urls as an argument. This function is called after a drop event in the main window."""
+        pass
+
+    def set_drop_event_function(self, func):
+        """Sets a drop event function. func must take a list of strings
+         as an argument."""
+        self.drop_event_function = func
+
     def eventFilter(self, source, event):
         """Add key events here:
         At the moment the following key events are recognized:
@@ -392,7 +416,7 @@ class MainWindow(QMainWindow):
         self.data_manipulation_list.clear()
         self.data_manipulation_list.addItems(items)
 
-    def update_info_labels(self, scan_date, scan_time, x_px, y_px, x_size, y_size):
+    def update_info_labels(self, scan_date, scan_time, scan_mode, x_px, y_px, x_size, y_size):
         text = f"<html>" \
                f"<table style='width:100%'>" \
                f"<tr>" \
@@ -400,6 +424,9 @@ class MainWindow(QMainWindow):
                f"</tr>" \
                f"<tr>" \
                f"<td><b>Scan time:</b></td> <td>{scan_time}</td>" \
+               f"</tr>" \
+               f"<tr>" \
+               f"<td><b>Scan mode:</b></td> <td>{scan_mode}</td>" \
                f"</tr>" \
                f"<tr>" \
                f"<td><b>x pixels:</b></td> <td>{x_px}</td>" \
