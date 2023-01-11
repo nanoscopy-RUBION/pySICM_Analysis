@@ -9,9 +9,12 @@ from matplotlib.patches import Rectangle
 from matplotlib.lines import Line2D
 from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+from matplotlib.colors import Normalize
 from sicm_analyzer.mouse_events import MouseInteraction, COLUMN, ROW, CROSS
 from sicm_analyzer.sicm_data import SICMdata
 from sicm_analyzer.view import View
+import numpy as np
 
 SURFACE_PLOT = "surface"
 RASTER_IMAGE = "raster"
@@ -83,7 +86,6 @@ class GraphCanvas(FigureCanvasQTAgg):
         if graph_type == APPROACH_CURVE:
             self.draw_approach_curve(data)
 
-        self.figure.tight_layout()
         self.draw()
 
     def convert_axes_labels_from_px_to_microns(self, data: SICMdata, axes):
@@ -131,17 +133,17 @@ class GraphCanvas(FigureCanvasQTAgg):
         """Draws a 3d surface plot for scanning data."""
         axes = self.figure.add_subplot(1, 1, 1, projection='3d')
 
+        norm = Normalize(vmin=np.min(self.current_data.get_data()[2]), vmax=np.max(self.current_data.get_data()[2]), clip=False)
         if self.current_view:
-            img = axes.plot_surface(*self.current_data.get_data(), cmap=self.current_view.color_map)
+
+            img = axes.plot_surface(*self.current_data.get_data(), norm=norm, cmap=self.current_view.color_map)
             axes.set_box_aspect(aspect=self.current_view.aspect_ratio)
             axes.azim = self.current_view.azim
             axes.elev = self.current_view.elev
             self.show_or_hide_axes(self.current_data, self.current_view, axes)
         else:
-            img = axes.plot_surface(*self.current_data.get_data())
-
-        cb = self.figure.colorbar(img)
-        cb.set_label(label="height in µm")
+            img = axes.plot_surface(*self.current_data.get_data(), norm=norm)
+        self.set_colorbar(img, axes)
 
     def draw_2d_plot_raster_image(self):
         """Draws a 2D raster image for 3-dimensional scanning data."""
@@ -157,8 +159,16 @@ class GraphCanvas(FigureCanvasQTAgg):
         else:
             img = axes.pcolormesh(self.current_data.z)
         axes.set_aspect("equal")
-        divider = make_axes_locatable(axes)
-        cax = divider.append_axes("right", size="5%", pad=0.2)
+        self.set_colorbar(img, axes)
+
+    def set_colorbar(self, img, axes):
+        #self.figure.tight_layout()
+        cax = inset_axes(axes,
+                         width="5%",
+                         height="100%",
+                         loc='right',
+                         borderpad=-7
+                         )
         cb = self.figure.colorbar(img, cax=cax)
         cb.set_label(label="height in µm")
 
