@@ -115,7 +115,7 @@ class Controller:
 
         # Other
         self.main_window.imported_files_list.currentItemChanged.connect(self.item_selection_changed_event)
-        self.main_window.action_roughness.triggered.connect(self.show_results)
+        self.main_window.action_results.triggered.connect(self.show_results)
         # self.main_window.action_about.triggered.connect(self.about)
         self.main_window.set_drop_event_function(self.import_files_by_drag_and_drop)
         self.main_window.closeEvent = self.quit_application
@@ -287,7 +287,9 @@ class Controller:
 
     def _helper_for_fit(self):
         data = self.data_manager.get_data(self.current_selection)
-        data.z = data.z - polynomial_fifth_degree(data.x, data.y, data.z)[0]
+        fitted_z, fit_results = polynomial_fifth_degree(data.x, data.y, data.z)
+        data.z = data.z - fitted_z
+        data.fit_results = fit_results
 
     def quit_application(self, event):
         # TODO dialogue unsaved changes
@@ -633,14 +635,17 @@ class Controller:
 
     def show_results(self):
         """Shows a small window displaying the results
-        of roughness calculation.
-
-        TODO add more data
+        of roughness calculation and fit functions. Min and max values
+        are also shown.
         """
-        self.results_window = ResultsWindow(self,
-                                            data=self.data_manager.get_data(self.current_selection),
-                                            parent=self.main_window)
-        self.results_window.open_window()
+        try:
+            self.results_window = ResultsWindow(self,
+                                                data=self.data_manager.get_data(self.current_selection),
+                                                parent=self.main_window,
+                                                )
+            self.results_window.open_window()
+        except TypeError:
+            pass
 
 
 def main():

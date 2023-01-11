@@ -3,6 +3,7 @@ from PyQt6.QtWidgets import QWidget, QPushButton, QVBoxLayout, QPlainTextEdit
 
 from sicm_analyzer.sicm_data import SICMdata
 from sicm_analyzer.measurements import get_roughness
+import numpy as np
 
 class ResultsWindow(QWidget):
     """
@@ -12,11 +13,13 @@ class ResultsWindow(QWidget):
     about the polynomial fit used to calculate the roughness.
     """
 
-    def __init__(self, controller, data: SICMdata, parent=None):
+    def __init__(self, controller, data: SICMdata, parent=None, size=(500, 600)):
         super().__init__()
+        width = size[0]
+        height = size[1]
         self.parent = parent
         self.setWindowTitle("Results")
-        self.setFixedSize(500, 600)
+        self.setFixedSize(width, height)
         self.controller = controller
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
 
@@ -31,12 +34,14 @@ class ResultsWindow(QWidget):
         self.text.insertPlainText(self.get_results(data))
 
     def get_results(self, data: SICMdata):
-        roughness, fit_result = get_roughness(data)
+        roughness = get_roughness(data)
         text = ""
         text = text + "Fit Results:\n"
-        text = text + str(fit_result)
+        text = text + str(data.fit_results)
         text = text + "\n\n"
-        text = text + f"Roughness: {roughness}"
+        text = text + f"Roughness: {roughness}\n"
+        text = text + f"Minimum value: {np.min(data.z)} µm\n"
+        text = text + f"Maximum value: {np.max(data.z)} µm\n"
         return text
 
     def open_window(self):

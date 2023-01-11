@@ -87,7 +87,8 @@ class MainWindow(QMainWindow):
         info_label = QLabel("Metadata:")
         self.info_text = QTextEdit()
         self.info_text.setReadOnly(True)
-        self.info_text.setFixedHeight(160)
+        self.info_text.setMinimumHeight(100)
+        #self.info_text.setFixedHeight(160)
         info_layout.addWidget(info_label)
         info_layout.addWidget(self.info_text)
         info_widget = QWidget()
@@ -246,8 +247,8 @@ class MainWindow(QMainWindow):
         self.data_menu.addAction(self.action_data_reset)
 
         # Measurements menu
-        self.action_roughness = QAction("Roughness")
-        self.action_roughness.setEnabled(False)
+        self.action_results = QAction("Results")
+        self.action_results.setEnabled(False)
         self.action_line_profile_row = QAction("row")
         self.action_line_profile_row.setEnabled(False)
         self.action_line_profile_column = QAction("column")
@@ -262,7 +263,7 @@ class MainWindow(QMainWindow):
         self.action_set_roi = QAction("Set ROI", self)
 
         self.measure_menu = menubar.addMenu("&Measurements")
-        self.measure_menu.addAction(self.action_roughness)
+        self.measure_menu.addAction(self.action_results)
         line_profile_menu = self.measure_menu.addMenu("Show line profile")
         line_profile_menu.addAction(self.action_line_profile_row)
         line_profile_menu.addAction(self.action_line_profile_column)
@@ -271,6 +272,8 @@ class MainWindow(QMainWindow):
         self.measure_menu.addAction(action_measure_profile)
         self.measure_menu.addAction(self.action_set_rois)
         self.measure_menu.addAction(self.action_set_roi)
+        self.action_set_roi.setEnabled(False)
+        self.action_set_rois.setEnabled(False)
 
         # About menu
         self.about_menu = menubar.addMenu("&About")
@@ -360,8 +363,8 @@ class MainWindow(QMainWindow):
         self.view_menu.setEnabled(enable)
         self.data_menu.setEnabled(enable)
         self.measure_menu.setEnabled(enable)
-        self.action_roughness.setEnabled(enable)
-        self.about_menu.setEnabled(enable)
+        self.action_results.setEnabled(enable)
+        self.about_menu.setEnabled(False)
         self.action_line_profile_row.setEnabled(enable)
         self.action_line_profile_column.setEnabled(enable)
         self.action_export_sicm_data.setEnabled(enable)

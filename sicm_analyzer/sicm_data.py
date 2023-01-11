@@ -71,6 +71,9 @@ class SICMdata:
         self.scan_mode: str = ""
         self.info: dict = {}
         self.settings: dict = {}
+        # result fields
+        self.fit_results = None
+        self.roughness = None
 
     def set_settings(self, settings: dict):
         """Sets metadata obtained from settings.json
