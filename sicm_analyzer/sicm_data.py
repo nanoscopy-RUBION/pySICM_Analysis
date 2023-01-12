@@ -68,6 +68,8 @@ class SICMdata:
         self.x_px: int = 0
         self.y_px: int = 0
         self.z_px: int = 0
+        self.x_px_raw: int = 0
+        self.y_px_raw: int = 0
         self.scan_mode: str = ""
         self.info: dict = {}
         self.settings: dict = {}
@@ -135,6 +137,8 @@ class ScanBackstepMode(SICMdata):
         super().set_settings(settings)
         self.x_px = int(settings[Xpx])
         self.y_px = int(settings[Ypx])
+        self.x_px_raw = int(settings[Xpx])
+        self.y_px_raw = int(settings[Ypx])
         try:
             self.x_size = int(settings[X_size])
             self.y_size = int(settings[Y_size])

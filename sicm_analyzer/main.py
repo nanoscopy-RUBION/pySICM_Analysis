@@ -464,6 +464,8 @@ class Controller:
                 scan_mode=current_data.scan_mode,
                 x_px=current_data.x_px,
                 y_px=current_data.y_px,
+                x_px_raw=current_data.x_px_raw,
+                y_px_raw=current_data.y_px_raw,
                 x_size=current_data.x_size,
                 y_size=current_data.y_size
             )
@@ -639,7 +641,6 @@ class Controller:
 
     def _show_line_profile_of_drawn_line(self, x_data: (int, int) = (-1, -1), y_data: (int, int) = (-1, -1)):
         data = self.data_manager.get_data(self.current_selection)
-        print("line profile line")
         try:
             if x_data[0] < x_data[1]:
                 src_x = x_data[0]
@@ -659,13 +660,6 @@ class Controller:
             a = range(plot.shape[0])
             x = np.array(a)
             self.line_profile.update_plot(x=x, y=plot)
-            print("#########")
-            print(data.z)
-            print(plot)
-            print(src)
-            print(dst)
-            print("#########")
-
         except Exception as e:
             print(e)
 
