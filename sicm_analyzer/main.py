@@ -1,3 +1,4 @@
+import math
 import os
 import sys
 sys.path.append("")
@@ -114,6 +115,7 @@ class Controller:
         self.main_window.action_line_profile_column.triggered.connect(self.select_line_profile_column)
         self.main_window.action_line_profile_xy.triggered.connect(self.show_xy_profile)
         self.main_window.action_line_profile_line.triggered.connect(self.select_line_profile_line)
+        self.main_window.action_measure_dist.triggered.connect(self.measure_distance)
 
         # Other
         self.main_window.imported_files_list.currentItemChanged.connect(self.item_selection_changed_event)
@@ -662,6 +664,18 @@ class Controller:
             self.line_profile.update_plot(x=x, y=plot)
         except Exception as e:
             print(e)
+
+    def measure_distance(self):
+        if self.current_selection:
+            self.figure_canvas_2d.bind_mouse_events_for_draw_line(
+                data=self.data_manager.get_data(self.current_selection),
+                view=self.view,
+                func=self._calculate_distance_between_two_points,
+            )
+
+    def _calculate_distance_between_two_points(self, x_data, y_data):
+        dist = math.dist((x_data[0], y_data[0]), (x_data[1], y_data[1]))
+        print("Distance [px]: %s" % str(dist))
 
     def _show_xy_line_profiles(self, y_index: int = -1, x_index: int = -1):
         data = self.data_manager.get_data(self.current_selection)
