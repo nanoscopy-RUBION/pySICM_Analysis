@@ -451,48 +451,37 @@ class Controller:
         An optional message will be concatenated to the status bar message.
         """
         try:
-            current_data = self.data_manager.get_data(self.current_selection)
-            self.view.show_as_px = self.main_window.action_set_axis_labels_px.isChecked()
+            if self.current_selection:
+                current_data = self.data_manager.get_data(self.current_selection)
+                self.view.show_as_px = self.main_window.action_set_axis_labels_px.isChecked()
 
-            if isinstance(current_data, ScanBackstepMode):
-                self.figure_canvas_3d.draw_graph(current_data, SURFACE_PLOT, self.view)
-                self.figure_canvas_2d.draw_graph(current_data, RASTER_IMAGE, self.view)
+                if isinstance(current_data, ScanBackstepMode):
+                    self.figure_canvas_3d.draw_graph(current_data, SURFACE_PLOT, self.view)
+                    self.figure_canvas_2d.draw_graph(current_data, RASTER_IMAGE, self.view)
 
-            if isinstance(current_data, ApproachCurve):
-                self.figure_canvas_3d.draw_graph(current_data)
-                self.figure_canvas_2d.draw_graph(current_data, APPROACH_CURVE, self.view)
+                if isinstance(current_data, ApproachCurve):
+                    self.figure_canvas_3d.draw_graph(current_data)
+                    self.figure_canvas_2d.draw_graph(current_data, APPROACH_CURVE, self.view)
 
-            self.main_window.update_info_labels(
-                scan_date=current_data.get_scan_date(),
-                scan_time=current_data.get_scan_time(),
-                scan_mode=current_data.scan_mode,
-                x_px=current_data.x_px,
-                y_px=current_data.y_px,
-                x_px_raw=current_data.x_px_raw,
-                y_px_raw=current_data.y_px_raw,
-                x_size=current_data.x_size,
-                y_size=current_data.y_size
-            )
+                self.main_window.update_info_labels(
+                    scan_date=current_data.get_scan_date(),
+                    scan_time=current_data.get_scan_time(),
+                    scan_mode=current_data.scan_mode,
+                    x_px=current_data.x_px,
+                    y_px=current_data.y_px,
+                    x_px_raw=current_data.x_px_raw,
+                    y_px_raw=current_data.y_px_raw,
+                    x_size=current_data.x_size,
+                    y_size=current_data.y_size
+                )
 
-            self._update_undo_redo_menu_items()
-            self.main_window.set_data_manipulation_list_items(
-                self.data_manager.get_undoable_manipulations_list(self.current_selection)
-            )
-        except Exception as e:
-            # TODO use specific type of exception
-            print(type(e))
-            print(traceback.format_exc())
-        try:
-            self.main_window.display_status_bar_message(
-                "Max: %s  Min: %s, x_px: %s, x_size: %s µm, Message:  %s" % (
-                    str(np.max(current_data.z)),
-                    str(np.min(current_data.z)),
-                    str(current_data.x_px),
-                    str(current_data.x_size),
-                    message
-                ))
-        except:
-            self.main_window.display_status_bar_message("approach curve")
+                self._update_undo_redo_menu_items()
+                self.main_window.set_data_manipulation_list_items(
+                    self.data_manager.get_undoable_manipulations_list(self.current_selection)
+                )
+                self.main_window.display_status_bar_message(message)
+        except TypeError as e:
+            print("No scan selected.")
 
     def store_viewing_angles(self):
         """Stores the two viewing angles in the View object.

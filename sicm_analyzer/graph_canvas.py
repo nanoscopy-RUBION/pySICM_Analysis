@@ -268,7 +268,7 @@ class GraphCanvas(FigureCanvasQTAgg):
             - motion_notify_event
             - button_release_event
         """
-        self._unbind_mouse_events()
+        self.unbind_mouse_events()
         self.mi = MouseInteraction(*args, **kwargs)
         self.mi.cid_press = self.figure.canvas.mpl_connect('button_press_event', func)
         self.mi.cid_move = self.figure.canvas.mpl_connect('motion_notify_event', func)
@@ -321,7 +321,7 @@ class GraphCanvas(FigureCanvasQTAgg):
                         self.function_after_mouse_events(self.mi.mouse_point1, self.mi.mouse_point2)
                     if self.clean_up_function:
                         self.clean_up_function()
-                self._unbind_mouse_events()
+                self.unbind_mouse_events()
 
     def _draw_a_line_on_raster_image(self, event):
         """TODO not yet finished
@@ -346,7 +346,7 @@ class GraphCanvas(FigureCanvasQTAgg):
                         self.function_after_mouse_events((self.mi.mouse_point1[0], self.mi.mouse_point2[0]), (self.mi.mouse_point1[1], self.mi.mouse_point2[1]))
                     if self.clean_up_function:
                         self.clean_up_function()
-                self._unbind_mouse_events()
+                self.unbind_mouse_events()
 
     def _highlight_row_or_column_and_call_func(self, event):
         """
@@ -393,7 +393,7 @@ class GraphCanvas(FigureCanvasQTAgg):
                 self.draw_graph(self.current_data, RASTER_IMAGE, self.current_view)
                 if self.clean_up_function:
                     self.clean_up_function()
-                self._unbind_mouse_events()
+                self.unbind_mouse_events()
 
     def get_rectangle(self, origin: tuple[int, int], width: int, height: int) -> Rectangle:
         """Returns a rectangle object which can be drawn on the canvas.
@@ -453,7 +453,7 @@ class GraphCanvas(FigureCanvasQTAgg):
         self.figure.get_axes()[0].add_patch(line)
         self.draw()
 
-    def _unbind_mouse_events(self):
+    def unbind_mouse_events(self):
         """This function disconnects mouse events.
 
         The following mouse events are disconnected:
