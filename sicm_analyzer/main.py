@@ -512,6 +512,7 @@ class Controller:
             self.main_window.action_toggle_axes.setChecked(True)
             self.main_window.action_set_axis_labels_px.setChecked(True)
             self.update_figures_and_status()
+            self.main_window.show_graphs()
         except TypeError as e:
             print('No view to restore')
             print(str(e))

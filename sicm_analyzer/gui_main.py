@@ -174,6 +174,8 @@ class MainWindow(QMainWindow):
         action_view_ylimits.setEnabled(False)  # TODO
         self.action_view_colormap = QAction('Colormap', self)
         self.action_store_angles = QAction('Store viewing angles', self)
+        self.action_show_graphs = QAction("Show plot windows", self)
+        self.action_show_graphs.triggered.connect(self.show_graphs)
 
         self.action_set_axis_labels_px = QAction("pixels", self)
         self.action_set_axis_labels_px.setCheckable(True)
@@ -199,6 +201,7 @@ class MainWindow(QMainWindow):
         self.view_menu.addAction(action_view_xlimits)
         self.view_menu.addAction(action_view_ylimits)
         self.view_menu.addAction(self.action_view_colormap)
+        self.view_menu.addAction(self.action_show_graphs)
         self.view_menu.addSeparator()
         self.view_menu.addAction(self.action_view_restore)
 
@@ -299,9 +302,9 @@ class MainWindow(QMainWindow):
         self.toolbar.addAction(self.action_import_files)
         self.toolbar.addAction(self.action_clear)
 
-        self.action_test_dock = QAction("Show dock")
-        self.action_test_dock.triggered.connect(self.show_graphs)
-        self.toolbar.addAction(self.action_test_dock)
+        self.action_show_dock_widgets = QAction(QIcon(join(self.resource_dir, "plot_widgets.png")), "Show plots")
+        self.action_show_dock_widgets.triggered.connect(self.show_graphs)
+        self.toolbar.addAction(self.action_show_dock_widgets)
 
         self.toolbar.addSeparator()
         self.addToolBar(self.toolbar)
