@@ -98,8 +98,10 @@ class GraphCanvas(FigureCanvasQTAgg):
         y_px = data.y_px
         x_ticks = axes.get_xticks()
         y_ticks = axes.get_yticks()
+
         if x_px != x_size:
             axes.set_xticklabels(self.get_tick_labels_in_microns(x_ticks, x_px, x_size))
+
         if y_px != y_size:
             axes.set_yticklabels(self.get_tick_labels_in_microns(y_ticks, y_px, y_size))
 
@@ -218,6 +220,15 @@ class GraphCanvas(FigureCanvasQTAgg):
         self.current_data = data
         self.current_view = view
 
+    def bind_mouse_events_for_draw_line(self, data: SICMdata, view: View = None, func: Callable = None, mode: str = "row"):
+        """Draw a line on image.
+        TODO
+        """
+        self._bind_mouse_events(self._draw_a_line_on_raster_image)
+        self.function_after_mouse_events = func
+        self.current_data = data
+        self.current_view = view
+
     def get_viewing_angles_from_3d_plot(self):
         """Returns the viewing angles from the 3D plot.
 
@@ -294,15 +305,29 @@ class GraphCanvas(FigureCanvasQTAgg):
                         self.function_after_mouse_events(self.mi.mouse_point1, self.mi.mouse_point2)
                 self._unbind_mouse_events()
 
-    def _draw_a_line_on_raster_image(self):
+    def _draw_a_line_on_raster_image(self, event):
         """TODO not yet finished
         Create a Line2D object from mouse coordinates and then
         add a patch to the figure axes before figure.draw.
         """
-        p1 = [self.mi.mouse_point1.x(), self.mi.mouse_point2.x() + 1]
-        p2 = [self.mi.mouse_point1.y(), self.mi.mouse_point2.y() + 1]
-        line = Line2D(p1, p2, color="r")
-        self.figure.get_axes()[0].add_patch(line)
+        if event.inaxes:
+            if event.name == "button_press_event":
+                self.mi.mouse_point1 = (event.xdata, event.ydata)
+
+            if event.name == "motion_notify_event":
+                if self.mi.mouse_point1 is not None:
+                    self.mi.mouse_point2 = (event.xdata, event.ydata)
+                    line = Line2D((self.mi.mouse_point1[0], self.mi.mouse_point2[0]), (self.mi.mouse_point1[1], self.mi.mouse_point2[1]), color="r")
+                    self._add_line_to_raster_image(line)
+                    if self.function_after_mouse_events:
+                        self.function_after_mouse_events((self.mi.mouse_point1[0], self.mi.mouse_point2[0]), (self.mi.mouse_point1[1], self.mi.mouse_point2[1]))
+
+            if event.name == "button_release_event":
+                if self.mi.mouse_point1 is not None and self.mi.mouse_point2 is not None:
+                    print("release")
+                    if self.function_after_mouse_events:
+                        self.function_after_mouse_events((self.mi.mouse_point1[0], self.mi.mouse_point2[0]), (self.mi.mouse_point1[1], self.mi.mouse_point2[1]))
+                self._unbind_mouse_events()
 
     def _highlight_row_or_column_and_call_func(self, event):
         """
@@ -401,6 +426,11 @@ class GraphCanvas(FigureCanvasQTAgg):
         self.draw_graph(self.current_data, RASTER_IMAGE, self.current_view)
         for rectangle in rectangles:
             self.figure.get_axes()[0].add_patch(rectangle)
+        self.draw()
+
+    def _add_line_to_raster_image(self, line: Line2D):
+        self.draw_graph(self.current_data, RASTER_IMAGE, self.current_view)
+        self.figure.get_axes()[0].add_patch(line)
         self.draw()
 
     def _unbind_mouse_events(self):

@@ -253,6 +253,8 @@ class MainWindow(QMainWindow):
         self.action_line_profile_row.setEnabled(False)
         self.action_line_profile_column = QAction("column")
         self.action_line_profile_column.setEnabled(False)
+        self.action_line_profile_line = QAction("line")
+        self.action_line_profile_line.setEnabled(False)
         self.action_line_profile_xy = QAction("xy")
         self.action_line_profile_column.setEnabled(False)
         action_measure_dist = QAction('&Measure distance', self)
@@ -268,6 +270,7 @@ class MainWindow(QMainWindow):
         line_profile_menu.addAction(self.action_line_profile_row)
         line_profile_menu.addAction(self.action_line_profile_column)
         line_profile_menu.addAction(self.action_line_profile_xy)
+        line_profile_menu.addAction(self.action_line_profile_line)
         self.measure_menu.addAction(action_measure_dist)
         self.measure_menu.addAction(action_measure_profile)
         self.measure_menu.addAction(self.action_set_rois)
@@ -373,6 +376,7 @@ class MainWindow(QMainWindow):
         self.about_menu.setEnabled(False)
         self.action_line_profile_row.setEnabled(enable)
         self.action_line_profile_column.setEnabled(enable)
+        self.action_line_profile_line.setEnabled(enable)
         self.action_export_sicm_data.setEnabled(enable)
 
     def toggle_show_toolbar(self):

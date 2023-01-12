@@ -8,6 +8,7 @@ import numpy as np
 from os import listdir
 from os.path import join, isfile
 from matplotlib.figure import Figure
+from skimage import measure
 
 from PyQt6.QtCore import QPoint
 from PyQt6.QtGui import QIcon
@@ -112,7 +113,7 @@ class Controller:
         self.main_window.action_line_profile_row.triggered.connect(self.select_line_profile_row)
         self.main_window.action_line_profile_column.triggered.connect(self.select_line_profile_column)
         self.main_window.action_line_profile_xy.triggered.connect(self.show_xy_profile)
-        self.main_window.action_line_profile_line.triggered.connect(self.show_xy_profile)
+        self.main_window.action_line_profile_line.triggered.connect(self.select_line_profile_line)
 
         # Other
         self.main_window.imported_files_list.currentItemChanged.connect(self.item_selection_changed_event)
@@ -593,6 +594,16 @@ class Controller:
                 mode=COLUMN
             )
 
+    def select_line_profile_line(self):
+        """TODO EXPERIMENTAL"""
+        if self.current_selection:
+            self._show_line_profile_window()
+            self.figure_canvas_2d.bind_mouse_events_for_draw_line(
+                data=self.data_manager.get_data(self.current_selection),
+                view=self.view,
+                func=self._show_line_profile_of_drawn_line
+            )
+
     def show_xy_profile(self):
         """Show a window displaying a line plot which is
         updated on mouse movement over the 2D canvas.
@@ -625,6 +636,38 @@ class Controller:
                 y = data.y
                 z = data.z
                 self.line_profile.update_plot(y[:, index], z[:, index])
+
+    def _show_line_profile_of_drawn_line(self, x_data: (int, int) = (-1, -1), y_data: (int, int) = (-1, -1)):
+        data = self.data_manager.get_data(self.current_selection)
+        print("line profile line")
+        try:
+            if x_data[0] < x_data[1]:
+                src_x = x_data[0]
+                dst_x = x_data[1]
+            else:
+                src_x = x_data[1]
+                dst_x = x_data[0]
+            if y_data[0] < y_data[1]:
+                src_y = y_data[0]
+                dst_y = y_data[1]
+            else:
+                src_y = y_data[1]
+                dst_y = y_data[0]
+            src = (src_y, src_x)
+            dst = (dst_y, dst_x)
+            plot = measure.profile_line(image=data.z, src=src, dst=dst, linewidth=1, reduce_func=None)
+            a = range(plot.shape[0])
+            x = np.array(a)
+            self.line_profile.update_plot(x=x, y=plot)
+            print("#########")
+            print(data.z)
+            print(plot)
+            print(src)
+            print(dst)
+            print("#########")
+
+        except Exception as e:
+            print(e)
 
     def _show_xy_line_profiles(self, y_index: int = -1, x_index: int = -1):
         data = self.data_manager.get_data(self.current_selection)
