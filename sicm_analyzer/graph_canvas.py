@@ -324,7 +324,6 @@ class GraphCanvas(FigureCanvasQTAgg):
 
             if event.name == "button_release_event":
                 if self.mi.mouse_point1 is not None and self.mi.mouse_point2 is not None:
-                    print("release")
                     if self.function_after_mouse_events:
                         self.function_after_mouse_events((self.mi.mouse_point1[0], self.mi.mouse_point2[0]), (self.mi.mouse_point1[1], self.mi.mouse_point2[1]))
                 self._unbind_mouse_events()
