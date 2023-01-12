@@ -57,6 +57,7 @@ class GraphCanvas(FigureCanvasQTAgg):
         # mouse event functions
         self.mi = MouseInteraction()
         self.function_after_mouse_events = None
+        self.clean_up_function = None
         self.current_data: SICMdata = SICMdata()
         self.current_view: View = View()
 
@@ -210,22 +211,34 @@ class GraphCanvas(FigureCanvasQTAgg):
         if view:
             self.axes.axis(view.axes_shown)
 
-    def bind_mouse_events_for_showing_line_profile(self, data: SICMdata, view: View = None, func: Callable = None, mode: str = "row"):
+    def bind_mouse_events_for_showing_line_profile(self,
+                                                   data: SICMdata,
+                                                   view: View = None,
+                                                   func: Callable = None,
+                                                   clean_up_func: Callable = None,
+                                                   mode: str = "row"):
         """Draw line profile plot.
 
         Dev note: Maybe in the future, custom drawn lines on the plot will be supported.
         """
         self._bind_mouse_events(self._highlight_row_or_column_and_call_func, mode=mode)
         self.function_after_mouse_events = func
+        self.clean_up_function = clean_up_func
         self.current_data = data
         self.current_view = view
 
-    def bind_mouse_events_for_draw_line(self, data: SICMdata, view: View = None, func: Callable = None, mode: str = "row"):
+    def bind_mouse_events_for_draw_line(self,
+                                        data: SICMdata,
+                                        view: View = None,
+                                        func: Callable = None,
+                                        clean_up_func: Callable = None,
+                                        mode: str = "row"):
         """Draw a line on image.
         TODO
         """
         self._bind_mouse_events(self._draw_a_line_on_raster_image)
         self.function_after_mouse_events = func
+        self.clean_up_function = clean_up_func
         self.current_data = data
         self.current_view = view
 
@@ -247,12 +260,15 @@ class GraphCanvas(FigureCanvasQTAgg):
         """
         Binds a callable to mouse events on the canvas.
 
+        Also unbinds all previous events.
+
         Optional arguments may be passed to the MouseInteraction instance.
         The following mouse events are bound:
             - button_press_event
             - motion_notify_event
             - button_release_event
         """
+        self._unbind_mouse_events()
         self.mi = MouseInteraction(*args, **kwargs)
         self.mi.cid_press = self.figure.canvas.mpl_connect('button_press_event', func)
         self.mi.cid_move = self.figure.canvas.mpl_connect('motion_notify_event', func)
@@ -303,6 +319,8 @@ class GraphCanvas(FigureCanvasQTAgg):
 
                     if self.function_after_mouse_events:
                         self.function_after_mouse_events(self.mi.mouse_point1, self.mi.mouse_point2)
+                    if self.clean_up_function:
+                        self.clean_up_function()
                 self._unbind_mouse_events()
 
     def _draw_a_line_on_raster_image(self, event):
@@ -326,6 +344,8 @@ class GraphCanvas(FigureCanvasQTAgg):
                 if self.mi.mouse_point1 is not None and self.mi.mouse_point2 is not None:
                     if self.function_after_mouse_events:
                         self.function_after_mouse_events((self.mi.mouse_point1[0], self.mi.mouse_point2[0]), (self.mi.mouse_point1[1], self.mi.mouse_point2[1]))
+                    if self.clean_up_function:
+                        self.clean_up_function()
                 self._unbind_mouse_events()
 
     def _highlight_row_or_column_and_call_func(self, event):
@@ -361,7 +381,6 @@ class GraphCanvas(FigureCanvasQTAgg):
                             self._add_rectangle_to_raster_image(rectangles=[rect])
                         if self.function_after_mouse_events:
                             self.function_after_mouse_events(self.mi.kwargs.get("mode"), index)
-
                 except Exception as e:
                     print(traceback.format_exc())
                     print(type(e))
@@ -372,6 +391,8 @@ class GraphCanvas(FigureCanvasQTAgg):
             if event.name == "button_release_event":
                 # remove the rectangle
                 self.draw_graph(self.current_data, RASTER_IMAGE, self.current_view)
+                if self.clean_up_function:
+                    self.clean_up_function()
                 self._unbind_mouse_events()
 
     def get_rectangle(self, origin: tuple[int, int], width: int, height: int) -> Rectangle:
@@ -443,10 +464,14 @@ class GraphCanvas(FigureCanvasQTAgg):
         Furthermore, references for function_after_mouse_event
         and MouseInteraction are set to None.
         """
-        self.figure.canvas.mpl_disconnect(self.mi.cid_press)
-        self.figure.canvas.mpl_disconnect(self.mi.cid_move)
-        self.figure.canvas.mpl_disconnect(self.mi.cid_release)
+        try:
+            self.figure.canvas.mpl_disconnect(self.mi.cid_press)
+            self.figure.canvas.mpl_disconnect(self.mi.cid_move)
+            self.figure.canvas.mpl_disconnect(self.mi.cid_release)
+        except AttributeError as e:
+            pass
         self.function_after_mouse_events = None
+        self.clean_up_function = None
         self.mi = None
 
     def draw_line_plot(self, x_data, y_data):

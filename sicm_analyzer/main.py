@@ -580,6 +580,7 @@ class Controller:
                 data=self.data_manager.get_data(self.current_selection),
                 view=self.view,
                 func=self._show_line_profile,
+                clean_up_func=self._focus_line_profile_widget,
                 mode=ROW
             )
 
@@ -596,6 +597,7 @@ class Controller:
                 data=self.data_manager.get_data(self.current_selection),
                 view=self.view,
                 func=self._show_line_profile,
+                clean_up_func=self._focus_line_profile_widget,
                 mode=COLUMN
             )
 
@@ -606,7 +608,8 @@ class Controller:
             self.figure_canvas_2d.bind_mouse_events_for_draw_line(
                 data=self.data_manager.get_data(self.current_selection),
                 view=self.view,
-                func=self._show_line_profile_of_drawn_line
+                func=self._show_line_profile_of_drawn_line,
+                clean_up_func=self._focus_line_profile_widget,
             )
 
     def show_xy_profile(self):
@@ -620,6 +623,7 @@ class Controller:
                 data=self.data_manager.get_data(self.current_selection),
                 view=self.view,
                 func=self._show_xy_line_profiles,
+                clean_up_func=self._focus_line_profile_widget,
                 mode=CROSS
             )
 
@@ -627,6 +631,10 @@ class Controller:
         """Show a small window including a line plot."""
         self.line_profile = LineProfileWindow(self.main_window)
         self.line_profile.add_canvas(GraphCanvas())
+        self.line_profile.show()
+
+    def _focus_line_profile_widget(self):
+        self.line_profile.raise_()
         self.line_profile.show()
 
     def _show_line_profile(self, selection_mode: str, index: int = -1):
@@ -645,20 +653,8 @@ class Controller:
     def _show_line_profile_of_drawn_line(self, x_data: (int, int) = (-1, -1), y_data: (int, int) = (-1, -1)):
         data = self.data_manager.get_data(self.current_selection)
         try:
-            if x_data[0] < x_data[1]:
-                src_x = x_data[0]
-                dst_x = x_data[1]
-            else:
-                src_x = x_data[1]
-                dst_x = x_data[0]
-            if y_data[0] < y_data[1]:
-                src_y = y_data[0]
-                dst_y = y_data[1]
-            else:
-                src_y = y_data[1]
-                dst_y = y_data[0]
-            src = (src_y, src_x)
-            dst = (dst_y, dst_x)
+            src = (y_data[0], x_data[0])
+            dst = (y_data[1], x_data[1])
             plot = measure.profile_line(image=data.z, src=src, dst=dst, linewidth=1, reduce_func=None)
             a = range(plot.shape[0])
             x = np.array(a)
