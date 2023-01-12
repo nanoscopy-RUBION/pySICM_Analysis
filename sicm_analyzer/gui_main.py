@@ -119,7 +119,7 @@ class MainWindow(QMainWindow):
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.dock_2d_plot)
 
         # File menu
-        self.action_clear = QAction(QIcon(join(self.resource_dir, "pySICM64.png")), '&Clear list', self)
+        self.action_clear = QAction(QIcon(join(self.resource_dir, "clear.png")), '&Clear list', self)
         self.action_remove_selection = QAction("Remove selection", self)
         self.action_remove_selection.setShortcut("Ctrl+D")
         self.action_import_files = QAction(icon_files, "&Import Files...", self)
