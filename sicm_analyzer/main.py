@@ -311,10 +311,12 @@ class Controller:
         self.add_files_to_list(files)
 
     def import_directory(self):
-        """Opens a file dialog to select a directory."""
-        #files = self.get_filenames_from_selected_directory()
+        """Import all sicm files from a selected directory
+        and its subfolders."""
+        files = []
         dirname = self.get_filenames_from_selected_directory()
-        files = self.get_sicm_files_from_url_list([dirname])
+        if dirname:
+            files = self.get_sicm_files_from_url_list([dirname])
         self.add_files_to_list(files)
 
     def import_files_by_drag_and_drop(self, urls):
@@ -339,17 +341,11 @@ class Controller:
         return that directory path.
         Returns None if no directory has been selected."""
         options = QFileDialog.Option(QFileDialog.Option.DontUseNativeDialog)
-        #filenames = []
         dirname = QFileDialog().getExistingDirectory(parent=self.main_window,
                                                      caption='Select Folder',
                                                      options=options
                                                      )
         if not dirname or not os.path.isdir:
-            #filenames = [
-            #    join(dirname, f) for f in listdir(dirname)
-            #    if (isfile(join(dirname, f)) and f.endswith('.sicm'))
-            #]
-        #return filenames
             dirname = None
         return dirname
 
