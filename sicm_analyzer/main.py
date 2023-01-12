@@ -112,6 +112,7 @@ class Controller:
         self.main_window.action_line_profile_row.triggered.connect(self.select_line_profile_row)
         self.main_window.action_line_profile_column.triggered.connect(self.select_line_profile_column)
         self.main_window.action_line_profile_xy.triggered.connect(self.show_xy_profile)
+        self.main_window.action_line_profile_line.triggered.connect(self.show_xy_profile)
 
         # Other
         self.main_window.imported_files_list.currentItemChanged.connect(self.item_selection_changed_event)
@@ -628,7 +629,7 @@ class Controller:
     def _show_xy_line_profiles(self, y_index: int = -1, x_index: int = -1):
         data = self.data_manager.get_data(self.current_selection)
         shape = data.z.shape
-        if 0 <= x_index <= shape[1] and 0 <= y_index <= shape[0]:
+        if 0 <= x_index <= shape[0] and 0 <= y_index <= shape[1]:
             x = data.x
             y = data.y
             z = data.z
