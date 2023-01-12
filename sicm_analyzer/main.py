@@ -153,7 +153,7 @@ class Controller:
         .sicm."""
         try:
             data = self.data_manager.get_data(self.current_selection)
-            if data and data.scan_mode == sicm_data.BACKSTEP:
+            if data and (data.scan_mode == sicm_data.BACKSTEP or data.scan_mode == sicm_data.FLOATING_BACKSTEP):
                 options = QFileDialog.Option(QFileDialog.Option.DontUseNativeDialog)
                 file_path = QFileDialog.getSaveFileName(parent=self.main_window,
                                                         caption="Export manipulated data as .sicm file",
