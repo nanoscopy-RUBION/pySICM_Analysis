@@ -3,7 +3,7 @@ TODO add module documentation
 """
 import os
 from os.path import join
-from PyQt6 import QtWidgets
+from PyQt6 import QtWidgets, QtCore
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QIcon, QAction, QActionGroup, QKeyEvent, QDragEnterEvent, QDropEvent, QCursor
 
@@ -125,6 +125,7 @@ class MainWindow(QMainWindow):
         self.action_import_files = QAction(icon_files, "&Import Files...", self)
         self.action_import_directory = QAction(icon_directory, '&Import Directory...', self)
         self.action_export_sicm_data = QAction(icon_export, 'Export sicm data', self)
+        self.action_export_sicm_data_multi = QAction(icon_export, 'Export sicm data (multi)', self)
         self.action_export_file = QAction(icon_export, 'Export view object', self)
         self.action_export_file.setEnabled(False)
         self.action_export_3d = QAction("3D graph", self)
@@ -140,6 +141,7 @@ class MainWindow(QMainWindow):
         clipboard_menu.addAction(self.action_export_3d)
         clipboard_menu.addAction(self.action_export_2d)
         file_menu.addAction(self.action_export_sicm_data)
+        file_menu.addAction(self.action_export_sicm_data_multi)
         file_menu.addAction(self.action_export_file)
         file_menu.addSeparator()
         file_menu.addAction(self.action_exit)
@@ -151,12 +153,18 @@ class MainWindow(QMainWindow):
         self.action_redo.setShortcut("Ctrl+R")
         self.action_undo.setEnabled(False)
         self.action_redo.setEnabled(False)
+        action_check_all = QAction("Check all items", self)
+        action_check_all.triggered.connect(self.check_all_items)
+        action_uncheck_all = QAction("Uncheck all items", self)
+        action_uncheck_all.triggered.connect(self.uncheck_all_items)
 
         self.action_toggle_toolbar = QAction("Show/Hide toolbar", self)
         self.action_toggle_toolbar.triggered.connect(self.toggle_show_toolbar)
         edit_menu = menubar.addMenu("Edit")
         edit_menu.addAction(self.action_undo)
         edit_menu.addAction(self.action_redo)
+        edit_menu.addAction(action_check_all)
+        edit_menu.addAction(action_uncheck_all)
         edit_menu.addSeparator()
         edit_menu.addAction(self.action_toggle_toolbar)
 
@@ -406,7 +414,28 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage(message)
 
     def add_items_to_list(self, items):
-        self.imported_files_list.addItems(items)
+        for item in items:
+            checkable_item = QtWidgets.QListWidgetItem(item)
+            checkable_item.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled)
+            checkable_item.setCheckState(Qt.CheckState.Checked)
+            self.imported_files_list.addItem(checkable_item)
+
+    def get_all_checked_items(self) -> list[str]:
+        items = []
+        for i in range(self.imported_files_list.count()):
+            if self.imported_files_list.item(i).checkState() == Qt.CheckState.Checked:
+                items.append(self.imported_files_list.item(i).text())
+        return items
+
+    def check_all_items(self):
+        self._change_checkstate_of_all_items(Qt.CheckState.Checked)
+
+    def uncheck_all_items(self):
+        self._change_checkstate_of_all_items(Qt.CheckState.Unchecked)
+
+    def _change_checkstate_of_all_items(self, state: Qt.CheckState):
+        for i in range(self.imported_files_list.count()):
+            self.imported_files_list.item(i).setCheckState(state)
 
     def clear_list_widgets(self):
         self.imported_files_list.clear()

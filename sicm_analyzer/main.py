@@ -6,8 +6,8 @@ sys.path.append("")
 import traceback
 import numpy as np
 
-from os import listdir
-from os.path import join, isfile
+from pathlib import Path
+from os.path import join
 from matplotlib.figure import Figure
 from skimage import measure
 
@@ -83,6 +83,7 @@ class Controller:
         self.main_window.action_export_2d.triggered.connect(lambda: self.export_figure(self.figure_canvas_2d.figure))
         self.main_window.action_export_3d.triggered.connect(lambda: self.export_figure(self.figure_canvas_3d.figure))
         self.main_window.action_export_sicm_data.triggered.connect(self.export_sicm_data)
+        self.main_window.action_export_sicm_data_multi.triggered.connect(self.export_sicm_data_multi)
         self.main_window.action_exit.triggered.connect(self.quit_application)
 
         # Edit menu
@@ -170,6 +171,21 @@ class Controller:
                 self.main_window.display_status_bar_message("No file exported.")
         except TypeError:
             self.main_window.display_status_bar_message("No file selected for export.")
+
+    def export_sicm_data_multi(self):
+        options = QFileDialog.Option(QFileDialog.Option.DontUseNativeDialog)
+        directory = str(QFileDialog.getExistingDirectory(parent=self.main_window,
+                                                         caption="Select Directory",
+                                                         directory=DEFAULT_FILE_PATH,
+                                                         options=options))
+        for item in self.main_window.get_all_checked_items():
+            data = self.data_manager.get_data(item)
+            if data and (data.scan_mode == sicm_data.BACKSTEP or data.scan_mode == sicm_data.FLOATING_BACKSTEP):
+                if directory and os.path.isdir(directory):
+                    name = Path(item).name
+                    full_path = os.path.join(directory, name)
+                    export_sicm_file(full_path, data)
+
 
     def _get_file_name_with_extension(self, file_dialog_path: tuple[str, str]) -> (str, str):
         """Checks the file path from a QFileDialog and returns
