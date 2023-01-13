@@ -2,7 +2,6 @@ import unittest
 import os
 from os.path import join
 from sicm_analyzer.graph_canvas import GraphCanvas
-from sicm_analyzer.sicm_data import SICMDataFactory
 from sicm_analyzer.view import View
 
 APP_PATH = os.getcwd()

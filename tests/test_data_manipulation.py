@@ -4,15 +4,15 @@ import numpy as np
 
 from sicm_analyzer.manipulate_data import filter_median_spatial, filter_average_spatial, filter_average_temporal, filter_median_temporal
 from sicm_analyzer.manipulate_data import transpose_z_data
-from sicm_analyzer.sicm_data import SICMdata
+from sicm_analyzer.sicm_data import ScanBackstepMode
 from sicm_analyzer.view import View
 
 
 class DataManipulationFilterTests(unittest.TestCase):
 
     def setUp(self):
-        self.test_data = SICMdata()
-        self.expected_data = SICMdata()
+        self.test_data = ScanBackstepMode()
+        self.expected_data = ScanBackstepMode()
 
     def tearDown(self):
         self.test_data = None
@@ -129,8 +129,8 @@ class DataManipulationFilterTests(unittest.TestCase):
 
 class DataManipulationSimpleTests(unittest.TestCase):
     def setUp(self):
-        self.test_data = SICMdata()
-        self.expected_data = SICMdata()
+        self.test_data = ScanBackstepMode()
+        self.expected_data = ScanBackstepMode()
 
     def tearDown(self):
         self.test_data = None

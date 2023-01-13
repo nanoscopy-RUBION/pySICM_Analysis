@@ -213,10 +213,16 @@ class ScanBackstepMode(SICMdata):
         self.y_size = self.y_px * self.micron_to_pixel_factor_y()
 
     def micron_to_pixel_factor_x(self) -> float:
-        return self.x_size_raw / self.x_px_raw
+        try:
+            return self.x_size_raw / self.x_px_raw
+        except ZeroDivisionError:
+            return 1
 
     def micron_to_pixel_factor_y(self) -> float:
-        return self.y_size_raw / self.y_px_raw
+        try:
+            return self.y_size_raw / self.y_px_raw
+        except ZeroDivisionError:
+            return 1
 
 def get_sicm_data(file_path: str) -> SICMdata:
     """Read all data from the tar.gz-like .sicm-file format and stores it in
