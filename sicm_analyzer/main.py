@@ -126,6 +126,7 @@ class Controller:
 
         # Key Events
         self.main_window.delete_key = self.remove_selection
+        self.main_window.escape_key = self.figure_canvas_2d.unbind_mouse_events
 
     def export_figure(self, figure: Figure):
         """Exports the current view of a figure."""

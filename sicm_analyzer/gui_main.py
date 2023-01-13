@@ -295,6 +295,7 @@ class MainWindow(QMainWindow):
         # Key events
         self.imported_files_list.installEventFilter(self)
         self.delete_key = None
+        self.escape_key = None
 
         self.toolbar = QToolBar()
         self.toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
@@ -353,6 +354,12 @@ class MainWindow(QMainWindow):
             if event.key() == Qt.Key.Key_Delete:
                 try:
                     self.delete_key()
+                except:
+                    pass
+            if event.key() == Qt.Key.Key_Escape:
+                try:
+                    print("escape")
+                    self.escape_key()
                 except:
                     pass
         return super().eventFilter(source, event)
