@@ -42,7 +42,7 @@ APP_PATH = os.getcwd()
 RESOURCE_DIRECTORY = "resources"
 APP_ICON = "pySICMsplash.png"
 APP_ICON_PATH = join(APP_PATH, RESOURCE_DIRECTORY, APP_ICON)
-TITLE = f"{APP_NAME} (ver. 2023-01-11)"
+TITLE = f"{APP_NAME} (ver. 2023-01-13)"
 DEFAULT_FILE_PATH = os.getcwd()
 
 # FILTERS

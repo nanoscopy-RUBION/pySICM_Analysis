@@ -4,7 +4,7 @@
 - python 3.10
 
 ## Known Bugs
-- ...
+- see issues in github repo
 
 ## minor issues
   - add hints for input (px or µm, index begins at 0)
@@ -34,10 +34,7 @@
   - store a list of actions which can be applied to selected sicm measurements
 - Colormap window
   - Create custom color maps
-- Show Line profile of selection
-  - custom line defined by drawing into the plot
 - Measurement of:
-  - Distance between two points
   - Profile
 - About window
   - program version info screen and licence
