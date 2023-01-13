@@ -358,7 +358,6 @@ class MainWindow(QMainWindow):
                     pass
             if event.key() == Qt.Key.Key_Escape:
                 try:
-                    print("escape")
                     self.escape_key()
                 except:
                     pass
