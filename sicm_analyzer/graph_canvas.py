@@ -11,6 +11,8 @@ from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from matplotlib.colors import Normalize
+
+import sicm_analyzer.sicm_data
 from sicm_analyzer.mouse_events import MouseInteraction, COLUMN, ROW, CROSS
 from sicm_analyzer.sicm_data import SICMdata
 from sicm_analyzer.view import View
@@ -93,29 +95,20 @@ class GraphCanvas(FigureCanvasQTAgg):
         """
 
         """
-        x_size = data.x_size
-        x_px = data.x_px
-        y_size = data.y_size
-        y_px = data.y_px
         x_ticks = axes.get_xticks()
         y_ticks = axes.get_yticks()
 
-        if x_px != x_size:
-            axes.set_xticklabels(self.get_tick_labels_in_microns(x_ticks, x_px, x_size))
-
-        if y_px != y_size:
-            axes.set_yticklabels(self.get_tick_labels_in_microns(y_ticks, y_px, y_size))
-
-    def get_tick_labels_in_microns(self, ticks, n_px, n_size):
-        labels = []
-        if n_px != n_size:
-            for tick in ticks:
-                label = round(tick * (n_size / n_px), 2)
-                labels.append(label)
-        return labels
+        if isinstance(data, sicm_analyzer.sicm_data.ScanBackstepMode):
+            axes.set_xticklabels([round(tick * data.micron_to_pixel_factor_x(), 2) for tick in x_ticks])
+            axes.set_yticklabels([round(tick * data.micron_to_pixel_factor_y(), 2) for tick in y_ticks])
 
     def show_or_hide_axes(self, data: SICMdata, view: View, axes):
         if view.axes_shown:
+            x_ticks = [0, round(data.x_px / 2, 2), data.x_px]
+            y_ticks = [0, round(data.y_px / 2, 2), data.y_px]
+            axes.set_xticks(x_ticks)
+            axes.set_yticks(y_ticks)
+
             if view.show_as_px:
                 axis_label = "px"
             else:
@@ -446,6 +439,31 @@ class GraphCanvas(FigureCanvasQTAgg):
         self.draw_graph(self.current_data, RASTER_IMAGE, self.current_view)
         for rectangle in rectangles:
             self.figure.get_axes()[0].add_patch(rectangle)
+
+            try:
+                if self.current_view.show_as_px:
+                    unit = " px"
+                    width = rectangle.get_width()
+                    height = rectangle.get_height()
+                else:
+                    if isinstance(self.current_data, sicm_analyzer.sicm_data.ScanBackstepMode)
+                        unit = " µm"
+                        width = rectangle.get_width() * self.current_data.micron_to_pixel_factor_x()
+                        height = rectangle.get_height() * self.current_data.micron_to_pixel_factor_y()
+
+                x_text = str(round(width, 2)) + unit
+                y_text = str(round(height, 2)) + unit
+
+                # rectangle coordinates
+                rx, ry = rectangle.get_xy()
+                h = rectangle.get_height()
+                w = rectangle.get_width()
+
+                # show size of rectangle inside the rectangle
+                self.figure.get_axes()[0].annotate(x_text, xy=(rx+w/2, ry), color="w", weight="bold", fontsize=10)
+                self.figure.get_axes()[0].annotate(y_text, xy=(rx, ry+h/2), color="w", weight="bold", fontsize=10)
+            except:
+                pass
         self.draw()
 
     def _add_line_to_raster_image(self, line: Line2D):

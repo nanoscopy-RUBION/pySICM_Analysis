@@ -469,10 +469,12 @@ class Controller:
                     scan_mode=current_data.scan_mode,
                     x_px=current_data.x_px,
                     y_px=current_data.y_px,
+                    x_size=current_data.x_size,
+                    y_size=current_data.y_size,
                     x_px_raw=current_data.x_px_raw,
                     y_px_raw=current_data.y_px_raw,
-                    x_size=current_data.x_size,
-                    y_size=current_data.y_size
+                    x_size_raw=current_data.x_size_raw,
+                    y_size_raw=current_data.y_size_raw
                 )
 
                 self._update_undo_redo_menu_items()

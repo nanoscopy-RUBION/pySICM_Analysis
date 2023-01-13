@@ -70,9 +70,12 @@ class SICMdata:
         self.z_px: int = 0
         self.x_px_raw: int = 0
         self.y_px_raw: int = 0
+        self.x_size_raw: int = 0
+        self.y_size_raw: int = 0
         self.scan_mode: str = ""
         self.info: dict = {}
         self.settings: dict = {}
+
         # result fields
         self.fit_results = None
         self.roughness = None
@@ -83,8 +86,14 @@ class SICMdata:
         self.settings = settings
 
     def get_data(self):
-        """Returns x and z data for ApproachCurves and
-         x, y and z for Scan data."""
+        """Returns a tuple containing x and z data for ApproachCurves and
+         x, y and z for Scan data.
+
+         Indices are:
+         [0]: x
+         [1]: z (ApproachCurves) or y (Scan)
+         [2]: z (Scan only)
+         """
         return self.x, self.y, self.z
 
     def get_scan_time(self) -> str:
@@ -149,6 +158,9 @@ class ScanBackstepMode(SICMdata):
             self.x_size = self.x_px
             self.y_size = self.y_px
 
+        self.x_size_raw = self.x_size
+        self.y_size_raw = self.y_size
+
     def set_data(self, data: list[int]):
         """Rearranges scan data for 3-dimensional plotting."""
         self.z = np.reshape(data, (self.y_px, self.x_px)) / 1000  # to have z data in µm instead of nm
@@ -180,15 +192,31 @@ class ScanBackstepMode(SICMdata):
         self.y_px = y
 
     def update_dimensions(self):
-        """Updates the number of pixel in x and y dimensions. Mesh grids for
-        x and y are also reshaped.
+        """Updates the number of pixel and the micrometer size in x and y dimensions.
+
 
         This function should be called when the scan size has changed, e.g.,
         after crop.
         """
+        self._update_pixel_dimensions()
+        self._update_sizes()
+
+    def _update_pixel_dimensions(self):
+        """Updates the number of pixels in x and y dimensions
+        and reshapes mesh grids."""
         self.y_px, self.x_px = self.z.shape
         self.reshape_xy_meshgrids()
 
+    def _update_sizes(self):
+        """Updates the size of the scan in micrometer."""
+        self.x_size = self.x_px * self.micron_to_pixel_factor_x()
+        self.y_size = self.y_px * self.micron_to_pixel_factor_y()
+
+    def micron_to_pixel_factor_x(self) -> float:
+        return self.x_size_raw / self.x_px_raw
+
+    def micron_to_pixel_factor_y(self) -> float:
+        return self.y_size_raw / self.y_px_raw
 
 def get_sicm_data(file_path: str) -> SICMdata:
     """Read all data from the tar.gz-like .sicm-file format and stores it in

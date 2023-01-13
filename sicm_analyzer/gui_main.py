@@ -433,7 +433,19 @@ class MainWindow(QMainWindow):
         self.data_manipulation_list.clear()
         self.data_manipulation_list.addItems(items)
 
-    def update_info_labels(self, scan_date, scan_time, scan_mode, x_px, y_px, x_px_raw, y_px_raw, x_size, y_size):
+    def update_info_labels(self,
+                           scan_date,
+                           scan_time,
+                           scan_mode,
+                           x_px,
+                           y_px,
+                           x_size,
+                           y_size,
+                           x_px_raw,
+                           y_px_raw,
+                           x_size_raw,
+                           y_size_raw
+                           ):
         text = f"<html>" \
                f"<table style='width:100%'>" \
                f"<tr>" \
@@ -452,16 +464,22 @@ class MainWindow(QMainWindow):
                f"<td><b>y pixels:</b></td> <td>{y_px}</td>" \
                f"</tr>" \
                f"<tr>" \
+               f"<td><b>x size [µm]:</b></td> <td>{x_size}</td>" \
+               f"</tr>" \
+               f"<tr>" \
+               f"<td><b>y size [µm]:</b></td> <td>{y_size}</td>" \
+               f"</tr>" \
+               f"<tr>" \
                f"<td><b>x pixels (raw):</b></td> <td>{x_px_raw}</td>" \
                f"</tr>" \
                f"<tr>" \
                f"<td><b>y pixels (raw):</b></td> <td>{y_px_raw}</td>" \
                f"</tr>" \
                f"<tr>" \
-               f"<td><b>x size [µm]:</b></td> <td>{x_size}</td>" \
+               f"<td><b>x size [µm] (raw):</b></td> <td>{x_size_raw}</td>" \
                f"</tr>" \
                f"<tr>" \
-               f"<td><b>y size [µm]:</b></td> <td>{y_size}</td>" \
+               f"<td><b>y size [µm] (raw):</b></td> <td>{y_size_raw}</td>" \
                f"</tr>" \
                f"</table>" \
                "</html>"
