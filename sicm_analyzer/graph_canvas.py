@@ -446,7 +446,7 @@ class GraphCanvas(FigureCanvasQTAgg):
                     width = rectangle.get_width()
                     height = rectangle.get_height()
                 else:
-                    if isinstance(self.current_data, sicm_analyzer.sicm_data.ScanBackstepMode)
+                    if isinstance(self.current_data, sicm_analyzer.sicm_data.ScanBackstepMode):
                         unit = " µm"
                         width = rectangle.get_width() * self.current_data.micron_to_pixel_factor_x()
                         height = rectangle.get_height() * self.current_data.micron_to_pixel_factor_y()
@@ -460,8 +460,8 @@ class GraphCanvas(FigureCanvasQTAgg):
                 w = rectangle.get_width()
 
                 # show size of rectangle inside the rectangle
-                self.figure.get_axes()[0].annotate(x_text, xy=(rx+w/2, ry), color="w", weight="bold", fontsize=10)
-                self.figure.get_axes()[0].annotate(y_text, xy=(rx, ry+h/2), color="w", weight="bold", fontsize=10)
+                self.figure.get_axes()[0].annotate(x_text, xy=(rx+w/2, ry), color="w", weight="bold", fontsize=8)
+                self.figure.get_axes()[0].annotate(y_text, xy=(rx, ry+h/2), color="w", weight="bold", fontsize=8)
             except:
                 pass
         self.draw()
