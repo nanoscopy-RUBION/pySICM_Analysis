@@ -428,12 +428,15 @@ class MainWindow(QMainWindow):
         return items
 
     def check_all_items(self):
+        """Sets the checkstate of all items in the imported files list to checked."""
         self._change_checkstate_of_all_items(Qt.CheckState.Checked)
 
     def uncheck_all_items(self):
+        """Sets the checkstate of all items in the imported files list to checked."""
         self._change_checkstate_of_all_items(Qt.CheckState.Unchecked)
 
     def _change_checkstate_of_all_items(self, state: Qt.CheckState):
+        """Sets the checkstate of all items in the imported files list."""
         for i in range(self.imported_files_list.count()):
             self.imported_files_list.item(i).setCheckState(state)
 
