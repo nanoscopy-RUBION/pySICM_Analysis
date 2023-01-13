@@ -329,7 +329,7 @@ class GraphCanvas(FigureCanvasQTAgg):
             if event.name == "motion_notify_event":
                 if self.mi.mouse_point1 is not None:
                     self.mi.mouse_point2 = (event.xdata, event.ydata)
-                    line = Line2D((self.mi.mouse_point1[0], self.mi.mouse_point2[0]), (self.mi.mouse_point1[1], self.mi.mouse_point2[1]), color="r")
+                    line = Line2D((self.mi.mouse_point1[0], self.mi.mouse_point2[0]), (self.mi.mouse_point1[1], self.mi.mouse_point2[1]), color="r", marker="x")
                     self._add_line_to_raster_image(line)
                     if self.function_after_mouse_events:
                         self.function_after_mouse_events((self.mi.mouse_point1[0], self.mi.mouse_point2[0]), (self.mi.mouse_point1[1], self.mi.mouse_point2[1]))
