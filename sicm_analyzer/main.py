@@ -498,9 +498,8 @@ class Controller:
                 self.main_window.set_data_manipulation_list_items(
                     self.data_manager.get_undoable_manipulations_list(self.current_selection)
                 )
-                print(self.data_manager.get_undoable_manipulations_list(self.current_selection))
                 self.main_window.display_status_bar_message(message)
-        except TypeError as e:
+        except TypeError:
             print("No scan selected.")
 
     def store_viewing_angles(self):
