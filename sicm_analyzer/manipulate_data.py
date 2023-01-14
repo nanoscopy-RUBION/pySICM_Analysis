@@ -44,6 +44,11 @@ def transpose_z_data(data: ScanBackstepMode):
     data.update_dimensions()
 
 
+def invert_z_data(data: ScanBackstepMode):
+    """Reflects all z values by x, y plane."""
+    data.z = data.z * (-1)
+
+
 # Filter Manipulations
 # ______________________________________
 def filter_median_temporal(data: ScanBackstepMode, px_neighbours=1):

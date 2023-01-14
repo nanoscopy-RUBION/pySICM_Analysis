@@ -22,7 +22,7 @@ from sicm_analyzer.enter_area_dialog import EnterAreaDialog
 from sicm_analyzer.gui_main import MainWindow
 from sicm_analyzer.graph_canvas import GraphCanvas
 from sicm_analyzer.filter_dialog import FilterDialog
-from sicm_analyzer.manipulate_data import transpose_z_data, subtract_z_minimum, crop
+from sicm_analyzer.manipulate_data import transpose_z_data, subtract_z_minimum, crop, invert_z_data
 from sicm_analyzer.manipulate_data import filter_median_temporal, filter_median_spatial, filter_average_temporal, \
     filter_average_spatial
 from sicm_analyzer.manipulate_data import level_data
@@ -102,6 +102,7 @@ class Controller:
         # Data manipulation
         self.main_window.action_data_transpose_z.triggered.connect(self.transpose_z_of_current_view)
         self.main_window.action_data_minimum.triggered.connect(self.subtract_minimum_in_current_view)
+        self.main_window.action_data_invert_z.triggered.connect(self.invert_z_in_current_view)
         self.main_window.action_data_reset.triggered.connect(self.reset_current_data_manipulations)
         self.main_window.action_data_filter.triggered.connect(self.filter_current_view)
         self.main_window.action_data_level_plane.triggered.connect(self.plane_correction)
@@ -460,6 +461,14 @@ class Controller:
                 subtract_z_minimum,
                 key=self.current_selection,
                 action_name="Subtract z minimum"
+            )(self.data_manager.get_data(self.current_selection))
+
+    def invert_z_in_current_view(self):
+        if self.current_selection:
+            self.data_manager.execute_func_on_current_data(
+                invert_z_data,
+                key=self.current_selection,
+                action_name="Invert z values"
             )(self.data_manager.get_data(self.current_selection))
 
     def update_figures_and_status(self, message: str = ""):
