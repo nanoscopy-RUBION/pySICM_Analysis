@@ -492,19 +492,19 @@ class MainWindow(QMainWindow):
         self.data_manipulation_list.clear()
         self.data_manipulation_list.addItems(items)
 
-    def update_info_labels(self,
-                           scan_date,
-                           scan_time,
-                           scan_mode,
-                           x_px,
-                           y_px,
-                           x_size,
-                           y_size,
-                           x_px_raw,
-                           y_px_raw,
-                           x_size_raw,
-                           y_size_raw
-                           ):
+    def update_info_text(self,
+                         scan_date,
+                         scan_time,
+                         scan_mode,
+                         x_px,
+                         y_px,
+                         x_size,
+                         y_size,
+                         x_px_raw,
+                         y_px_raw,
+                         x_size_raw,
+                         y_size_raw
+                         ):
         text = f"<html>" \
                f"<table style='width:100%'>" \
                f"<tr>" \
@@ -544,3 +544,6 @@ class MainWindow(QMainWindow):
                "</html>"
         self.info_text.clear()
         self.info_text.setHtml(text)
+
+    def clear_info_text(self):
+        self.info_text.clear()

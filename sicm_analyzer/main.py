@@ -394,6 +394,9 @@ class Controller:
             data_key = item.text()
             self.data_manager.remove_data(data_key)
             self.main_window.imported_files_list.takeItem(index)
+            if self.main_window.imported_files_list.count() == 0:
+                self.clear_canvases()
+                self.main_window.clear_info_text()
         except AttributeError:
             self.main_window.display_status_bar_message("No item selected.")
 
@@ -431,9 +434,15 @@ class Controller:
             self.main_window.set_menus_enabled(False)
             self.main_window.set_undo_menu_items()
             self.main_window.set_redo_menu_items()
+            self.clear_canvases()
+            self.main_window.clear_info_text()
             self.main_window.display_status_bar_message("Files removed from the list.")
         else:
             self.main_window.display_status_bar_message("No files to remove")
+
+    def clear_canvases(self):
+        self.figure_canvas_3d.draw_white_canvas()
+        self.figure_canvas_2d.draw_white_canvas()
 
     def toggle_axes(self):
         """Shows or hides axes in figures.
@@ -501,7 +510,7 @@ class Controller:
                     self.figure_canvas_3d.draw_graph(current_data)
                     self.figure_canvas_2d.draw_graph(current_data, APPROACH_CURVE, self.view)
 
-                self.main_window.update_info_labels(
+                self.main_window.update_info_text(
                     scan_date=current_data.get_scan_date(),
                     scan_time=current_data.get_scan_time(),
                     scan_mode=current_data.scan_mode,

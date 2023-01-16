@@ -63,6 +63,7 @@ class GraphCanvas(FigureCanvasQTAgg):
         self.clean_up_function = None
         self.current_data: SICMdata = SICMdata()
         self.current_view: View = View()
+        self.draw_white_canvas()
 
     def draw_graph(self, data: SICMdata, graph_type: str = "", view: View = None):
         """
@@ -90,6 +91,10 @@ class GraphCanvas(FigureCanvasQTAgg):
         if graph_type == APPROACH_CURVE:
             self.draw_approach_curve(data)
 
+        self.draw()
+
+    def draw_white_canvas(self):
+        self.figure.clear()
         self.draw()
 
     def convert_axes_labels_from_px_to_microns(self, data: SICMdata, axes):
