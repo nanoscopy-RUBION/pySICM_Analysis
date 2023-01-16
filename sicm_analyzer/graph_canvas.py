@@ -5,7 +5,7 @@ from typing import Callable
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
-from matplotlib.patches import Rectangle
+from matplotlib.patches import Rectangle, Circle
 from matplotlib.lines import Line2D
 from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -267,9 +267,11 @@ class GraphCanvas(FigureCanvasQTAgg):
 
                     x = event.xdata
                     y = event.ydata
-                    text = f"x: {x:.1f}, y: {y: .1f}, z: {self.current_data.z[int(y), int(x)]}"
+                    text = f"x: {x:.1f}, y: {y:.1f}, z: {self.current_data.z[int(y), int(x)]:.3f}"
                     self.draw_graph(self.current_data, RASTER_IMAGE, self.current_view)
-                    self.figure.get_axes()[0].annotate(text, xy=(x+0.25, y+0.25), color="w", weight="bold", fontsize=8,
+                    circle = Circle((x, y), 0.1, color="w", fill=True)
+                    self.figure.get_axes()[0].add_patch(circle)
+                    self.figure.get_axes()[0].annotate(text, xy=(x+1, y+1), color="w", weight="bold", fontsize=8,
                                                        bbox=dict(boxstyle="square,pad=0.5", fc="gray"))
                     self.draw()
                 else:
