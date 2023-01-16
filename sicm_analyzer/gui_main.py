@@ -503,8 +503,17 @@ class MainWindow(QMainWindow):
                          x_px_raw,
                          y_px_raw,
                          x_size_raw,
-                         y_size_raw
+                         y_size_raw,
+                         previous_manipulations: list[str]
                          ):
+        manipulations = "<ul style=\"list-style-type:circle;\">"
+        if previous_manipulations:
+            for manipulation in previous_manipulations:
+                manipulations = manipulations + "<li>" + manipulation + "</li>"
+            manipulations = manipulations + "</ul>"
+        else:
+            manipulations = "none"
+
         text = f"<html>" \
                f"<table style='width:100%'>" \
                f"<tr>" \
@@ -539,6 +548,9 @@ class MainWindow(QMainWindow):
                f"</tr>" \
                f"<tr>" \
                f"<td><b>y size [µm] (raw):</b></td> <td>{y_size_raw}</td>" \
+               f"</tr>" \
+               f"<tr>" \
+               f"<td><b>Previous manipulations:</b></td> <td>{manipulations}</td>" \
                f"</tr>" \
                f"</table>" \
                "</html>"

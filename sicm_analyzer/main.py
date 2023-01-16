@@ -521,13 +521,14 @@ class Controller:
                     x_px_raw=current_data.x_px_raw,
                     y_px_raw=current_data.y_px_raw,
                     x_size_raw=current_data.x_size_raw,
-                    y_size_raw=current_data.y_size_raw
+                    y_size_raw=current_data.y_size_raw,
+                    previous_manipulations=current_data.previous_manipulations
                 )
 
                 self._update_undo_redo_menu_items()
-                self.main_window.set_data_manipulation_list_items(
-                    self.data_manager.get_undoable_manipulations_list(self.current_selection)
-                )
+                manipulations = self.data_manager.get_undoable_manipulations_list(self.current_selection)
+                self.main_window.set_data_manipulation_list_items(manipulations)
+                self.data_manager.get_data(self.current_selection).previous_manipulations = manipulations
                 self.main_window.display_status_bar_message(message)
         except TypeError:
             print("No scan selected.")
@@ -723,7 +724,6 @@ class Controller:
 
     def _calculate_distance_between_two_points(self, x_data, y_data):
         dist = math.dist((x_data[0], y_data[0]), (x_data[1], y_data[1]))
-        print("Distance [px]: %s" % str(dist))
 
     def _show_xy_line_profiles(self, y_index: int = -1, x_index: int = -1):
         data = self.data_manager.get_data(self.current_selection)

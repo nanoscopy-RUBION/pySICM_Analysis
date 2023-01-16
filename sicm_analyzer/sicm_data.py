@@ -26,6 +26,7 @@ import os
 import tarfile
 import tempfile
 import time
+import traceback
 from tarfile import TarFile
 import json
 import numpy as np
@@ -39,8 +40,13 @@ MODE = ".mode"
 INFO = ".info"
 Xpx = "x-px"
 Ypx = "y-px"
+Xpx_raw = "x-px_raw"
+Ypx_raw = "y-px-raw"
 X_size = "x-Size"
 Y_size = "y-Size"
+X_size_raw = "x-Size-raw"
+Y_size_raw = "y-Size-raw"
+Manipulations = "manipulations"
 
 
 class SICMdata:
@@ -75,6 +81,7 @@ class SICMdata:
         self.scan_mode: str = ""
         self.info: dict = {}
         self.settings: dict = {}
+        self.previous_manipulations: list[str] = []
 
         # result fields
         self.fit_results = None
@@ -146,20 +153,33 @@ class ScanBackstepMode(SICMdata):
         super().set_settings(settings)
         self.x_px = int(settings[Xpx])
         self.y_px = int(settings[Ypx])
-        self.x_px_raw = int(settings[Xpx])
-        self.y_px_raw = int(settings[Ypx])
+        self.previous_manipulations = settings.get(Manipulations, [])
         try:
-            self.x_size = int(settings[X_size])
-            self.y_size = int(settings[Y_size])
-        except ValueError:
-            # There might be cases in which no x_size or y_size has
-            # been set in the control software
-            print("No x_size or y_size value found in settings.json.")
-            self.x_size = self.x_px
-            self.y_size = self.y_px
+            self.x_px_raw = self.get_valid_int_from_field(value=settings.get(Xpx_raw, ""), default_value=self.x_px)
+            self.y_px_raw = self.get_valid_int_from_field(value=settings.get(Ypx_raw, ""), default_value=self.y_px)
 
-        self.x_size_raw = self.x_size
-        self.y_size_raw = self.y_size
+            self.x_size = self.get_valid_int_from_field(value=settings.get(X_size, ""), default_value=self.x_px)
+            self.y_size = self.get_valid_int_from_field(value=settings.get(Y_size, ""), default_value=self.y_px)
+            self.x_size_raw = self.get_valid_int_from_field(value=settings.get(X_size_raw, ""), default_value=self.x_size)
+            self.y_size_raw = self.get_valid_int_from_field(value=settings.get(Y_size_raw, ""), default_value=self.y_size)
+
+        except ValueError as e:
+            # There might be cases in which the control software
+            # set empty values for x_size or y_size
+
+            #print(e)
+            #print(traceback.format_exc(()))
+            print("bla")
+
+    def get_valid_int_from_field(self, value: str, default_value: int = 0) -> int:
+        """This function returns an integer converted from a string value.
+        In case the string can not be converted to int, a default value is returned."""
+        try:
+            valid_int = int(value)
+        except ValueError:
+            valid_int = int(default_value)
+        return valid_int
+
 
     def set_data(self, data: list[int]):
         """Rearranges scan data for 3-dimensional plotting."""
@@ -279,8 +299,12 @@ def get_data_as_bytes(data: SICMdata) -> list[bytes]:
     """Packs and returns data as list of bytes.
     All values will be converted from micrometer to nanometer.
     Values are packed as unsigned 2-byte integers.
+
+    If negative values exist all z_data will be adjusted by the
+    largest negative number.
     """
     z_data = data.z.flatten("C") * 1000
+    z_data = z_data - np.min(z_data)
     byte_data = []
     for pixel in z_data:
         byte_data.append(struct.pack("<H", int(pixel)))
@@ -372,13 +396,29 @@ def _write_settings_file(path: str, sicm_data: SICMdata) -> str:
     :return: full path to the file as a string.
     """
     settings_copy = copy.deepcopy(sicm_data.settings)
-    settings_copy[Xpx] = str(sicm_data.x_px)
-    settings_copy[Ypx] = str(sicm_data.y_px)
+    _add_matedata_fields(settings_copy, sicm_data)
+
     sjson = json.dumps(settings_copy, separators=(',', ':'))
     with open(os.path.join(path, "settings.json"), "w") as f:
         f.write(sjson)
         f.close()
     return f.name
+
+
+def _add_matedata_fields(settings_copy: dict, sicm_data: SICMdata):
+    """
+    Adds metadata fields to a copy of the settings dictionary. If the field exists
+    it is updated
+    """
+    settings_copy[Xpx] = str(sicm_data.x_px)
+    settings_copy[Ypx] = str(sicm_data.y_px)
+    settings_copy[Xpx_raw] = str(sicm_data.x_px_raw)
+    settings_copy[Ypx_raw] = str(sicm_data.y_px_raw)
+    settings_copy[X_size] = str(sicm_data.x_size)
+    settings_copy[Y_size] = str(sicm_data.y_size)
+    settings_copy[X_size_raw] = str(sicm_data.x_size_raw)
+    settings_copy[Y_size_raw] = str(sicm_data.y_size_raw)
+    settings_copy[Manipulations] = sicm_data.previous_manipulations
 
 
 def create_targz_from_list_of_files(export_filename: str, files: list[str]):
