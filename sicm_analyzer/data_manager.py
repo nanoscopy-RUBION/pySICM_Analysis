@@ -130,6 +130,8 @@ class DataManager:
                 items.append(item.name)
         except IndexError:
             pass
+        except TypeError:
+            pass
         return items
 
     def _make_undoable_data_copy(self, key, action_name="action"):
@@ -200,7 +202,6 @@ class DataManager:
             self.listener_function()
 
         self._make_undoable_data_copy(key, action_name)
-
 
         return wrapper
 

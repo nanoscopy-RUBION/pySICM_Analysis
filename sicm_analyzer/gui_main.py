@@ -242,9 +242,10 @@ class MainWindow(QMainWindow):
         action_data_line.setEnabled(False)  # TODO
         action_data_linemean = QAction('Linewise (mean)', self)
         action_data_linemean.setEnabled(False)  # TODO
-        action_data_liney = QAction('Linewise Y', self)
-        action_data_liney.setEnabled(False)  # TODO
-        self.action_data_poly = QAction('polyXX (5th)', self)
+        self.action_data_liney = QAction('Linewise Y', self)
+        self.action_data_liney.setEnabled(False)  # TODO
+        self.action_data_poly = QAction('polyXX (5th) symfit', self)
+        self.action_data_poly_lmfit = QAction('polyXX (5th) lmfit', self)
 
         action_data_splines = QAction('by cubic splines', self)
         action_data_splines.setEnabled(False)  # TODO
@@ -266,8 +267,9 @@ class MainWindow(QMainWindow):
         flatten_menu.addAction(action_data_paraboloid)
         flatten_menu.addAction(action_data_line)
         flatten_menu.addAction(action_data_linemean)
-        flatten_menu.addAction(action_data_liney)
+        flatten_menu.addAction(self.action_data_liney)
         flatten_menu.addAction(self.action_data_poly)
+        flatten_menu.addAction(self.action_data_poly_lmfit)
         interpolation_menu = self.data_menu.addMenu('Interpolation')
         interpolation_menu.addAction(action_data_splines)
         interpolation_menu.addAction(action_data_neighbor)
@@ -419,6 +421,7 @@ class MainWindow(QMainWindow):
         self.action_line_profile_line.setEnabled(enable)
         self.action_export_sicm_data.setEnabled(enable)
         self.action_measure_dist.setEnabled(enable)
+        self.action_data_poly_lmfit.setEnabled(enable)
 
     def toggle_show_toolbar(self):
         """Show or hide toolbar."""

@@ -34,6 +34,7 @@ from sicm_analyzer.graph_canvas import SURFACE_PLOT, RASTER_IMAGE, APPROACH_CURV
 from sicm_analyzer.set_rois_dialog import ROIsDialog
 from sicm_analyzer.measurements import polynomial_fifth_degree
 from sicm_analyzer.line_profile_window import LineProfileWindow
+from sicm_analyzer.data_fitting import poly_xx_fit
 
 
 # APP CONSTANTS
@@ -117,6 +118,7 @@ class Controller:
         self.main_window.action_data_crop_input.triggered.connect(self.crop_by_input)
         self.main_window.action_data_crop_select.triggered.connect(self.crop_by_selection)
         self.main_window.action_data_poly.triggered.connect(self.fit_to_polyXX)
+        self.main_window.action_data_poly_lmfit.triggered.connect(self.fit_to_polyXX_lmfit)
 
         # Measurement
         self.main_window.action_set_rois.triggered.connect(self.show_roi_dialog)
@@ -165,6 +167,7 @@ class Controller:
         .sicm."""
         try:
             data = self.data_manager.get_data(self.current_selection)
+            manipulations = self.data_manager.get_undoable_manipulations_list(self.current_selection)
             if data and (data.scan_mode == sicm_data.BACKSTEP or data.scan_mode == sicm_data.FLOATING_BACKSTEP):
                 options = QFileDialog.Option(QFileDialog.Option.DontUseNativeDialog)
                 file_path = QFileDialog.getSaveFileName(parent=self.main_window,
@@ -176,7 +179,8 @@ class Controller:
                                                         )
                 if file_path[0]:
                     file, _ = self._get_file_name_with_extension(file_path)
-                    export_sicm_file(file, sicm_data=data)
+
+                    export_sicm_file(file, sicm_data=data, manipulations=manipulations)
             else:
                 self.main_window.display_status_bar_message("No file exported.")
         except TypeError:
@@ -190,11 +194,12 @@ class Controller:
                                                          options=options))
         for item in self.main_window.get_all_checked_items():
             data = self.data_manager.get_data(item)
+            manipulations = self.data_manager.get_undoable_manipulations_list(item)
             if data and (data.scan_mode == sicm_data.BACKSTEP or data.scan_mode == sicm_data.FLOATING_BACKSTEP):
                 if directory and os.path.isdir(directory):
                     name = Path(item).name
                     full_path = os.path.join(directory, name)
-                    export_sicm_file(full_path, data)
+                    export_sicm_file(full_path, data, manipulations=manipulations)
 
 
     def _get_file_name_with_extension(self, file_dialog_path: tuple[str, str]) -> (str, str):
@@ -317,12 +322,31 @@ class Controller:
                 self._helper_for_fit,
                 key=self.current_selection,
                 action_name="Leveling (polyXX)"
-            )()
+            )("polyXX")
             self.main_window.set_default_cursor()
 
-    def _helper_for_fit(self):
+    def fit_to_polyXX_lmfit(self):
+        """This function uses the lmfit module."""
+        if self.current_selection:
+            self.main_window.set_wait_cursor()
+            self.data_manager.execute_func_on_current_data(
+                self._helper_for_fit,
+                key=self.current_selection,
+                action_name="Leveling (polyXX lmfit)"
+            )("polyXX lmfit")
+            self.main_window.set_default_cursor()
+
+    def _helper_for_fit(self, fit_model: str):
+        """
+
+        """
+        fitted_z = 0
+        fit_results = ""
         data = self.data_manager.get_data(self.current_selection)
-        fitted_z, fit_results = polynomial_fifth_degree(data.x, data.y, data.z)
+        if fit_model == "polyXX":
+            fitted_z, fit_results = polynomial_fifth_degree(data.x, data.y, data.z)
+        if fit_model == "polyXX lmfit":
+            fitted_z, fit_results = poly_xx_fit(data)
         data.z = data.z - fitted_z
         data.fit_results = fit_results
 
@@ -761,6 +785,7 @@ class Controller:
                                                 parent=self.main_window,
                                                 )
             self.results_window.open_window()
+
         except TypeError:
             pass
 

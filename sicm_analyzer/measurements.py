@@ -62,14 +62,11 @@ def polynomial_fifth_degree(x_data, y_data, z_data: np.array):
     p21.value = 0.01
     p31.value = 0.01
     p41.value = 0.01
-    p11.value = 0.01
     p12.value = 0.01
     p13.value = 0.01
     p14.value = 0.01
-
     p22.value = 0.01
     p32.value = 0.01
-    p41.value = 0.01
     p23.value = 0.01
 
     model_dict = {
@@ -108,6 +105,7 @@ def polynomial_fifth_degree(x_data, y_data, z_data: np.array):
     #_print_fit_results_to_console(fit_result)
     z_fitted = model(x=x_data, y=y_data, **fit_result.params).z
     return z_fitted, fit_result
+
 
 
 def _print_fit_results_to_console(fit_result):

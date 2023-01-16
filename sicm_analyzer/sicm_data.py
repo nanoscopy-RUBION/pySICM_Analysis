@@ -244,6 +244,7 @@ class ScanBackstepMode(SICMdata):
         except ZeroDivisionError:
             return 1
 
+
 def get_sicm_data(file_path: str) -> SICMdata:
     """Read all data from the tar.gz-like .sicm-file format and stores it in
     an instance of SICMdata.
@@ -335,7 +336,7 @@ def export_sicm_file(file_path: str, sicm_data: SICMdata, manipulations: list[st
         file_names.append(file_name)
         file_name = _write_mode_file(path_temp_dir, sicm_data)
         file_names.append(file_name)
-        file_name = _write_settings_file(path_temp_dir, sicm_data)
+        file_name = _write_settings_file(path_temp_dir, sicm_data, manipulations)
         file_names.append(file_name)
     except FileNotFoundError as e:
         print("Error during file export as .sicm.")
@@ -397,7 +398,7 @@ def _write_settings_file(path: str, sicm_data: SICMdata, manipulations: list[str
     :return: full path to the file as a string.
     """
     settings_copy = copy.deepcopy(sicm_data.settings)
-    _add_matedata_fields(settings_copy, sicm_data)
+    _add_matedata_fields(settings_copy, sicm_data, manipulations)
 
     sjson = json.dumps(settings_copy, separators=(',', ':'))
     with open(os.path.join(path, "settings.json"), "w") as f:
