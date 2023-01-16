@@ -40,9 +40,12 @@ from sicm_analyzer.line_profile_window import LineProfileWindow
 APP_NAME = "pySICM Analysis"
 APP_PATH = os.getcwd()
 RESOURCE_DIRECTORY = "resources"
+ICONS_DIRECTORY = "icons"
+SAMPLES_DIRECTORY = "samples"
 APP_ICON = "pySICMsplash.png"
-APP_ICON_PATH = join(APP_PATH, RESOURCE_DIRECTORY, APP_ICON)
-TITLE = f"{APP_NAME} (ver. 2023-01-13)"
+APP_ICON_PATH = join(APP_PATH, RESOURCE_DIRECTORY, ICONS_DIRECTORY, APP_ICON)
+APP_SAMPLES_PATH = join(APP_PATH, RESOURCE_DIRECTORY, SAMPLES_DIRECTORY)
+TITLE = f"{APP_NAME} (ver. 2023-01-16)"
 DEFAULT_FILE_PATH = os.getcwd()
 
 # FILTERS
@@ -76,8 +79,8 @@ class Controller:
     def connect_actions(self):
         """Connect functions with actions in the main window's menu."""
         # File menu
-        self.main_window.action_clear.triggered.connect(self.clear_lists)
-        self.main_window.action_remove_selection.triggered.connect(self.remove_selection)
+        self.main_window.action_close_all.triggered.connect(self.close_all)
+        self.main_window.action_close_selection.triggered.connect(self.close_selection)
         self.main_window.action_import_files.triggered.connect(self.import_files)
         self.main_window.action_import_directory.triggered.connect(self.import_directory)
         self.main_window.action_export_2d.triggered.connect(lambda: self.export_figure(self.figure_canvas_2d.figure))
@@ -85,6 +88,11 @@ class Controller:
         self.main_window.action_export_sicm_data.triggered.connect(self.export_sicm_data)
         self.main_window.action_export_sicm_data_multi.triggered.connect(self.export_sicm_data_multi)
         self.main_window.action_exit.triggered.connect(self.quit_application)
+
+        # Open samples
+        self.main_window.action_sample1.triggered.connect(lambda: self.add_files_to_list(
+            os.path.join(APP_SAMPLES_PATH, "sample1.sicm")
+        ))
 
         # Edit menu
         self.main_window.action_undo.triggered.connect(self.undo)
@@ -127,7 +135,7 @@ class Controller:
         self.main_window.closeEvent = self.quit_application
 
         # Key Events
-        self.main_window.delete_key = self.remove_selection
+        self.main_window.delete_key = self.close_selection
         self.main_window.escape_key = self.unbind_mouse_events
 
     def export_figure(self, figure: Figure):
@@ -378,8 +386,8 @@ class Controller:
                                                     )
         return filenames
 
-    def remove_selection(self):
-        """Remove selected item imported."""
+    def close_selection(self):
+        """Remove selected item from import list."""
         try:
             index = self.main_window.imported_files_list.selectionModel().currentIndex().row()
             item = self.main_window.imported_files_list.currentItem()
@@ -395,6 +403,10 @@ class Controller:
 
         :param files: list of files
         """
+        # in case only a single filepath has been passed as an argument
+        if type(files) is not list:
+            files = [files]
+
         self.main_window.set_wait_cursor()
         new_files = self.data_manager.get_files_without_duplicates(files)
         self.data_manager.import_files(files)
@@ -411,7 +423,7 @@ class Controller:
             self.main_window.display_status_bar_message("No files imported.")
         self.main_window.set_default_cursor()
 
-    def clear_lists(self):
+    def close_all(self):
         """Removes all items from list widget and disables menus."""
         if self.main_window.imported_files_list.count() > 0:
             self.main_window.clear_list_widgets()

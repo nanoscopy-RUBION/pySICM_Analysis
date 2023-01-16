@@ -45,6 +45,7 @@ class MainWindow(QMainWindow):
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
         self.resource_dir = join(os.getcwd(), "resources")
+        self.icons_dir = join(self.resource_dir, "icons")
         self.close_window = pyqtSignal()
         self.central_widget = QtWidgets.QWidget(self)
         self.imported_files_list = QListWidget(self)
@@ -119,9 +120,9 @@ class MainWindow(QMainWindow):
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.dock_2d_plot)
 
         # File menu
-        self.action_clear = QAction(QIcon(join(self.resource_dir, "clear.png")), '&Clear list', self)
-        self.action_remove_selection = QAction("Remove selection", self)
-        self.action_remove_selection.setShortcut("Ctrl+D")
+        self.action_close_all = QAction(QIcon(join(self.icons_dir, "clear.png")), '&Close all', self)
+        self.action_close_selection = QAction("Close selection", self)
+        self.action_close_selection.setShortcut("Ctrl+D")
         self.action_import_files = QAction(icon_files, "&Import Files...", self)
         self.action_import_directory = QAction(icon_directory, '&Import Directory...', self)
         self.action_export_sicm_data = QAction(icon_export, 'Export sicm data', self)
@@ -132,9 +133,10 @@ class MainWindow(QMainWindow):
         self.action_export_2d = QAction("2D graph", self)
         self.action_exit = QAction('&Exit', self)
 
-        file_menu.addAction(self.action_clear)
-        file_menu.addAction(self.action_remove_selection)
+        file_menu.addAction(self.action_close_all)
+        file_menu.addAction(self.action_close_selection)
         file_menu.addSeparator()
+        open_sample_menu = file_menu.addMenu("Open sample")
         file_menu.addAction(self.action_import_files)
         file_menu.addAction(self.action_import_directory)
         clipboard_menu = file_menu.addMenu(icon_export, 'Export graph')
@@ -145,6 +147,19 @@ class MainWindow(QMainWindow):
         file_menu.addAction(self.action_export_file)
         file_menu.addSeparator()
         file_menu.addAction(self.action_exit)
+
+        # Samples
+        self.action_sample1 = QAction("Sample 1", self)
+        open_sample_menu.addAction(self.action_sample1)
+        self.action_sample2 = QAction("Sample 2", self)
+        open_sample_menu.addAction(self.action_sample2)
+        self.action_sample3 = QAction("Sample 3", self)
+        open_sample_menu.addAction(self.action_sample3)
+        self.action_sample4 = QAction("Sample 4", self)
+        open_sample_menu.addAction(self.action_sample4)
+        self.action_sample2.setEnabled(False)
+        self.action_sample3.setEnabled(False)
+        self.action_sample4.setEnabled(False)
 
         # Edit menu
         self.action_undo = QAction("Undo", self)
@@ -312,9 +327,9 @@ class MainWindow(QMainWindow):
         self.toolbar.setMovable(False)
         self.toolbar.addAction(self.action_import_files)
         self.toolbar.addAction(self.action_import_directory)
-        self.toolbar.addAction(self.action_clear)
+        self.toolbar.addAction(self.action_close_all)
 
-        self.action_show_dock_widgets = QAction(QIcon(join(self.resource_dir, "plot_widgets.png")), "Show plots")
+        self.action_show_dock_widgets = QAction(QIcon(join(self.icons_dir, "plot_widgets.png")), "Show plots")
         self.action_show_dock_widgets.triggered.connect(self.show_graphs)
         self.toolbar.addAction(self.action_show_dock_widgets)
 
