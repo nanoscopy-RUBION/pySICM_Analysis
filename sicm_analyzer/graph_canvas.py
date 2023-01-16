@@ -362,6 +362,15 @@ class GraphCanvas(FigureCanvasQTAgg):
                         self.clean_up_function()
                 self.unbind_mouse_events()
 
+        if not event.inaxes:
+            if event.name == "button_release_event":
+                if self.mi.mouse_point1 is not None and self.mi.mouse_point2 is not None:
+                    if self.function_after_mouse_events:
+                        self.function_after_mouse_events((self.mi.mouse_point1[0], self.mi.mouse_point2[0]), (self.mi.mouse_point1[1], self.mi.mouse_point2[1]))
+                    if self.clean_up_function:
+                        self.clean_up_function()
+                self.unbind_mouse_events()
+
     def _highlight_row_or_column_and_call_func(self, event):
         """
         Supports selection modes "row" and "column".
@@ -402,6 +411,14 @@ class GraphCanvas(FigureCanvasQTAgg):
             if event.name == "button_press_event":
                 self.mi.mouse_point1 = QPoint(int(event.xdata), int(event.ydata))
 
+            if event.name == "button_release_event":
+                # remove the rectangle
+                self.draw_graph(self.current_data, RASTER_IMAGE, self.current_view)
+                if self.clean_up_function:
+                    self.clean_up_function()
+                self.unbind_mouse_events()
+
+        if not event.inaxes:
             if event.name == "button_release_event":
                 # remove the rectangle
                 self.draw_graph(self.current_data, RASTER_IMAGE, self.current_view)
