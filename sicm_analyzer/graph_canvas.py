@@ -315,7 +315,26 @@ class GraphCanvas(FigureCanvasQTAgg):
                         self.function_after_mouse_events(self.mi.mouse_point1, self.mi.mouse_point2)
                     if self.clean_up_function:
                         self.clean_up_function()
-                self.unbind_mouse_events()
+                    self.unbind_mouse_events()
+
+        if not event.inaxes:
+            if event.name == "button_release_event":
+                if self.mi.mouse_point1 is not None and self.mi.mouse_point2 is not None:
+
+                    if self.mi.mouse_point1.x() <= self.mi.mouse_point2.x():
+                        self.mi.mouse_point2 = self.mi.mouse_point2 + QPoint(1, 0)
+                    else:
+                        self.mi.mouse_point1 = self.mi.mouse_point1 + QPoint(1, 0)
+                    if self.mi.mouse_point1.y() <= self.mi.mouse_point2.y():
+                        self.mi.mouse_point2 = self.mi.mouse_point2 + QPoint(0, 1)
+                    else:
+                        self.mi.mouse_point1 = self.mi.mouse_point1 + QPoint(0, 1)
+
+                    if self.function_after_mouse_events:
+                        self.function_after_mouse_events(self.mi.mouse_point1, self.mi.mouse_point2)
+                    if self.clean_up_function:
+                        self.clean_up_function()
+                    self.unbind_mouse_events()
 
     def _draw_a_line_on_raster_image(self, event):
         """TODO not yet finished
