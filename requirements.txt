@@ -1,15 +1,18 @@
+asteval==0.9.28
 astroid==2.12.9
 autopep8==1.6.0
 cycler==0.11.0
 dill==0.3.5.1
 flake8==4.0.1
 fonttools==4.34.4
+future==0.18.3
 imageio==2.21.1
 isort==5.10.1
 jedi==0.18.1
 joblib==1.1.0
 kiwisolver==1.4.4
 lazy-object-proxy==1.7.1
+lmfit==1.1.0
 matplotlib==3.5.2
 mccabe==0.6.1
 mpmath==1.2.1
@@ -51,6 +54,7 @@ tomli==2.0.1
 tomlkit==0.11.4
 toposort==1.7
 ujson==5.4.0
+uncertainties==3.1.7
 whatthepatch==1.0.2
 wrapt==1.14.1
 yapf==0.32.0
