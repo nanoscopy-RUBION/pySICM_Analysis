@@ -328,6 +328,9 @@ class MainWindow(QMainWindow):
     def set_wait_cursor(self):
         self.setCursor(QCursor(Qt.CursorShape.WaitCursor))
 
+    def set_cross_cursor(self):
+        self.setCursor(QCursor(Qt.CursorShape.CrossCursor))
+
     def set_default_cursor(self):
         self.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
 

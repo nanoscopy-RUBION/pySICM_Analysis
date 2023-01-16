@@ -128,7 +128,7 @@ class Controller:
 
         # Key Events
         self.main_window.delete_key = self.remove_selection
-        self.main_window.escape_key = self.figure_canvas_2d.unbind_mouse_events
+        self.main_window.escape_key = self.unbind_mouse_events
 
     def export_figure(self, figure: Figure):
         """Exports the current view of a figure."""
@@ -547,6 +547,11 @@ class Controller:
         data = self.data_manager.get_data(self.current_selection)
         self.figure_canvas_2d.draw_rectangle_on_raster_image(data=data, view=self.view, func=self._select_area)
 
+    def unbind_mouse_events(self):
+        self.figure_canvas_2d.unbind_mouse_events()
+        self.main_window.set_default_cursor()
+        self.update_figures_and_status()
+
     def _select_area(self, point1: QPoint, point2: QPoint):
         print("TODO ROI selection")
         if points_are_not_equal(point1, point2):
@@ -570,10 +575,12 @@ class Controller:
 
     def crop_by_selection(self):
         if self.current_selection:
+            self.main_window.set_cross_cursor()
             self.figure_canvas_2d.draw_rectangle_on_raster_image(
                 data=self.data_manager.get_data(self.current_selection),
                 view=self.view,
-                func=self._crop_data
+                func=self._crop_data,
+                clean_up_func=self.main_window.set_default_cursor
             )
 
     def _crop_data(self, point1: QPoint, point2: QPoint):
@@ -593,8 +600,8 @@ class Controller:
         Selection mode is row.
         """
         if self.current_selection:
+            self.main_window.set_cross_cursor()
             self._show_line_profile_window()
-
             self.figure_canvas_2d.bind_mouse_events_for_showing_line_profile(
                 data=self.data_manager.get_data(self.current_selection),
                 view=self.view,
@@ -610,8 +617,8 @@ class Controller:
         Selection mode is column.
         """
         if self.current_selection:
+            self.main_window.set_cross_cursor()
             self._show_line_profile_window()
-
             self.figure_canvas_2d.bind_mouse_events_for_showing_line_profile(
                 data=self.data_manager.get_data(self.current_selection),
                 view=self.view,
@@ -623,6 +630,7 @@ class Controller:
     def select_line_profile_line(self):
         """TODO EXPERIMENTAL"""
         if self.current_selection:
+            self.main_window.set_cross_cursor()
             self._show_line_profile_window()
             self.figure_canvas_2d.bind_mouse_events_for_draw_line(
                 data=self.data_manager.get_data(self.current_selection),
@@ -636,8 +644,8 @@ class Controller:
         updated on mouse movement over the 2D canvas.
         """
         if self.current_selection:
+            self.main_window.set_cross_cursor()
             self._show_line_profile_window()
-
             self.figure_canvas_2d.bind_mouse_events_for_showing_line_profile(
                 data=self.data_manager.get_data(self.current_selection),
                 view=self.view,
@@ -653,6 +661,7 @@ class Controller:
         self.line_profile.show()
 
     def _focus_line_profile_widget(self):
+        self.main_window.set_default_cursor()
         self.line_profile.raise_()
         self.line_profile.show()
 
@@ -683,10 +692,12 @@ class Controller:
 
     def measure_distance(self):
         if self.current_selection:
+            self.main_window.set_cross_cursor()
             self.figure_canvas_2d.bind_mouse_events_for_draw_line(
                 data=self.data_manager.get_data(self.current_selection),
                 view=self.view,
                 func=self._calculate_distance_between_two_points,
+                clean_up_func=self.main_window.set_default_cursor
             )
 
     def _calculate_distance_between_two_points(self, x_data, y_data):

@@ -244,9 +244,10 @@ class GraphCanvas(FigureCanvasQTAgg):
         elev = self.figure.get_axes()[0].elev
         return azim, elev
 
-    def draw_rectangle_on_raster_image(self, data: SICMdata, view: View = None, func=None):
+    def draw_rectangle_on_raster_image(self, data: SICMdata, view: View = None, func=None, clean_up_func=None):
         self._bind_mouse_events(self._draw_rectangle_and_call_func)
         self.function_after_mouse_events = func
+        self.clean_up_function = clean_up_func
         self.current_data = data
         self.current_view = view
 
