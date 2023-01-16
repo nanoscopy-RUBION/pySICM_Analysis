@@ -311,7 +311,7 @@ def get_data_as_bytes(data: SICMdata) -> list[bytes]:
     return byte_data
 
 
-def export_sicm_file(file_path: str, sicm_data: SICMdata):
+def export_sicm_file(file_path: str, sicm_data: SICMdata, manipulations: list[str]):
     """
     Export an instance of SICMdata as a .sicm file.
 
@@ -387,12 +387,13 @@ def _write_mode_file(path: str, sicm_data: SICMdata) -> str:
     return f.name
 
 
-def _write_settings_file(path: str, sicm_data: SICMdata) -> str:
+def _write_settings_file(path: str, sicm_data: SICMdata, manipulations: list[str]) -> str:
     """
     Creates a file in the given directory path containing the scan settings
-    of the SICMdata instance.
+    and metadata of the SICMdata instance.
 
     :param str path: path to a directory
+    :param list[str] manipulations: a list of strings describing manipulations of the data
     :return: full path to the file as a string.
     """
     settings_copy = copy.deepcopy(sicm_data.settings)
@@ -405,7 +406,7 @@ def _write_settings_file(path: str, sicm_data: SICMdata) -> str:
     return f.name
 
 
-def _add_matedata_fields(settings_copy: dict, sicm_data: SICMdata):
+def _add_matedata_fields(settings_copy: dict, sicm_data: SICMdata, manipulations: list[str]):
     """
     Adds metadata fields to a copy of the settings dictionary. If the field exists
     it is updated
@@ -418,7 +419,7 @@ def _add_matedata_fields(settings_copy: dict, sicm_data: SICMdata):
     settings_copy[Y_size] = str(sicm_data.y_size)
     settings_copy[X_size_raw] = str(sicm_data.x_size_raw)
     settings_copy[Y_size_raw] = str(sicm_data.y_size_raw)
-    settings_copy[Manipulations] = sicm_data.previous_manipulations
+    settings_copy[Manipulations] = manipulations
 
 
 def create_targz_from_list_of_files(export_filename: str, files: list[str]):

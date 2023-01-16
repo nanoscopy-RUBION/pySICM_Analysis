@@ -528,7 +528,7 @@ class Controller:
                 self._update_undo_redo_menu_items()
                 manipulations = self.data_manager.get_undoable_manipulations_list(self.current_selection)
                 self.main_window.set_data_manipulation_list_items(manipulations)
-                self.data_manager.get_data(self.current_selection).previous_manipulations = manipulations
+                # self.data_manager.get_data(self.current_selection).previous_manipulations = manipulations
                 self.main_window.display_status_bar_message(message)
         except TypeError:
             print("No scan selected.")
