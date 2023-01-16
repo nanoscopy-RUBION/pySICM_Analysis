@@ -126,6 +126,7 @@ class Controller:
         self.main_window.action_line_profile_xy.triggered.connect(self.show_xy_profile)
         self.main_window.action_line_profile_line.triggered.connect(self.select_line_profile_line)
         self.main_window.action_measure_dist.triggered.connect(self.measure_distance)
+        self.main_window.action_get_pixel_values.triggered.connect(self.display_pixel_values)
 
         # Other
         self.main_window.imported_files_list.currentItemChanged.connect(self.item_selection_changed_event)
@@ -719,6 +720,16 @@ class Controller:
                 data=self.data_manager.get_data(self.current_selection),
                 view=self.view,
                 func=self._calculate_distance_between_two_points,
+                clean_up_func=self.main_window.set_default_cursor
+            )
+
+    def display_pixel_values(self):
+        if self.current_selection:
+            self.main_window.set_cross_cursor()
+            self.figure_canvas_2d.bind_mouse_events_for_pixel_mouse_over(
+                data=self.data_manager.get_data(self.current_selection),
+                view=self.view,
+                func=None,
                 clean_up_func=self.main_window.set_default_cursor
             )
 

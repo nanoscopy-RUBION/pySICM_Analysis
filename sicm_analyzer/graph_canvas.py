@@ -215,7 +215,8 @@ class GraphCanvas(FigureCanvasQTAgg):
                                                    view: View = None,
                                                    func: Callable = None,
                                                    clean_up_func: Callable = None,
-                                                   mode: str = "row"):
+                                                   mode: str = "row"
+                                                   ):
         """Draw line profile plot.
 
         Dev note: Maybe in the future, custom drawn lines on the plot will be supported.
@@ -231,7 +232,7 @@ class GraphCanvas(FigureCanvasQTAgg):
                                         view: View = None,
                                         func: Callable = None,
                                         clean_up_func: Callable = None,
-                                        mode: str = "row"):
+                                        ):
         """Draw a line on image.
         TODO
         """
@@ -240,6 +241,45 @@ class GraphCanvas(FigureCanvasQTAgg):
         self.clean_up_function = clean_up_func
         self.current_data = data
         self.current_view = view
+
+    def bind_mouse_events_for_pixel_mouse_over(self,
+                                               data: SICMdata,
+                                               view: View = None,
+                                               func: Callable = None,
+                                               clean_up_func: Callable = None,
+                                               ):
+        """
+        Mouse over a pixel to get the values at this point.
+        """
+        self._bind_mouse_events(self._mouse_over_pixel)
+        self.function_after_mouse_events = func
+        self.clean_up_function = clean_up_func
+        self.current_data = data
+        self.current_view = view
+
+    def _mouse_over_pixel(self, event):
+        """
+
+        """
+        if event.inaxes:
+            if event.name == "motion_notify_event":
+                if self.mi.mouse_point1:
+
+                    x = event.xdata
+                    y = event.ydata
+                    text = f"x: {x:.1f}, y: {y: .1f}, z: {self.current_data.z[int(y), int(x)]}"
+                    self.draw_graph(self.current_data, RASTER_IMAGE, self.current_view)
+                    self.figure.get_axes()[0].annotate(text, xy=(x+0.25, y+0.25), color="w", weight="bold", fontsize=8,
+                                                       bbox=dict(boxstyle="square,pad=0.5", fc="gray"))
+                    self.draw()
+                else:
+                    self.mi.mouse_point1 = QPoint(int(event.xdata), int(event.ydata))
+
+        if event.name == "button_release_event":
+            if self.clean_up_function:
+                self.clean_up_function()
+            self.unbind_mouse_events()
+
 
     def get_viewing_angles_from_3d_plot(self):
         """Returns the viewing angles from the 3D plot.

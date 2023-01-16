@@ -285,6 +285,7 @@ class MainWindow(QMainWindow):
         self.action_line_profile_line.setEnabled(False)
         self.action_line_profile_xy = QAction("xy")
         self.action_line_profile_column.setEnabled(False)
+        self.action_get_pixel_values = QAction("Get pixel values", self)
         self.action_measure_dist = QAction('&Measure distance', self)
         self.action_measure_dist.setEnabled(False)  # TODO
         action_measure_profile = QAction('&Measure profile', self)
@@ -299,6 +300,7 @@ class MainWindow(QMainWindow):
         line_profile_menu.addAction(self.action_line_profile_column)
         line_profile_menu.addAction(self.action_line_profile_xy)
         line_profile_menu.addAction(self.action_line_profile_line)
+        self.measure_menu.addAction(self.action_get_pixel_values)
         self.measure_menu.addAction(self.action_measure_dist)
         self.measure_menu.addAction(action_measure_profile)
         self.measure_menu.addAction(self.action_set_rois)
