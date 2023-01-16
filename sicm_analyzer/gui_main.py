@@ -311,6 +311,7 @@ class MainWindow(QMainWindow):
         self.toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
         self.toolbar.setMovable(False)
         self.toolbar.addAction(self.action_import_files)
+        self.toolbar.addAction(self.action_import_directory)
         self.toolbar.addAction(self.action_clear)
 
         self.action_show_dock_widgets = QAction(QIcon(join(self.resource_dir, "plot_widgets.png")), "Show plots")
