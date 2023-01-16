@@ -166,10 +166,7 @@ class ScanBackstepMode(SICMdata):
         except ValueError as e:
             # There might be cases in which the control software
             # set empty values for x_size or y_size
-
-            #print(e)
-            #print(traceback.format_exc(()))
-            print("bla")
+            print(e)
 
     def get_valid_int_from_field(self, value: str, default_value: int = 0) -> int:
         """This function returns an integer converted from a string value.
@@ -179,7 +176,6 @@ class ScanBackstepMode(SICMdata):
         except ValueError:
             valid_int = int(default_value)
         return valid_int
-
 
     def set_data(self, data: list[int]):
         """Rearranges scan data for 3-dimensional plotting."""
@@ -213,7 +209,6 @@ class ScanBackstepMode(SICMdata):
 
     def update_dimensions(self):
         """Updates the number of pixel and the micrometer size in x and y dimensions.
-
 
         This function should be called when the scan size has changed, e.g.,
         after crop.
@@ -410,7 +405,7 @@ def _write_settings_file(path: str, sicm_data: SICMdata, manipulations: list[str
 def _add_matedata_fields(settings_copy: dict, sicm_data: SICMdata, manipulations: list[str]):
     """
     Adds metadata fields to a copy of the settings dictionary. If the field exists
-    it is updated
+    it is updated.
     """
     settings_copy[Xpx] = str(sicm_data.x_px)
     settings_copy[Ypx] = str(sicm_data.y_px)
@@ -420,7 +415,7 @@ def _add_matedata_fields(settings_copy: dict, sicm_data: SICMdata, manipulations
     settings_copy[Y_size] = str(sicm_data.y_size)
     settings_copy[X_size_raw] = str(sicm_data.x_size_raw)
     settings_copy[Y_size_raw] = str(sicm_data.y_size_raw)
-    settings_copy[Manipulations] = manipulations
+    settings_copy[Manipulations] = sicm_data.previous_manipulations + manipulations
 
 
 def create_targz_from_list_of_files(export_filename: str, files: list[str]):
