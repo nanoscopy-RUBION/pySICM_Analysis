@@ -6,6 +6,7 @@ from symfit.core.minimizers import BFGS
 from symfit import Poly, variables, parameters, Model, Fit
 from symfit.core.objectives import LeastSquares
 from sicm_analyzer.sicm_data import SICMdata
+from scipy.spatial import Delaunay
 
 
 # TODO generalization of polynomial fit functions
@@ -134,6 +135,17 @@ def get_points(window, n=2):
     point1 = [window.get_old_x(), window.get_old_y()]
     point2 = [window.get_current_x(), window.get_current_y()]
     return [point1, point2]
+
+
+def get_surface_area_of_roi(data: SICMdata, roi=None) -> float:
+    """Returns the surface area of a selected region of interest.
+
+    Dev Note: ROI is not supported at the moment. the surface
+    area for the whole scan will be returned.
+    """
+    points = np.vstack((data.x, data.y, data.z)).reshape((3, -1)).T
+    triangulation = Delaunay(points[:, :2]).simplices
+
 
 
 def root_mean_square_error(data: np.array) -> float:
