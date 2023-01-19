@@ -82,7 +82,7 @@ class GraphCanvas(FigureCanvasQTAgg):
         self.current_data = data
         self.current_view = view
 
-        # if the canvas is to small for one or both of the
+        # if the canvas is too small for one or both of the
         # graphs matplotlib will be unable to draw the graph
         # and crashes the program
         try:
