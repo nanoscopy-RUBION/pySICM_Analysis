@@ -82,16 +82,22 @@ class GraphCanvas(FigureCanvasQTAgg):
         self.current_data = data
         self.current_view = view
 
-        if graph_type == SURFACE_PLOT:
-            self.draw_3d_plot()
+        # if the canvas is to small for one or both of the
+        # graphs matplotlib will be unable to draw the graph
+        # and crashes the program
+        try:
+            if graph_type == SURFACE_PLOT:
+                self.draw_3d_plot()
 
-        if graph_type == RASTER_IMAGE:
-            self.draw_2d_plot_raster_image()
+            if graph_type == RASTER_IMAGE:
+                self.draw_2d_plot_raster_image()
 
-        if graph_type == APPROACH_CURVE:
-            self.draw_approach_curve(data)
+            if graph_type == APPROACH_CURVE:
+                self.draw_approach_curve(data)
 
-        self.draw()
+            self.draw()
+        except ValueError:
+            pass
 
     def draw_white_canvas(self):
         self.figure.clear()
@@ -133,19 +139,26 @@ class GraphCanvas(FigureCanvasQTAgg):
 
     def draw_3d_plot(self):
         """Draws a 3d surface plot for scanning data."""
-        axes = self.figure.add_subplot(1, 1, 1, projection='3d')
 
-        norm = Normalize(vmin=np.min(self.current_data.get_data()[2]), vmax=np.max(self.current_data.get_data()[2]), clip=False)
-        if self.current_view:
+        # if the canvas is to small for one or both of the
+        # graphs matplotlib will be unable to draw the graph
+        # and crashes the program
+        try:
+            axes = self.figure.add_subplot(1, 1, 1, projection='3d')
 
-            img = axes.plot_surface(*self.current_data.get_data(), norm=norm, cmap=self.current_view.color_map)
-            axes.set_box_aspect(aspect=self.current_view.aspect_ratio)
-            axes.azim = self.current_view.azim
-            axes.elev = self.current_view.elev
-            self.show_or_hide_axes(self.current_data, self.current_view, axes)
-        else:
-            img = axes.plot_surface(*self.current_data.get_data(), norm=norm)
-        self.set_colorbar(img, axes)
+            norm = Normalize(vmin=np.min(self.current_data.get_data()[2]), vmax=np.max(self.current_data.get_data()[2]), clip=False)
+            if self.current_view:
+
+                img = axes.plot_surface(*self.current_data.get_data(), norm=norm, cmap=self.current_view.color_map)
+                axes.set_box_aspect(aspect=self.current_view.aspect_ratio)
+                axes.azim = self.current_view.azim
+                axes.elev = self.current_view.elev
+                self.show_or_hide_axes(self.current_data, self.current_view, axes)
+            else:
+                img = axes.plot_surface(*self.current_data.get_data(), norm=norm)
+            self.set_colorbar(img, axes)
+        except:
+            pass
 
     def draw_2d_plot_raster_image(self):
         """Draws a 2D raster image for 3-dimensional scanning data."""
@@ -271,7 +284,7 @@ class GraphCanvas(FigureCanvasQTAgg):
                     self.draw_graph(self.current_data, RASTER_IMAGE, self.current_view)
                     circle = Circle((x, y), 0.1, color="w", fill=True)
                     self.figure.get_axes()[0].add_patch(circle)
-                    self.figure.get_axes()[0].annotate(text, xy=(x+1, y+1), color="w", weight="bold", fontsize=8,
+                    self.figure.get_axes()[0].annotate(text, xy=(x, y), color="w", weight="bold", fontsize=8,
                                                        bbox=dict(boxstyle="square,pad=0.5", fc="gray"))
                     self.draw()
                 else:
