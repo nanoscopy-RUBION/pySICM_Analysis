@@ -1,9 +1,10 @@
-=Installation Instructions
+# Installation Instructions
 
 
 Install Git (For group Member only!)
 
 Download git for your operating system by following the instructions on this link:
+
 https://git-scm.com/book/en/v2/Getting-Started-Installing-Git
 
 
