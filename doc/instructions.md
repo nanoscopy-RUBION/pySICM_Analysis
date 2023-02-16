@@ -1,14 +1,14 @@
 # Installation Instructions
 
 
-Install Git (For group Member only!)
+## Install Git (For group Member only!)
 
 Download git for your operating system by following the instructions on this link:
 
 https://git-scm.com/book/en/v2/Getting-Started-Installing-Git
 
 
-I. Creating Github account and Private Access Token (PAS) (For group Member only!)
+## I. Creating Github account and Private Access Token (PAS) (For group Member only!)
 
 Create your own github account on https://github.com. Write one of the group members an email so you can be added to the group account and have access to our private repositories. Generate a personal access token (PAT) on github so you can navigate to github repositories on your command line. Follow the following link:
 
@@ -17,14 +17,14 @@ https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/c
 For Step 8 just click all the permissions. You get a random code in the end which you have to save! If you lose the code you have to make a new one, so save it properly!
 
 
-II. Install Python 3
+## II. Install Python 3
 
 Install Python by follow the instruction on this link for your operating system:
 
 https://realpython.com/installing-python/
 
 
-III. Install virtualenv
+## III. Install virtualenv
 
 In your command line type in the following command:
 
@@ -37,7 +37,7 @@ This should upgrade your python packet manager pip. If you have the newest versi
 This makes it possible to generate virtual environments on python.
 
 
-IV. Clone Git Respository
+## IV. Clone Git Respository
 
 Chose a folder where you want to install the analysis program. Direct to this folder in your command line with the following command:
 
@@ -51,7 +51,7 @@ If you are an external user ask for the folder from one of the group members and
 Direct to the pySICM_Analysis folder in your command line.
 
 
-V. Create virtual Python Environment
+## V. Create virtual Python Environment
 
 Create a virtual environment in this directory through the following command:
 
@@ -64,7 +64,7 @@ venv is the name of the environment which should be visible now as a folder in y
 The Script in venv/Scripts activates the virtual environment of your current command line. This command always has to be executed beforehand if you want to start the program.
 
 
-VI. Install dependencies for the program
+## VI. Install dependencies for the program
 
 Now the program dependencies can be installed with the following command:
 
@@ -73,7 +73,7 @@ Now the program dependencies can be installed with the following command:
 (Note: This has to be done only once. It could be that while further developing the program new dependencies will be added later on, in this case this has to be done again.)
 
 
-VII. Start Program
+## VII. Start Program
 
 Type in following command to start the program (be in the correct folder pySICM_Analysis and venv should be activated):
 
@@ -82,7 +82,7 @@ Type in following command to start the program (be in the correct folder pySICM_
 The Program should start (this can take several seconds).
 
 
-Git pull of the newest version (For group members only!)
+## Git pull of the newest version (For group members only!)
 
 Go to the pySICM_Analysis folder in your command line and type:
 
