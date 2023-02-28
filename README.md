@@ -1,17 +1,16 @@
 # pySICM Analysis
 
 ## Prerequisites
-- python 3.10
+- Python 3.10
 
 ## Known Bugs
-- see issues in github repo
+- see issues in Github repository
 
 ## minor issues
   - add hints for input (px or µm, index begins at 0)
 
 ## To Do
 - General:
-  - add checkbox to list items
   - clean up existing py files
 - New Functions:
   - set ROIs 
@@ -24,9 +23,9 @@
   - axis limits
 - Data manipulations:
   - add more level/flatten functions
-    - linewise leveling
+    - line-wise leveling
     - polynomial
-    - area exlcusion
+    - area exclusion
     - three point
     - histogram
   - interpolation

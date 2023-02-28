@@ -11,6 +11,7 @@ from os.path import join
 from matplotlib.figure import Figure
 from skimage import measure
 
+from PyQt6.QtWidgets import QStyleFactory
 from PyQt6.QtCore import QPoint
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication, QFileDialog, QInputDialog
@@ -46,7 +47,7 @@ SAMPLES_DIRECTORY = "samples"
 APP_ICON = "pySICMsplash.png"
 APP_ICON_PATH = join(APP_PATH, RESOURCE_DIRECTORY, ICONS_DIRECTORY, APP_ICON)
 APP_SAMPLES_PATH = join(APP_PATH, RESOURCE_DIRECTORY, SAMPLES_DIRECTORY)
-TITLE = f"{APP_NAME} (ver. 2023-01-19)"
+TITLE = f"{APP_NAME} (ver. 2023-02-28)"
 DEFAULT_FILE_PATH = os.getcwd()
 
 # FILTERS
@@ -609,10 +610,12 @@ class Controller:
 
     def crop_by_input(self):
         if self.current_selection:
-            dialog = EnterAreaDialog(controller=self, parent=self.main_window)
+            z_array = self.data_manager.get_data(self.current_selection).z
+            dialog = EnterAreaDialog(controller=self, z_shape=z_array.shape, parent=self.main_window)
             if dialog.exec():
                 point1, point2 = dialog.get_input_as_points()
-                z_array = self.data_manager.get_data(self.current_selection).z
+                print(point1)
+                print(point2)
                 if is_in_range(point1, z_array) and is_in_range(point2, z_array):
                     self._crop_data(point1, point2)
                 else:
@@ -794,6 +797,9 @@ def main():
     app = QApplication(sys.argv)
     app.setApplicationName(APP_NAME)
     app.setWindowIcon(QIcon(APP_ICON_PATH))
+    # replace the default style so the application looks
+    # the same on all operating systems
+    app.setStyle(QStyleFactory.create("Fusion"))
 
     window = MainWindow()
     window.resource_dir = RESOURCE_DIRECTORY
@@ -803,9 +809,9 @@ def main():
     controller.add_canvases_to_main_window()
     controller.set_listener_function_in_data_manager()
     controller.connect_actions()
-
     sys.exit(app.exec())
 
 
 if __name__ == "__main__":
     main()
+
