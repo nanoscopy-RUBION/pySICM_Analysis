@@ -229,7 +229,7 @@ class MainWindow(QMainWindow):
         self.view_menu.addAction(self.action_view_restore)
 
         # Manipulate data menu
-        self.action_data_crop_input = QAction('Enter range...', self)
+        self.action_data_crop_tool = QAction('Crop...', self)
         self.action_data_crop_select = QAction('Select area...', self)
         self.action_data_minimum = QAction('Subtract minimum', self)
         self.action_data_transpose_z = QAction('Transpose Z', self)
@@ -254,9 +254,10 @@ class MainWindow(QMainWindow):
         self.action_data_reset = QAction('Reset data manipulations', self)
 
         self.data_menu = menubar.addMenu("&Manipulate data")
-        crop_menu = self.data_menu.addMenu("Crop")
-        crop_menu.addAction(self.action_data_crop_input)
-        crop_menu.addAction(self.action_data_crop_select)
+        self.data_menu.addAction(self.action_data_crop_tool)
+        # crop_menu = self.data_menu.addMenu("Crop")
+        # crop_menu.addAction(self.action_data_crop_tool)
+        # crop_menu.addAction(self.action_data_crop_select)
         simple_menu = self.data_menu.addMenu('Simple Manipulations')
         simple_menu.addAction(self.action_data_minimum)
         simple_menu.addAction(self.action_data_transpose_z)

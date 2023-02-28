@@ -19,7 +19,7 @@ from PyQt6.QtWidgets import QApplication, QFileDialog, QInputDialog
 from sicm_analyzer.data_manager import DataManager
 from sicm_analyzer.results import ResultsWindow
 from sicm_analyzer.colormap_dialog import ColorMapDialog
-from sicm_analyzer.enter_area_dialog import EnterAreaDialog
+from sicm_analyzer.crop_tool import CropToolWindow
 from sicm_analyzer.gui_main import MainWindow
 from sicm_analyzer.graph_canvas import GraphCanvas
 from sicm_analyzer.filter_dialog import FilterDialog
@@ -116,8 +116,8 @@ class Controller:
         self.main_window.action_data_reset.triggered.connect(self.reset_current_data_manipulations)
         self.main_window.action_data_filter.triggered.connect(self.filter_current_view)
         self.main_window.action_data_level_plane.triggered.connect(self.plane_correction)
-        self.main_window.action_data_crop_input.triggered.connect(self.crop_by_input)
-        self.main_window.action_data_crop_select.triggered.connect(self.crop_by_selection)
+        self.main_window.action_data_crop_tool.triggered.connect(self.open_crop_tool)
+        #self.main_window.action_data_crop_select.triggered.connect(self.crop_by_selection)
         self.main_window.action_data_poly.triggered.connect(self.fit_to_polyXX)
         self.main_window.action_data_poly_lmfit.triggered.connect(self.fit_to_polyXX_lmfit)
 
@@ -608,30 +608,32 @@ class Controller:
         else:
             self.update_figures_and_status("No ROI set.")
 
-    def crop_by_input(self):
+    def open_crop_tool(self):
         if self.current_selection:
-            z_array = self.data_manager.get_data(self.current_selection).z
-            dialog = EnterAreaDialog(controller=self, z_shape=z_array.shape, parent=self.main_window)
+            data = self.data_manager.get_data(self.current_selection)
+            z_array = data.z
+            dialog = CropToolWindow(
+                controller=self,
+                z_shape=z_array.shape,
+                data=data,
+                view=self.view,
+                parent=self.main_window
+            )
             if dialog.exec():
                 point1, point2 = dialog.get_input_as_points()
-                print(point1)
-                print(point2)
-                if is_in_range(point1, z_array) and is_in_range(point2, z_array):
-                    self._crop_data(point1, point2)
-                else:
-                    self.main_window.display_status_bar_message("Invalid input: Data not cropped.")
+                self._crop_data(point1, point2)
             else:
-                self.main_window.display_status_bar_message("Invalid input: Data not cropped.")
+                self.main_window.display_status_bar_message("Action canceled: Data not cropped.")
 
-    def crop_by_selection(self):
-        if self.current_selection:
-            self.main_window.set_cross_cursor()
-            self.figure_canvas_2d.draw_rectangle_on_raster_image(
-                data=self.data_manager.get_data(self.current_selection),
-                view=self.view,
-                func=self._crop_data,
-                clean_up_func=self.main_window.set_default_cursor
-            )
+    # def crop_by_selection(self):
+    #     if self.current_selection:
+    #         self.main_window.set_cross_cursor()
+    #         self.figure_canvas_2d.draw_rectangle_on_raster_image(
+    #             data=self.data_manager.get_data(self.current_selection),
+    #             view=self.view,
+    #             func=self._crop_data,
+    #             clean_up_func=self.main_window.set_default_cursor
+    #         )
 
     def _crop_data(self, point1: QPoint, point2: QPoint):
         if points_are_not_equal(point1, point2):
