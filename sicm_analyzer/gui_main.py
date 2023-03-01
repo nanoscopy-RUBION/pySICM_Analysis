@@ -49,6 +49,8 @@ class MainWindow(QMainWindow):
         self.close_window = pyqtSignal()
         self.central_widget = QtWidgets.QWidget(self)
         self.imported_files_list = QListWidget(self)
+        self.imported_files_list.setDragDropMode(QListWidget.DragDropMode.InternalMove)
+
         self.data_manipulation_list = QListWidget(self)
         self.init_ui()
         self.set_menus_enabled(False)
@@ -89,7 +91,7 @@ class MainWindow(QMainWindow):
         self.info_text = QTextEdit()
         self.info_text.setReadOnly(True)
         self.info_text.setMinimumHeight(100)
-        #self.info_text.setFixedHeight(160)
+
         info_layout.addWidget(info_label)
         info_layout.addWidget(self.info_text)
         info_widget = QWidget()
@@ -251,6 +253,7 @@ class MainWindow(QMainWindow):
         action_data_splines.setEnabled(False)  # TODO
         action_data_neighbor = QAction('by nearest neighbor', self)
         action_data_neighbor.setEnabled(False)  # TODO
+        self.action_data_to_height_diff = QAction('Transform to height differences', self)
         self.action_data_reset = QAction('Reset data manipulations', self)
 
         self.data_menu = menubar.addMenu("&Manipulate data")
@@ -274,6 +277,7 @@ class MainWindow(QMainWindow):
         interpolation_menu = self.data_menu.addMenu('Interpolation')
         interpolation_menu.addAction(action_data_splines)
         interpolation_menu.addAction(action_data_neighbor)
+        self.data_menu.addAction(self.action_data_to_height_diff)
         self.data_menu.addSeparator()
         self.data_menu.addAction(self.action_data_reset)
 
@@ -443,9 +447,15 @@ class MainWindow(QMainWindow):
     def add_items_to_list(self, items):
         for item in items:
             checkable_item = QtWidgets.QListWidgetItem(item)
-            checkable_item.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled)
+            checkable_item.setFlags(
+                Qt.ItemFlag.ItemIsUserCheckable
+                | Qt.ItemFlag.ItemIsSelectable
+                | Qt.ItemFlag.ItemIsEnabled
+                | Qt.ItemFlag.ItemIsDragEnabled
+            )
             checkable_item.setCheckState(Qt.CheckState.Checked)
             self.imported_files_list.addItem(checkable_item)
+
 
     def get_all_checked_items(self) -> list[str]:
         items = []

@@ -49,6 +49,18 @@ def invert_z_data(data: ScanBackstepMode):
     data.z = data.z * (-1)
 
 
+def height_diff_to_neighbour(data: ScanBackstepMode):
+    """
+    Calculates the difference between each value and its right neighbour.
+    Last point in a row is set to 0.
+    """
+    z = data.z
+    for i in range(z.shape[0]):
+        for j in range(z.shape[1] - 1):
+            z[i, j] = z[i, j] - z[i, j+1]
+        z[i, z.shape[1]-1] = 0
+
+
 # Filter Manipulations
 # ______________________________________
 def filter_median_temporal(data: ScanBackstepMode, px_neighbours=1):

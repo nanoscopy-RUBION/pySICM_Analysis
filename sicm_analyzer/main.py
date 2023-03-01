@@ -23,7 +23,8 @@ from sicm_analyzer.crop_tool import CropToolWindow
 from sicm_analyzer.gui_main import MainWindow
 from sicm_analyzer.graph_canvas import GraphCanvas
 from sicm_analyzer.filter_dialog import FilterDialog
-from sicm_analyzer.manipulate_data import transpose_z_data, subtract_z_minimum, crop, invert_z_data
+from sicm_analyzer.manipulate_data import transpose_z_data, subtract_z_minimum, crop, invert_z_data, \
+    height_diff_to_neighbour
 from sicm_analyzer.manipulate_data import filter_median_temporal, filter_median_spatial, filter_average_temporal, \
     filter_average_spatial
 from sicm_analyzer.manipulate_data import level_data
@@ -37,7 +38,6 @@ from sicm_analyzer.measurements import polynomial_fifth_degree
 from sicm_analyzer.line_profile_window import LineProfileWindow
 from sicm_analyzer.data_fitting import poly_xx_fit
 
-
 # APP CONSTANTS
 APP_NAME = "pySICM Analysis"
 APP_PATH = os.getcwd()
@@ -47,7 +47,7 @@ SAMPLES_DIRECTORY = "samples"
 APP_ICON = "pySICMsplash.png"
 APP_ICON_PATH = join(APP_PATH, RESOURCE_DIRECTORY, ICONS_DIRECTORY, APP_ICON)
 APP_SAMPLES_PATH = join(APP_PATH, RESOURCE_DIRECTORY, SAMPLES_DIRECTORY)
-TITLE = f"{APP_NAME} (ver. 2023-02-28)"
+TITLE = f"{APP_NAME} (ver. 2023-03-01)"
 DEFAULT_FILE_PATH = os.getcwd()
 
 # FILTERS
@@ -118,6 +118,7 @@ class Controller:
         self.main_window.action_data_level_plane.triggered.connect(self.plane_correction)
         self.main_window.action_data_crop_tool.triggered.connect(self.open_crop_tool)
         #self.main_window.action_data_crop_select.triggered.connect(self.crop_by_selection)
+        self.main_window.action_data_to_height_diff.triggered.connect(self.transform_to_height_differences)
         self.main_window.action_data_poly.triggered.connect(self.fit_to_polyXX)
         self.main_window.action_data_poly_lmfit.triggered.connect(self.fit_to_polyXX_lmfit)
 
@@ -201,7 +202,6 @@ class Controller:
                     name = Path(item).name
                     full_path = os.path.join(directory, name)
                     export_sicm_file(full_path, data, manipulations=manipulations)
-
 
     def _get_file_name_with_extension(self, file_dialog_path: tuple[str, str]) -> (str, str):
         """Checks the file path from a QFileDialog and returns
@@ -516,6 +516,14 @@ class Controller:
                 invert_z_data,
                 key=self.current_selection,
                 action_name="Invert z values"
+            )(self.data_manager.get_data(self.current_selection))
+
+    def transform_to_height_differences(self):
+        if self.current_selection:
+            self.data_manager.execute_func_on_current_data(
+                height_diff_to_neighbour,
+                key=self.current_selection,
+                action_name="Transform height to height differences"
             )(self.data_manager.get_data(self.current_selection))
 
     def update_figures_and_status(self, message: str = ""):
