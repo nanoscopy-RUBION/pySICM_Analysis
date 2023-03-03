@@ -1,4 +1,5 @@
 # pySICM Analysis
+Analysis tool for .sicm files created with our home-built SIC microscope.
 
 ## Prerequisites
 - Python 3.10
