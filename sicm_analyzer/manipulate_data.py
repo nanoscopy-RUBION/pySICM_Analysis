@@ -4,6 +4,12 @@ from scipy.interpolate import griddata
 from skimage.draw import disk
 
 from sicm_analyzer.sicm_data import SICMdata, ScanBackstepMode
+import enum
+
+
+class MirrorAxis(enum.Enum):
+    X_AXIS = 1
+    Y_AXIS = 0
 
 
 # Simple Manipulations
@@ -42,6 +48,17 @@ def transpose_z_data(data: ScanBackstepMode):
     """Transposes the z array."""
     data.z = data.z.transpose()
     data.update_dimensions()
+
+
+def flip_z_data(data: ScanBackstepMode, mirror_axis: int | MirrorAxis):
+    """Flips z data of a BackstepScan in x or y direction.
+
+    :param data:
+    :param mirror_axis:
+    """
+    if isinstance(mirror_axis, MirrorAxis):
+        mirror_axis = mirror_axis.value
+    data.z = np.flip(data.z, axis=mirror_axis)
 
 
 def invert_z_data(data: ScanBackstepMode):

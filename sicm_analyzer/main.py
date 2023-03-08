@@ -27,7 +27,7 @@ from sicm_analyzer.manipulate_data import transpose_z_data, subtract_z_minimum, 
     height_diff_to_neighbour
 from sicm_analyzer.manipulate_data import filter_median_temporal, filter_median_spatial, filter_average_temporal, \
     filter_average_spatial
-from sicm_analyzer.manipulate_data import level_data
+from sicm_analyzer.manipulate_data import level_data, MirrorAxis, flip_z_data
 from sicm_analyzer.mouse_events import MouseInteraction, points_are_not_equal, is_in_range, ROW, COLUMN, CROSS
 from sicm_analyzer import sicm_data
 from sicm_analyzer.sicm_data import ApproachCurve, ScanBackstepMode, export_sicm_file
@@ -113,6 +113,8 @@ class Controller:
         self.main_window.action_data_transpose_z.triggered.connect(self.transpose_z_of_current_view)
         self.main_window.action_data_minimum.triggered.connect(self.subtract_minimum_in_current_view)
         self.main_window.action_data_invert_z.triggered.connect(self.invert_z_in_current_view)
+        self.main_window.action_data_flip_x.triggered.connect(self.flip_x)
+        self.main_window.action_data_flip_y.triggered.connect(self.flip_y)
         self.main_window.action_data_reset.triggered.connect(self.reset_current_data_manipulations)
         self.main_window.action_data_filter.triggered.connect(self.filter_current_view)
         self.main_window.action_data_level_plane.triggered.connect(self.plane_correction)
@@ -517,6 +519,20 @@ class Controller:
                 key=self.current_selection,
                 action_name="Invert z values"
             )(self.data_manager.get_data(self.current_selection))
+
+    def flip_x(self):
+        self.flip_data(axis=MirrorAxis.X_AXIS, action_name="Flip data in x direction")
+
+    def flip_y(self):
+        self.flip_data(axis=MirrorAxis.Y_AXIS, action_name="Flip data in y direction")
+
+    def flip_data(self, axis, action_name):
+        if self.current_selection:
+            self.data_manager.execute_func_on_current_data(
+                flip_z_data,
+                key=self.current_selection,
+                action_name=action_name
+            )(self.data_manager.get_data(self.current_selection), mirror_axis=axis)
 
     def transform_to_height_differences(self):
         if self.current_selection:

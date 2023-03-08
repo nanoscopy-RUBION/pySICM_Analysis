@@ -237,6 +237,8 @@ class MainWindow(QMainWindow):
         self.action_data_transpose_z = QAction('Transpose Z', self)
         self.action_data_invert_z = QAction("Invert z", self)
         self.action_data_filter = QAction("Filter data", self)
+        self.action_data_flip_x = QAction("X", self)
+        self.action_data_flip_y = QAction("Y", self)
         self.action_data_level_plane = QAction('Plane', self)
         action_data_paraboloid = QAction('Paraboloid', self)
         action_data_paraboloid.setEnabled(False)  # TODO
@@ -258,13 +260,14 @@ class MainWindow(QMainWindow):
 
         self.data_menu = menubar.addMenu("&Manipulate data")
         self.data_menu.addAction(self.action_data_crop_tool)
-        # crop_menu = self.data_menu.addMenu("Crop")
-        # crop_menu.addAction(self.action_data_crop_tool)
-        # crop_menu.addAction(self.action_data_crop_select)
+
         simple_menu = self.data_menu.addMenu('Simple Manipulations')
         simple_menu.addAction(self.action_data_minimum)
         simple_menu.addAction(self.action_data_transpose_z)
         simple_menu.addAction(self.action_data_invert_z)
+        flip_menu = simple_menu.addMenu("Flip data")
+        flip_menu.addAction(self.action_data_flip_x)
+        flip_menu.addAction(self.action_data_flip_y)
         self.data_menu.addAction(self.action_data_filter)
         flatten_menu = self.data_menu.addMenu('Leveling')
         flatten_menu.addAction(self.action_data_level_plane)
