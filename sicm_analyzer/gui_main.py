@@ -49,6 +49,8 @@ class MainWindow(QMainWindow):
         self.close_window = pyqtSignal()
         self.central_widget = QtWidgets.QWidget(self)
         self.imported_files_list = QListWidget(self)
+        self.imported_files_list.setDragDropMode(QListWidget.DragDropMode.InternalMove)
+
         self.data_manipulation_list = QListWidget(self)
         self.init_ui()
         self.set_menus_enabled(False)
@@ -89,7 +91,7 @@ class MainWindow(QMainWindow):
         self.info_text = QTextEdit()
         self.info_text.setReadOnly(True)
         self.info_text.setMinimumHeight(100)
-        #self.info_text.setFixedHeight(160)
+
         info_layout.addWidget(info_label)
         info_layout.addWidget(self.info_text)
         info_widget = QWidget()
@@ -229,12 +231,14 @@ class MainWindow(QMainWindow):
         self.view_menu.addAction(self.action_view_restore)
 
         # Manipulate data menu
-        self.action_data_crop_input = QAction('Enter range...', self)
+        self.action_data_crop_tool = QAction('Crop...', self)
         self.action_data_crop_select = QAction('Select area...', self)
         self.action_data_minimum = QAction('Subtract minimum', self)
         self.action_data_transpose_z = QAction('Transpose Z', self)
         self.action_data_invert_z = QAction("Invert z", self)
         self.action_data_filter = QAction("Filter data", self)
+        self.action_data_flip_x = QAction("X", self)
+        self.action_data_flip_y = QAction("Y", self)
         self.action_data_level_plane = QAction('Plane', self)
         action_data_paraboloid = QAction('Paraboloid', self)
         action_data_paraboloid.setEnabled(False)  # TODO
@@ -251,16 +255,19 @@ class MainWindow(QMainWindow):
         action_data_splines.setEnabled(False)  # TODO
         action_data_neighbor = QAction('by nearest neighbor', self)
         action_data_neighbor.setEnabled(False)  # TODO
+        self.action_data_to_height_diff = QAction('Transform to height differences', self)
         self.action_data_reset = QAction('Reset data manipulations', self)
 
         self.data_menu = menubar.addMenu("&Manipulate data")
-        crop_menu = self.data_menu.addMenu("Crop")
-        crop_menu.addAction(self.action_data_crop_input)
-        crop_menu.addAction(self.action_data_crop_select)
+        self.data_menu.addAction(self.action_data_crop_tool)
+
         simple_menu = self.data_menu.addMenu('Simple Manipulations')
         simple_menu.addAction(self.action_data_minimum)
         simple_menu.addAction(self.action_data_transpose_z)
         simple_menu.addAction(self.action_data_invert_z)
+        flip_menu = simple_menu.addMenu("Flip data")
+        flip_menu.addAction(self.action_data_flip_x)
+        flip_menu.addAction(self.action_data_flip_y)
         self.data_menu.addAction(self.action_data_filter)
         flatten_menu = self.data_menu.addMenu('Leveling')
         flatten_menu.addAction(self.action_data_level_plane)
@@ -273,6 +280,7 @@ class MainWindow(QMainWindow):
         interpolation_menu = self.data_menu.addMenu('Interpolation')
         interpolation_menu.addAction(action_data_splines)
         interpolation_menu.addAction(action_data_neighbor)
+        self.data_menu.addAction(self.action_data_to_height_diff)
         self.data_menu.addSeparator()
         self.data_menu.addAction(self.action_data_reset)
 
@@ -442,9 +450,15 @@ class MainWindow(QMainWindow):
     def add_items_to_list(self, items):
         for item in items:
             checkable_item = QtWidgets.QListWidgetItem(item)
-            checkable_item.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled)
+            checkable_item.setFlags(
+                Qt.ItemFlag.ItemIsUserCheckable
+                | Qt.ItemFlag.ItemIsSelectable
+                | Qt.ItemFlag.ItemIsEnabled
+                | Qt.ItemFlag.ItemIsDragEnabled
+            )
             checkable_item.setCheckState(Qt.CheckState.Checked)
             self.imported_files_list.addItem(checkable_item)
+
 
     def get_all_checked_items(self) -> list[str]:
         items = []

@@ -63,6 +63,7 @@ class GraphCanvas(FigureCanvasQTAgg):
         self.clean_up_function = None
         self.current_data: SICMdata = SICMdata()
         self.current_view: View = View()
+        self.graph_type = ""
         self.draw_white_canvas()
 
     def draw_graph(self, data: SICMdata, graph_type: str = "", view: View = None):
@@ -81,6 +82,7 @@ class GraphCanvas(FigureCanvasQTAgg):
         self.figure.clear()
         self.current_data = data
         self.current_view = view
+        self.graph_type = graph_type
 
         # if the canvas is too small for one or both of the
         # graphs matplotlib will be unable to draw the graph
@@ -98,6 +100,9 @@ class GraphCanvas(FigureCanvasQTAgg):
             self.draw()
         except ValueError:
             pass
+
+    def redraw_graph(self):
+        self.draw_graph(self.current_data, self.graph_type, self.current_view)
 
     def draw_white_canvas(self):
         self.figure.clear()
@@ -122,13 +127,13 @@ class GraphCanvas(FigureCanvasQTAgg):
             axes.set_yticks(y_ticks)
 
             if view.show_as_px:
-                axis_label = "px"
+                axis_label = "[px]"
             else:
                 self.convert_axes_labels_from_px_to_microns(data, axes)
-                axis_label = "µm"
+                axis_label = "[µm]"
 
-            axes.set_xlabel(axis_label)
-            axes.set_ylabel(axis_label)
+            axes.set_xlabel("x dimension " + axis_label)
+            axes.set_ylabel("y dimension " + axis_label)
             try:
                 # 2D plots have no zlabel
                 axes.set_zlabel("µm")  # z data is always in µm
@@ -140,12 +145,12 @@ class GraphCanvas(FigureCanvasQTAgg):
     def draw_3d_plot(self):
         """Draws a 3d surface plot for scanning data."""
 
-        # if the canvas is to small for one or both of the
+        # if the canvas is too small for one or both of the
         # graphs matplotlib will be unable to draw the graph
         # and crashes the program
         try:
-            axes = self.figure.add_subplot(1, 1, 1, projection='3d')
-
+            #axes = self.figure.add_subplot(1, 1, 1, projection='3d')
+            axes = self.figure.add_axes([0.1, 0.1, 0.5, 0.9], projection="3d")
             norm = Normalize(vmin=np.min(self.current_data.get_data()[2]), vmax=np.max(self.current_data.get_data()[2]), clip=False)
             if self.current_view:
 
@@ -162,7 +167,8 @@ class GraphCanvas(FigureCanvasQTAgg):
 
     def draw_2d_plot_raster_image(self):
         """Draws a 2D raster image for 3-dimensional scanning data."""
-        axes = self.figure.add_subplot(1, 1, 1)
+        #axes = self.figure.add_subplot(1, 1, 1)
+        axes = self.figure.add_axes([0.15, 0.1, 0.5, 0.9])
         # use pcolormesh for scalable pixelmaps
         # img = self.axes.imshow(view_object.z_data, cmap=view_object.color_map)
         #if data.rois:
@@ -173,16 +179,16 @@ class GraphCanvas(FigureCanvasQTAgg):
             img = axes.pcolormesh(self.current_data.z, cmap=self.current_view.color_map)
         else:
             img = axes.pcolormesh(self.current_data.z)
+
         axes.set_aspect("equal")
         self.set_colorbar(img, axes)
 
     def set_colorbar(self, img, axes):
-        #self.figure.tight_layout()
         cax = inset_axes(axes,
                          width="5%",
                          height="100%",
                          loc='right',
-                         borderpad=-7
+                         borderpad=-6
                          )
         cb = self.figure.colorbar(img, cax=cax)
         cb.set_label(label="height in µm")
@@ -295,7 +301,6 @@ class GraphCanvas(FigureCanvasQTAgg):
                 self.clean_up_function()
             self.unbind_mouse_events()
 
-
     def get_viewing_angles_from_3d_plot(self):
         """Returns the viewing angles from the 3D plot.
 
@@ -358,19 +363,18 @@ class GraphCanvas(FigureCanvasQTAgg):
                     height = abs(self.mi.mouse_point1.y() - self.mi.mouse_point2.y()) + 1
 
                     rect = self.get_rectangle(origin=origin, width=width, height=height)
-                    self._add_rectangle_to_raster_image(rectangles=[rect])
+                    self.add_rectangle_to_raster_image(rectangles=[rect])
 
             if event.name == "button_release_event":
                 if self.mi.mouse_point1 is not None and self.mi.mouse_point2 is not None:
-
                     if self.mi.mouse_point1.x() <= self.mi.mouse_point2.x():
-                        self.mi.mouse_point2 = self.mi.mouse_point2 + QPoint(1, 0)
+                        self.mi.mouse_point2 = self.mi.mouse_point2 #+ QPoint(1, 0)
                     else:
-                        self.mi.mouse_point1 = self.mi.mouse_point1 + QPoint(1, 0)
+                        self.mi.mouse_point1 = self.mi.mouse_point1 #+ QPoint(1, 0)
                     if self.mi.mouse_point1.y() <= self.mi.mouse_point2.y():
-                        self.mi.mouse_point2 = self.mi.mouse_point2 + QPoint(0, 1)
+                        self.mi.mouse_point2 = self.mi.mouse_point2 #+ QPoint(0, 1)
                     else:
-                        self.mi.mouse_point1 = self.mi.mouse_point1 + QPoint(0, 1)
+                        self.mi.mouse_point1 = self.mi.mouse_point1 #+ QPoint(0, 1)
 
                     if self.function_after_mouse_events:
                         self.function_after_mouse_events(self.mi.mouse_point1, self.mi.mouse_point2)
@@ -383,13 +387,13 @@ class GraphCanvas(FigureCanvasQTAgg):
                 if self.mi.mouse_point1 is not None and self.mi.mouse_point2 is not None:
 
                     if self.mi.mouse_point1.x() <= self.mi.mouse_point2.x():
-                        self.mi.mouse_point2 = self.mi.mouse_point2 + QPoint(1, 0)
+                        self.mi.mouse_point2 = self.mi.mouse_point2 #+ QPoint(1, 0)
                     else:
-                        self.mi.mouse_point1 = self.mi.mouse_point1 + QPoint(1, 0)
+                        self.mi.mouse_point1 = self.mi.mouse_point1 #+ QPoint(1, 0)
                     if self.mi.mouse_point1.y() <= self.mi.mouse_point2.y():
-                        self.mi.mouse_point2 = self.mi.mouse_point2 + QPoint(0, 1)
+                        self.mi.mouse_point2 = self.mi.mouse_point2 #+ QPoint(0, 1)
                     else:
-                        self.mi.mouse_point1 = self.mi.mouse_point1 + QPoint(0, 1)
+                        self.mi.mouse_point1 = self.mi.mouse_point1 #+ QPoint(0, 1)
 
                     if self.function_after_mouse_events:
                         self.function_after_mouse_events(self.mi.mouse_point1, self.mi.mouse_point2)
@@ -457,11 +461,11 @@ class GraphCanvas(FigureCanvasQTAgg):
                         rect2 = self.get_row_rectangle(self.mi.mouse_point1)
 
                     if self.mi.kwargs.get("mode") == CROSS:
-                        self._add_rectangle_to_raster_image(rectangles=[rect1, rect2])
+                        self.add_rectangle_to_raster_image(rectangles=[rect1, rect2])
                         self.function_after_mouse_events(y_index, x_index)
                     else:
                         if rect:
-                            self._add_rectangle_to_raster_image(rectangles=[rect])
+                            self.add_rectangle_to_raster_image(rectangles=[rect])
                         if self.function_after_mouse_events:
                             self.function_after_mouse_events(self.mi.kwargs.get("mode"), index)
                 except Exception as e:
@@ -532,7 +536,7 @@ class GraphCanvas(FigureCanvasQTAgg):
         except TypeError:
             return None
 
-    def _add_rectangle_to_raster_image(self, rectangles: list[Rectangle]):
+    def add_rectangle_to_raster_image(self, rectangles: list[Rectangle]):
         """Adds a rectangle shape to the current 2D plot."""
         self.draw_graph(self.current_data, RASTER_IMAGE, self.current_view)
         for rectangle in rectangles:

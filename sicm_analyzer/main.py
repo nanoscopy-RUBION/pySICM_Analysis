@@ -19,14 +19,15 @@ from PyQt6.QtWidgets import QApplication, QFileDialog, QInputDialog
 from sicm_analyzer.data_manager import DataManager
 from sicm_analyzer.results import ResultsWindow
 from sicm_analyzer.colormap_dialog import ColorMapDialog
-from sicm_analyzer.enter_area_dialog import EnterAreaDialog
+from sicm_analyzer.crop_tool import CropToolWindow
 from sicm_analyzer.gui_main import MainWindow
 from sicm_analyzer.graph_canvas import GraphCanvas
 from sicm_analyzer.filter_dialog import FilterDialog
-from sicm_analyzer.manipulate_data import transpose_z_data, subtract_z_minimum, crop, invert_z_data
+from sicm_analyzer.manipulate_data import transpose_z_data, subtract_z_minimum, crop, invert_z_data, \
+    height_diff_to_neighbour
 from sicm_analyzer.manipulate_data import filter_median_temporal, filter_median_spatial, filter_average_temporal, \
     filter_average_spatial
-from sicm_analyzer.manipulate_data import level_data
+from sicm_analyzer.manipulate_data import level_data, MirrorAxis, flip_z_data
 from sicm_analyzer.mouse_events import MouseInteraction, points_are_not_equal, is_in_range, ROW, COLUMN, CROSS
 from sicm_analyzer import sicm_data
 from sicm_analyzer.sicm_data import ApproachCurve, ScanBackstepMode, export_sicm_file
@@ -37,7 +38,6 @@ from sicm_analyzer.measurements import polynomial_fifth_degree
 from sicm_analyzer.line_profile_window import LineProfileWindow
 from sicm_analyzer.data_fitting import poly_xx_fit
 
-
 # APP CONSTANTS
 APP_NAME = "pySICM Analysis"
 APP_PATH = os.getcwd()
@@ -47,7 +47,7 @@ SAMPLES_DIRECTORY = "samples"
 APP_ICON = "pySICMsplash.png"
 APP_ICON_PATH = join(APP_PATH, RESOURCE_DIRECTORY, ICONS_DIRECTORY, APP_ICON)
 APP_SAMPLES_PATH = join(APP_PATH, RESOURCE_DIRECTORY, SAMPLES_DIRECTORY)
-TITLE = f"{APP_NAME} (ver. 2023-02-28)"
+TITLE = f"{APP_NAME} (ver. 2023-03-01)"
 DEFAULT_FILE_PATH = os.getcwd()
 
 # FILTERS
@@ -113,11 +113,14 @@ class Controller:
         self.main_window.action_data_transpose_z.triggered.connect(self.transpose_z_of_current_view)
         self.main_window.action_data_minimum.triggered.connect(self.subtract_minimum_in_current_view)
         self.main_window.action_data_invert_z.triggered.connect(self.invert_z_in_current_view)
+        self.main_window.action_data_flip_x.triggered.connect(self.flip_x)
+        self.main_window.action_data_flip_y.triggered.connect(self.flip_y)
         self.main_window.action_data_reset.triggered.connect(self.reset_current_data_manipulations)
         self.main_window.action_data_filter.triggered.connect(self.filter_current_view)
         self.main_window.action_data_level_plane.triggered.connect(self.plane_correction)
-        self.main_window.action_data_crop_input.triggered.connect(self.crop_by_input)
-        self.main_window.action_data_crop_select.triggered.connect(self.crop_by_selection)
+        self.main_window.action_data_crop_tool.triggered.connect(self.open_crop_tool)
+        #self.main_window.action_data_crop_select.triggered.connect(self.crop_by_selection)
+        self.main_window.action_data_to_height_diff.triggered.connect(self.transform_to_height_differences)
         self.main_window.action_data_poly.triggered.connect(self.fit_to_polyXX)
         self.main_window.action_data_poly_lmfit.triggered.connect(self.fit_to_polyXX_lmfit)
 
@@ -201,7 +204,6 @@ class Controller:
                     name = Path(item).name
                     full_path = os.path.join(directory, name)
                     export_sicm_file(full_path, data, manipulations=manipulations)
-
 
     def _get_file_name_with_extension(self, file_dialog_path: tuple[str, str]) -> (str, str):
         """Checks the file path from a QFileDialog and returns
@@ -518,6 +520,28 @@ class Controller:
                 action_name="Invert z values"
             )(self.data_manager.get_data(self.current_selection))
 
+    def flip_x(self):
+        self.flip_data(axis=MirrorAxis.X_AXIS, action_name="Flip data in x direction")
+
+    def flip_y(self):
+        self.flip_data(axis=MirrorAxis.Y_AXIS, action_name="Flip data in y direction")
+
+    def flip_data(self, axis, action_name):
+        if self.current_selection:
+            self.data_manager.execute_func_on_current_data(
+                flip_z_data,
+                key=self.current_selection,
+                action_name=action_name
+            )(self.data_manager.get_data(self.current_selection), mirror_axis=axis)
+
+    def transform_to_height_differences(self):
+        if self.current_selection:
+            self.data_manager.execute_func_on_current_data(
+                height_diff_to_neighbour,
+                key=self.current_selection,
+                action_name="Transform height to height differences"
+            )(self.data_manager.get_data(self.current_selection))
+
     def update_figures_and_status(self, message: str = ""):
         """Redraws figures on the canvas and updates statusbar message.
 
@@ -608,30 +632,32 @@ class Controller:
         else:
             self.update_figures_and_status("No ROI set.")
 
-    def crop_by_input(self):
+    def open_crop_tool(self):
         if self.current_selection:
-            z_array = self.data_manager.get_data(self.current_selection).z
-            dialog = EnterAreaDialog(controller=self, z_shape=z_array.shape, parent=self.main_window)
+            data = self.data_manager.get_data(self.current_selection)
+            z_array = data.z
+            dialog = CropToolWindow(
+                controller=self,
+                z_shape=z_array.shape,
+                data=data,
+                view=self.view,
+                parent=self.main_window
+            )
             if dialog.exec():
                 point1, point2 = dialog.get_input_as_points()
-                print(point1)
-                print(point2)
-                if is_in_range(point1, z_array) and is_in_range(point2, z_array):
-                    self._crop_data(point1, point2)
-                else:
-                    self.main_window.display_status_bar_message("Invalid input: Data not cropped.")
+                self._crop_data(point1, point2)
             else:
-                self.main_window.display_status_bar_message("Invalid input: Data not cropped.")
+                self.main_window.display_status_bar_message("Action canceled: Data not cropped.")
 
-    def crop_by_selection(self):
-        if self.current_selection:
-            self.main_window.set_cross_cursor()
-            self.figure_canvas_2d.draw_rectangle_on_raster_image(
-                data=self.data_manager.get_data(self.current_selection),
-                view=self.view,
-                func=self._crop_data,
-                clean_up_func=self.main_window.set_default_cursor
-            )
+    # def crop_by_selection(self):
+    #     if self.current_selection:
+    #         self.main_window.set_cross_cursor()
+    #         self.figure_canvas_2d.draw_rectangle_on_raster_image(
+    #             data=self.data_manager.get_data(self.current_selection),
+    #             view=self.view,
+    #             func=self._crop_data,
+    #             clean_up_func=self.main_window.set_default_cursor
+    #         )
 
     def _crop_data(self, point1: QPoint, point2: QPoint):
         if points_are_not_equal(point1, point2):

@@ -7,6 +7,7 @@ COLOR_MAPS = {
     "AFM hot": cm.afmhot,
     "Bone": cm.bone,
     "Cividis": cm.cividis,
+    "gist_yarg": cm.get_cmap("gist_yarg"),
     "Greys": cm.gray,
     "Hot (für Dilan)": cm.hot,
     "Jet": cm.jet,
