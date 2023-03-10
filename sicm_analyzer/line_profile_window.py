@@ -49,7 +49,8 @@ class LineProfileWindow(QWidget):
 
         # toolbar
         self.toolbar = QToolBar()
-        self.toolbar.setIconSize(QSize(26, 26))
+        self.toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+        self.toolbar.setMovable(False)
         self.toolbar.setStyleSheet("QToolBar {border-bottom: 1px solid #D3D3D3;}")
 
         # graphs

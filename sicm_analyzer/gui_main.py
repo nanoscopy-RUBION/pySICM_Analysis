@@ -175,6 +175,12 @@ class MainWindow(QMainWindow):
         self.action_redo.setShortcut("Ctrl+R")
         self.action_undo.setEnabled(False)
         self.action_redo.setEnabled(False)
+
+        action_sort_ascending = QAction(QIcon(join(self.icons_dir, "sort_ascending.svg")), "Sort (ascending)", self)
+        action_sort_ascending.triggered.connect(lambda x: self.__sort_list_items(Qt.SortOrder.AscendingOrder))
+        action_sort_descending = QAction(QIcon(join(self.icons_dir, "sort_descending.svg")), "Sort (descending)", self)
+        action_sort_descending.triggered.connect(lambda x: self.__sort_list_items(Qt.SortOrder.DescendingOrder))
+
         action_check_all = QAction("Check all items", self)
         action_check_all.triggered.connect(self.check_all_items)
         action_uncheck_all = QAction("Uncheck all items", self)
@@ -187,6 +193,9 @@ class MainWindow(QMainWindow):
         edit_menu.addAction(self.action_redo)
         edit_menu.addAction(action_check_all)
         edit_menu.addAction(action_uncheck_all)
+        edit_menu.addSeparator()
+        edit_menu.addAction(action_sort_ascending)
+        edit_menu.addAction(action_sort_descending)
         edit_menu.addSeparator()
         edit_menu.addAction(self.action_toggle_toolbar)
 
@@ -311,11 +320,6 @@ class MainWindow(QMainWindow):
         self.measure_menu = menubar.addMenu("&Measurements")
         self.measure_menu.addAction(self.action_results)
         self.action_line_profile_tool = QAction("Line profile tool...", self)
-        # line_profile_menu = self.measure_menu.addMenu("Show line profile")
-        # line_profile_menu.addAction(self.action_line_profile_row)
-        # line_profile_menu.addAction(self.action_line_profile_column)
-        # line_profile_menu.addAction(self.action_line_profile_xy)
-        # line_profile_menu.addAction(self.action_line_profile_line)
         self.measure_menu.addAction(self.action_line_profile_tool)
         self.measure_menu.addAction(self.action_get_pixel_values)
         self.measure_menu.addAction(self.action_measure_dist)
@@ -338,16 +342,21 @@ class MainWindow(QMainWindow):
 
         # Key events
         self.imported_files_list.installEventFilter(self)
+        self.imported_files_list.setSortingEnabled(True)
         self.delete_key = None
         self.escape_key = None
 
+        # Toolbar
         self.toolbar = QToolBar()
         self.toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
         self.toolbar.setMovable(False)
         self.toolbar.addAction(self.action_import_files)
         self.toolbar.addAction(self.action_import_directory)
+        self.toolbar.addSeparator()
         self.toolbar.addAction(self.action_close_all)
-
+        self.toolbar.addAction(action_sort_ascending)
+        self.toolbar.addAction(action_sort_descending)
+        self.toolbar.addSeparator()
         self.action_show_dock_widgets = QAction(QIcon(join(self.icons_dir, "plot_widgets.png")), "Show plots")
         self.action_show_dock_widgets.triggered.connect(self.show_graphs)
         self.toolbar.addAction(self.action_show_dock_widgets)
@@ -474,6 +483,10 @@ class MainWindow(QMainWindow):
         )
         checkable_item.setCheckState(Qt.CheckState.Checked)
         return checkable_item
+
+    def __sort_list_items(self, order: Qt.SortOrder):
+        """Reorders list items according to the order parameter."""
+        self.imported_files_list.sortItems(order)
 
     def insert_item_after_current_selection(self, item):
         """Insert an item right below the currently selected item."""
