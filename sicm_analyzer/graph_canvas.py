@@ -608,16 +608,41 @@ class GraphCanvas(FigureCanvasQTAgg):
         self.clean_up_function = None
         self.mi = None
 
-    def draw_line_plot(self, x_data, y_data):
+    def draw_line_plot(self, x_data, y_data, data, view):
         """Draws a simple line plot with x and y data."""
         self.figure.clear()
         axes = self.figure.add_subplot(1, 1, 1)
         axes.plot(x_data, y_data)
+
+        if view.show_as_px:
+            axis_label = "[px]"
+        else:
+            self.convert_axes_labels_from_px_to_microns(data, axes)
+            axis_label = "[µm]"
+
+        axes.set_xlabel(f"distance {axis_label}")
+        axes.set_ylabel("height [µm]")
+        self.figure.tight_layout()
+        self.figure.subplots_adjust(bottom=0.20, top=0.90, left=0.15, right=0.75)
         self.draw()
 
-    def draw_xy_line_profiles(self, x_x_data, x_y_data, y_x_data, y_y_data):
+    def draw_xy_line_profiles(self, x_x_data, x_y_data, y_x_data, y_y_data, data, view):
         self.figure.clear()
         axes = self.figure.add_subplot(1, 1, 1)
-        axes.plot(x_x_data, x_y_data)
-        axes.plot(y_x_data, y_y_data)
+        axes.plot(x_x_data, x_y_data, label="row")
+        axes.plot(y_x_data, y_y_data, label="column")
+
+        # TODO test what happens if x pixel dimension differs from y
+        if view.show_as_px:
+            axis_label = "[px]"
+        else:
+            self.convert_axes_labels_from_px_to_microns(data, axes)
+            axis_label = "[µm]"
+
+        axes.set_xlabel(f"distance {axis_label}")
+        axes.set_ylabel("height [µm]")
+
+        self.figure.legend(loc=7)
+        self.figure.tight_layout()
+        self.figure.subplots_adjust(bottom=0.20, top=0.90, left=0.15, right=0.75)
         self.draw()

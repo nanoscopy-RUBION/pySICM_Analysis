@@ -305,11 +305,13 @@ class MainWindow(QMainWindow):
 
         self.measure_menu = menubar.addMenu("&Measurements")
         self.measure_menu.addAction(self.action_results)
-        line_profile_menu = self.measure_menu.addMenu("Show line profile")
-        line_profile_menu.addAction(self.action_line_profile_row)
-        line_profile_menu.addAction(self.action_line_profile_column)
-        line_profile_menu.addAction(self.action_line_profile_xy)
-        line_profile_menu.addAction(self.action_line_profile_line)
+        self.action_line_profile_tool = QAction("Line profile tool...", self)
+        # line_profile_menu = self.measure_menu.addMenu("Show line profile")
+        # line_profile_menu.addAction(self.action_line_profile_row)
+        # line_profile_menu.addAction(self.action_line_profile_column)
+        # line_profile_menu.addAction(self.action_line_profile_xy)
+        # line_profile_menu.addAction(self.action_line_profile_line)
+        self.measure_menu.addAction(self.action_line_profile_tool)
         self.measure_menu.addAction(self.action_get_pixel_values)
         self.measure_menu.addAction(self.action_measure_dist)
         self.measure_menu.addAction(action_measure_profile)
@@ -390,6 +392,7 @@ class MainWindow(QMainWindow):
         At the moment the following key events are recognized:
 
         Key_Delete
+        Key_Escape
         """
         if event.type() is QKeyEvent.Type.KeyPress:
             if event.key() == Qt.Key.Key_Delete:

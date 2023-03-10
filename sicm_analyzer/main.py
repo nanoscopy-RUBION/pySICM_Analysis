@@ -70,6 +70,7 @@ class Controller:
         self.figure_canvas_3d = GraphCanvas()
         self.figure_canvas_2d = GraphCanvas()
         self.mi = MouseInteraction()
+        self.line_profile = None
 
     def set_listener_function_in_data_manager(self):
         self.data_manager.listener_function = self.update_figures_and_status
@@ -127,10 +128,11 @@ class Controller:
         # Measurement
         self.main_window.action_set_rois.triggered.connect(self.show_roi_dialog)
         self.main_window.action_set_roi.triggered.connect(self.select_roi_with_mouse)
-        self.main_window.action_line_profile_row.triggered.connect(self.select_line_profile_row)
-        self.main_window.action_line_profile_column.triggered.connect(self.select_line_profile_column)
-        self.main_window.action_line_profile_xy.triggered.connect(self.show_xy_profile)
-        self.main_window.action_line_profile_line.triggered.connect(self.select_line_profile_line)
+        self.main_window.action_line_profile_tool.triggered.connect(self.open_line_profile_tool)
+        #self.main_window.action_line_profile_row.triggered.connect(self.select_line_profile_row)
+        #self.main_window.action_line_profile_column.triggered.connect(self.select_line_profile_column)
+        #self.main_window.action_line_profile_xy.triggered.connect(self.show_xy_profile)
+        #self.main_window.action_line_profile_line.triggered.connect(self.select_line_profile_line)
         self.main_window.action_measure_dist.triggered.connect(self.measure_distance)
         self.main_window.action_get_pixel_values.triggered.connect(self.display_pixel_values)
 
@@ -669,102 +671,115 @@ class Controller:
         else:
             self.update_figures_and_status("Data not cropped.")
 
-    def select_line_profile_row(self):
-        """Show a window displaying a line plot which is
-        updated on mouse movement over the 2D canvas.
+    # def select_line_profile_row(self):
+    #     """Show a window displaying a line plot which is
+    #     updated on mouse movement over the 2D canvas.
+    #
+    #     Selection mode is row.
+    #     """
+    #     if self.current_selection:
+    #         self.main_window.set_cross_cursor()
+    #         self._show_line_profile_window()
+    #         self.figure_canvas_2d.bind_mouse_events_for_showing_line_profile(
+    #             data=self.data_manager.get_data(self.current_selection),
+    #             view=self.view,
+    #             func=self._show_line_profile,
+    #             clean_up_func=self._focus_line_profile_widget,
+    #             mode=ROW
+    #         )
+    #
+    # def select_line_profile_column(self):
+    #     """Show a window displaying a line plot which is
+    #     updated on mouse movement over the 2D canvas.
+    #
+    #     Selection mode is column.
+    #     """
+    #     if self.current_selection:
+    #         self.main_window.set_cross_cursor()
+    #         self._show_line_profile_window()
+    #         self.figure_canvas_2d.bind_mouse_events_for_showing_line_profile(
+    #             data=self.data_manager.get_data(self.current_selection),
+    #             view=self.view,
+    #             func=self._show_line_profile,
+    #             clean_up_func=self._focus_line_profile_widget,
+    #             mode=COLUMN
+    #         )
+    #
+    # def select_line_profile_line(self):
+    #     """TODO EXPERIMENTAL"""
+    #     if self.current_selection:
+    #         self.main_window.set_cross_cursor()
+    #         self._show_line_profile_window()
+    #         self.figure_canvas_2d.bind_mouse_events_for_draw_line(
+    #             data=self.data_manager.get_data(self.current_selection),
+    #             view=self.view,
+    #             func=self._show_line_profile_of_drawn_line,
+    #             clean_up_func=self._focus_line_profile_widget,
+    #         )
+    #
+    # def show_xy_profile(self):
+    #     """Show a window displaying a line plot which is
+    #     updated on mouse movement over the 2D canvas.
+    #     """
+    #     if self.current_selection:
+    #         self.main_window.set_cross_cursor()
+    #         self._show_line_profile_window()
+    #         self.figure_canvas_2d.bind_mouse_events_for_showing_line_profile(
+    #             data=self.data_manager.get_data(self.current_selection),
+    #             view=self.view,
+    #             func=self._show_xy_line_profiles,
+    #             clean_up_func=self._focus_line_profile_widget,
+    #             mode=CROSS
+    #         )
 
-        Selection mode is row.
-        """
+    def open_line_profile_tool(self):
         if self.current_selection:
-            self.main_window.set_cross_cursor()
-            self._show_line_profile_window()
-            self.figure_canvas_2d.bind_mouse_events_for_showing_line_profile(
-                data=self.data_manager.get_data(self.current_selection),
-                view=self.view,
-                func=self._show_line_profile,
-                clean_up_func=self._focus_line_profile_widget,
-                mode=ROW
-            )
-
-    def select_line_profile_column(self):
-        """Show a window displaying a line plot which is
-        updated on mouse movement over the 2D canvas.
-
-        Selection mode is column.
-        """
-        if self.current_selection:
-            self.main_window.set_cross_cursor()
-            self._show_line_profile_window()
-            self.figure_canvas_2d.bind_mouse_events_for_showing_line_profile(
-                data=self.data_manager.get_data(self.current_selection),
-                view=self.view,
-                func=self._show_line_profile,
-                clean_up_func=self._focus_line_profile_widget,
-                mode=COLUMN
-            )
-
-    def select_line_profile_line(self):
-        """TODO EXPERIMENTAL"""
-        if self.current_selection:
-            self.main_window.set_cross_cursor()
-            self._show_line_profile_window()
-            self.figure_canvas_2d.bind_mouse_events_for_draw_line(
-                data=self.data_manager.get_data(self.current_selection),
-                view=self.view,
-                func=self._show_line_profile_of_drawn_line,
-                clean_up_func=self._focus_line_profile_widget,
-            )
-
-    def show_xy_profile(self):
-        """Show a window displaying a line plot which is
-        updated on mouse movement over the 2D canvas.
-        """
-        if self.current_selection:
-            self.main_window.set_cross_cursor()
-            self._show_line_profile_window()
-            self.figure_canvas_2d.bind_mouse_events_for_showing_line_profile(
-                data=self.data_manager.get_data(self.current_selection),
-                view=self.view,
-                func=self._show_xy_line_profiles,
-                clean_up_func=self._focus_line_profile_widget,
-                mode=CROSS
-            )
-
-    def _show_line_profile_window(self):
-        """Show a small window including a line plot."""
-        self.line_profile = LineProfileWindow(self.main_window)
-        self.line_profile.add_canvas(GraphCanvas())
-        self.line_profile.show()
-
-    def _focus_line_profile_widget(self):
-        self.main_window.set_default_cursor()
-        self.line_profile.raise_()
-        self.line_profile.show()
-
-    def _show_line_profile(self, selection_mode: str, index: int = -1):
-        if index >= 0:
             data = self.data_manager.get_data(self.current_selection)
-            shape = data.z.shape
-            if selection_mode == ROW and index <= shape[0]:
-                x = data.x
-                z = data.z
-                self.line_profile.update_plot(x[index, :], z[index, :])
-            if selection_mode == COLUMN and index <= shape[1]:
-                y = data.y
-                z = data.z
-                self.line_profile.update_plot(y[:, index], z[:, index])
+            if isinstance(data, ScanBackstepMode):
+                self.line_profile = LineProfileWindow(
+                    data=data,
+                    parent=self.main_window,
+                    view=self.view
+                )
+                self.line_profile.show()
+            else:
+                self.main_window.display_status_bar_message("No scan data selected.")
 
-    def _show_line_profile_of_drawn_line(self, x_data: (int, int) = (-1, -1), y_data: (int, int) = (-1, -1)):
-        data = self.data_manager.get_data(self.current_selection)
-        try:
-            src = (y_data[0], x_data[0])
-            dst = (y_data[1], x_data[1])
-            plot = measure.profile_line(image=data.z, src=src, dst=dst, linewidth=1, reduce_func=None)
-            a = range(plot.shape[0])
-            x = np.array(a)
-            self.line_profile.update_plot(x=x, y=plot)
-        except Exception as e:
-            print(e)
+    # def _show_line_profile_window(self):
+    #     """Show a small window including a line plot."""
+    #     self.line_profile = LineProfileWindow(self.main_window)
+    #     self.line_profile.add_canvas(GraphCanvas())
+    #     self.line_profile.show()
+    #
+    # def _focus_line_profile_widget(self):
+    #     self.main_window.set_default_cursor()
+    #     self.line_profile.raise_()
+    #     self.line_profile.show()
+    #
+    # def _show_line_profile(self, selection_mode: str, index: int = -1):
+    #     if index >= 0:
+    #         data = self.data_manager.get_data(self.current_selection)
+    #         shape = data.z.shape
+    #         if selection_mode == ROW and index <= shape[0]:
+    #             x = data.x
+    #             z = data.z
+    #             self.line_profile.update_plot(x[index, :], z[index, :])
+    #         if selection_mode == COLUMN and index <= shape[1]:
+    #             y = data.y
+    #             z = data.z
+    #             self.line_profile.update_plot(y[:, index], z[:, index])
+    #
+    # def _show_line_profile_of_drawn_line(self, x_data: (int, int) = (-1, -1), y_data: (int, int) = (-1, -1)):
+    #     data = self.data_manager.get_data(self.current_selection)
+    #     try:
+    #         src = (y_data[0], x_data[0])
+    #         dst = (y_data[1], x_data[1])
+    #         plot = measure.profile_line(image=data.z, src=src, dst=dst, linewidth=1, reduce_func=None)
+    #         a = range(plot.shape[0])
+    #         x = np.array(a)
+    #         self.line_profile.update_plot(x=x, y=plot)
+    #     except Exception as e:
+    #         print(e)
 
     def measure_distance(self):
         if self.current_selection:
@@ -789,14 +804,14 @@ class Controller:
     def _calculate_distance_between_two_points(self, x_data, y_data):
         dist = math.dist((x_data[0], y_data[0]), (x_data[1], y_data[1]))
 
-    def _show_xy_line_profiles(self, y_index: int = -1, x_index: int = -1):
-        data = self.data_manager.get_data(self.current_selection)
-        shape = data.z.shape
-        if 0 <= x_index <= shape[0] and 0 <= y_index <= shape[1]:
-            x = data.x
-            y = data.y
-            z = data.z
-            self.line_profile.update_xy_line_profile_plot(x[x_index, :], z[x_index, :], y[:, y_index], z[:, y_index])
+    # def _show_xy_line_profiles(self, y_index: int = -1, x_index: int = -1):
+    #     data = self.data_manager.get_data(self.current_selection)
+    #     shape = data.z.shape
+    #     if 0 <= x_index <= shape[0] and 0 <= y_index <= shape[1]:
+    #         x = data.x
+    #         y = data.y
+    #         z = data.z
+    #         self.line_profile.update_xy_line_profile_plot(x[x_index, :], z[x_index, :], y[:, y_index], z[:, y_index])
 
     def show_roi_dialog(self):
         """TODO not implemented yet"""
