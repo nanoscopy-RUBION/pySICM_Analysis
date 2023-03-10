@@ -250,7 +250,7 @@ class MainWindow(QMainWindow):
         self.action_data_minimum = QAction('Subtract minimum', self)
         self.action_data_transpose_z = QAction('Transpose Z', self)
         self.action_data_invert_z = QAction("Invert z", self)
-        self.action_data_filter = QAction("Filter data", self)
+        self.action_data_filter = QAction("Filter data...", self)
         self.action_data_flip_x = QAction("X", self)
         self.action_data_flip_y = QAction("Y", self)
         self.action_data_level_plane = QAction('Plane', self)
