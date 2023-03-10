@@ -4,7 +4,6 @@ import sys
 sys.path.append("")
 
 import traceback
-import numpy as np
 
 from pathlib import Path
 from os.path import join
@@ -28,7 +27,7 @@ from sicm_analyzer.manipulate_data import transpose_z_data, subtract_z_minimum, 
 from sicm_analyzer.manipulate_data import filter_median_temporal, filter_median_spatial, filter_average_temporal, \
     filter_average_spatial
 from sicm_analyzer.manipulate_data import level_data, MirrorAxis, flip_z_data
-from sicm_analyzer.mouse_events import MouseInteraction, points_are_not_equal, is_in_range, ROW, COLUMN, CROSS
+from sicm_analyzer.mouse_events import MouseInteraction, points_are_not_equal
 from sicm_analyzer import sicm_data
 from sicm_analyzer.sicm_data import ApproachCurve, ScanBackstepMode, export_sicm_file
 from sicm_analyzer.view import View
@@ -121,7 +120,6 @@ class Controller:
         self.main_window.action_data_filter.triggered.connect(self.filter_current_view)
         self.main_window.action_data_level_plane.triggered.connect(self.plane_correction)
         self.main_window.action_data_crop_tool.triggered.connect(self.open_crop_tool)
-        #self.main_window.action_data_crop_select.triggered.connect(self.crop_by_selection)
         self.main_window.action_data_to_height_diff.triggered.connect(self.transform_to_height_differences)
         self.main_window.action_data_poly.triggered.connect(self.fit_to_polyXX)
         self.main_window.action_data_poly_lmfit.triggered.connect(self.fit_to_polyXX_lmfit)
@@ -130,10 +128,6 @@ class Controller:
         self.main_window.action_set_rois.triggered.connect(self.show_roi_dialog)
         self.main_window.action_set_roi.triggered.connect(self.select_roi_with_mouse)
         self.main_window.action_line_profile_tool.triggered.connect(self.open_line_profile_tool)
-        #self.main_window.action_line_profile_row.triggered.connect(self.select_line_profile_row)
-        #self.main_window.action_line_profile_column.triggered.connect(self.select_line_profile_column)
-        #self.main_window.action_line_profile_xy.triggered.connect(self.show_xy_profile)
-        #self.main_window.action_line_profile_line.triggered.connect(self.select_line_profile_line)
         self.main_window.action_measure_dist.triggered.connect(self.measure_distance)
         self.main_window.action_get_pixel_values.triggered.connect(self.display_pixel_values)
 
@@ -247,9 +241,11 @@ class Controller:
         )
 
     def open_color_map_dialog(self):
-        """Opens a dialog to choose a color map.
+        """
+        Opens a dialog to choose a color map.
+
         The selected color map can be applied to the current view
-        or to all view objects an once.
+        or to all view objects at once.
         """
         if not self.cmap_dialog:
             self.cmap_dialog = ColorMapDialog(controller=self, parent=self.main_window)
@@ -620,7 +616,6 @@ class Controller:
                 self._update_undo_redo_menu_items()
                 manipulations = self.data_manager.get_undoable_manipulations_list(self.current_selection)
                 self.main_window.set_data_manipulation_list_items(manipulations)
-                # self.data_manager.get_data(self.current_selection).previous_manipulations = manipulations
                 self.main_window.display_status_bar_message(message)
         except TypeError:
             print("No scan selected.")
@@ -691,16 +686,6 @@ class Controller:
             else:
                 self.main_window.display_status_bar_message("Action canceled: Data not cropped.")
 
-    # def crop_by_selection(self):
-    #     if self.current_selection:
-    #         self.main_window.set_cross_cursor()
-    #         self.figure_canvas_2d.draw_rectangle_on_raster_image(
-    #             data=self.data_manager.get_data(self.current_selection),
-    #             view=self.view,
-    #             func=self._crop_data,
-    #             clean_up_func=self.main_window.set_default_cursor
-    #         )
-
     def _crop_data(self, point1: QPoint, point2: QPoint):
         if points_are_not_equal(point1, point2):
             self.data_manager.execute_func_on_current_data(
@@ -710,67 +695,6 @@ class Controller:
             )(self.data_manager.get_data(self.current_selection), point1, point2)
         else:
             self.update_figures_and_status("Data not cropped.")
-
-    # def select_line_profile_row(self):
-    #     """Show a window displaying a line plot which is
-    #     updated on mouse movement over the 2D canvas.
-    #
-    #     Selection mode is row.
-    #     """
-    #     if self.current_selection:
-    #         self.main_window.set_cross_cursor()
-    #         self._show_line_profile_window()
-    #         self.figure_canvas_2d.bind_mouse_events_for_showing_line_profile(
-    #             data=self.data_manager.get_data(self.current_selection),
-    #             view=self.view,
-    #             func=self._show_line_profile,
-    #             clean_up_func=self._focus_line_profile_widget,
-    #             mode=ROW
-    #         )
-    #
-    # def select_line_profile_column(self):
-    #     """Show a window displaying a line plot which is
-    #     updated on mouse movement over the 2D canvas.
-    #
-    #     Selection mode is column.
-    #     """
-    #     if self.current_selection:
-    #         self.main_window.set_cross_cursor()
-    #         self._show_line_profile_window()
-    #         self.figure_canvas_2d.bind_mouse_events_for_showing_line_profile(
-    #             data=self.data_manager.get_data(self.current_selection),
-    #             view=self.view,
-    #             func=self._show_line_profile,
-    #             clean_up_func=self._focus_line_profile_widget,
-    #             mode=COLUMN
-    #         )
-    #
-    # def select_line_profile_line(self):
-    #     """TODO EXPERIMENTAL"""
-    #     if self.current_selection:
-    #         self.main_window.set_cross_cursor()
-    #         self._show_line_profile_window()
-    #         self.figure_canvas_2d.bind_mouse_events_for_draw_line(
-    #             data=self.data_manager.get_data(self.current_selection),
-    #             view=self.view,
-    #             func=self._show_line_profile_of_drawn_line,
-    #             clean_up_func=self._focus_line_profile_widget,
-    #         )
-    #
-    # def show_xy_profile(self):
-    #     """Show a window displaying a line plot which is
-    #     updated on mouse movement over the 2D canvas.
-    #     """
-    #     if self.current_selection:
-    #         self.main_window.set_cross_cursor()
-    #         self._show_line_profile_window()
-    #         self.figure_canvas_2d.bind_mouse_events_for_showing_line_profile(
-    #             data=self.data_manager.get_data(self.current_selection),
-    #             view=self.view,
-    #             func=self._show_xy_line_profiles,
-    #             clean_up_func=self._focus_line_profile_widget,
-    #             mode=CROSS
-    #         )
 
     def open_line_profile_tool(self):
         if self.current_selection:
@@ -784,42 +708,6 @@ class Controller:
                 self.line_profile.show()
             else:
                 self.main_window.display_status_bar_message("No scan data selected.")
-
-    # def _show_line_profile_window(self):
-    #     """Show a small window including a line plot."""
-    #     self.line_profile = LineProfileWindow(self.main_window)
-    #     self.line_profile.add_canvas(GraphCanvas())
-    #     self.line_profile.show()
-    #
-    # def _focus_line_profile_widget(self):
-    #     self.main_window.set_default_cursor()
-    #     self.line_profile.raise_()
-    #     self.line_profile.show()
-    #
-    # def _show_line_profile(self, selection_mode: str, index: int = -1):
-    #     if index >= 0:
-    #         data = self.data_manager.get_data(self.current_selection)
-    #         shape = data.z.shape
-    #         if selection_mode == ROW and index <= shape[0]:
-    #             x = data.x
-    #             z = data.z
-    #             self.line_profile.update_plot(x[index, :], z[index, :])
-    #         if selection_mode == COLUMN and index <= shape[1]:
-    #             y = data.y
-    #             z = data.z
-    #             self.line_profile.update_plot(y[:, index], z[:, index])
-    #
-    # def _show_line_profile_of_drawn_line(self, x_data: (int, int) = (-1, -1), y_data: (int, int) = (-1, -1)):
-    #     data = self.data_manager.get_data(self.current_selection)
-    #     try:
-    #         src = (y_data[0], x_data[0])
-    #         dst = (y_data[1], x_data[1])
-    #         plot = measure.profile_line(image=data.z, src=src, dst=dst, linewidth=1, reduce_func=None)
-    #         a = range(plot.shape[0])
-    #         x = np.array(a)
-    #         self.line_profile.update_plot(x=x, y=plot)
-    #     except Exception as e:
-    #         print(e)
 
     def measure_distance(self):
         if self.current_selection:
@@ -843,15 +731,6 @@ class Controller:
 
     def _calculate_distance_between_two_points(self, x_data, y_data):
         dist = math.dist((x_data[0], y_data[0]), (x_data[1], y_data[1]))
-
-    # def _show_xy_line_profiles(self, y_index: int = -1, x_index: int = -1):
-    #     data = self.data_manager.get_data(self.current_selection)
-    #     shape = data.z.shape
-    #     if 0 <= x_index <= shape[0] and 0 <= y_index <= shape[1]:
-    #         x = data.x
-    #         y = data.y
-    #         z = data.z
-    #         self.line_profile.update_xy_line_profile_plot(x[x_index, :], z[x_index, :], y[:, y_index], z[:, y_index])
 
     def show_roi_dialog(self):
         """TODO not implemented yet"""

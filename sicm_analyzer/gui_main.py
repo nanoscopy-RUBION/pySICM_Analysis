@@ -177,9 +177,9 @@ class MainWindow(QMainWindow):
         self.action_redo.setEnabled(False)
 
         action_sort_ascending = QAction(QIcon(join(self.icons_dir, "sort_ascending.svg")), "Sort (ascending)", self)
-        action_sort_ascending.triggered.connect(lambda x: self.__sort_list_items(Qt.SortOrder.AscendingOrder))
+        action_sort_ascending.triggered.connect(lambda: self.__sort_list_items(Qt.SortOrder.AscendingOrder))
         action_sort_descending = QAction(QIcon(join(self.icons_dir, "sort_descending.svg")), "Sort (descending)", self)
-        action_sort_descending.triggered.connect(lambda x: self.__sort_list_items(Qt.SortOrder.DescendingOrder))
+        action_sort_descending.triggered.connect(lambda: self.__sort_list_items(Qt.SortOrder.DescendingOrder))
 
         action_check_all = QAction("Check all items", self)
         action_check_all.triggered.connect(self.check_all_items)
