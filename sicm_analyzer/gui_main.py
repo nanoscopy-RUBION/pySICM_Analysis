@@ -125,6 +125,8 @@ class MainWindow(QMainWindow):
         self.action_close_all = QAction(QIcon(join(self.icons_dir, "clear.png")), '&Close all', self)
         self.action_close_selection = QAction("Close selection", self)
         self.action_close_selection.setShortcut("Ctrl+D")
+        self.action_copy_selection = QAction("Copy selected file", self)
+        self.action_preferences = QAction("Preferences", self)
         self.action_import_files = QAction(icon_files, "&Import Files...", self)
         self.action_import_directory = QAction(icon_directory, '&Import Directory...', self)
         self.action_export_sicm_data = QAction(icon_export, 'Export sicm data', self)
@@ -137,6 +139,9 @@ class MainWindow(QMainWindow):
 
         file_menu.addAction(self.action_close_all)
         file_menu.addAction(self.action_close_selection)
+        file_menu.addAction(self.action_copy_selection)
+        file_menu.addSeparator()
+        file_menu.addAction(self.action_preferences)
         file_menu.addSeparator()
         open_sample_menu = file_menu.addMenu("Open sample")
         file_menu.addAction(self.action_import_files)
@@ -452,16 +457,29 @@ class MainWindow(QMainWindow):
 
     def add_items_to_list(self, items):
         for item in items:
-            checkable_item = QtWidgets.QListWidgetItem(item)
-            checkable_item.setFlags(
-                Qt.ItemFlag.ItemIsUserCheckable
-                | Qt.ItemFlag.ItemIsSelectable
-                | Qt.ItemFlag.ItemIsEnabled
-                | Qt.ItemFlag.ItemIsDragEnabled
-            )
-            checkable_item.setCheckState(Qt.CheckState.Checked)
-            self.imported_files_list.addItem(checkable_item)
+            self.add_item_to_list(item)
 
+    def add_item_to_list(self, item):
+        checkable_item = self._get_checkable_item(item)
+        self.imported_files_list.addItem(checkable_item)
+
+    def _get_checkable_item(self, item):
+        """Create and return a list item which has a checkbox."""
+        checkable_item = QtWidgets.QListWidgetItem(item)
+        checkable_item.setFlags(
+            Qt.ItemFlag.ItemIsUserCheckable
+            | Qt.ItemFlag.ItemIsSelectable
+            | Qt.ItemFlag.ItemIsEnabled
+            | Qt.ItemFlag.ItemIsDragEnabled
+        )
+        checkable_item.setCheckState(Qt.CheckState.Checked)
+        return checkable_item
+
+    def insert_item_after_current_selection(self, item):
+        """Insert an item right below the currently selected item."""
+        checkable_item = self._get_checkable_item(item)
+        pos = self.imported_files_list.currentRow() + 1
+        self.imported_files_list.insertItem(pos, checkable_item)
 
     def get_all_checked_items(self) -> list[str]:
         items = []

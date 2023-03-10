@@ -9,7 +9,7 @@ import numpy as np
 from pathlib import Path
 from os.path import join
 from matplotlib.figure import Figure
-from skimage import measure
+import re
 
 from PyQt6.QtWidgets import QStyleFactory
 from PyQt6.QtCore import QPoint
@@ -84,6 +84,7 @@ class Controller:
         # File menu
         self.main_window.action_close_all.triggered.connect(self.close_all)
         self.main_window.action_close_selection.triggered.connect(self.close_selection)
+        self.main_window.action_copy_selection.triggered.connect(self.copy_selected_file)
         self.main_window.action_import_files.triggered.connect(self.import_files)
         self.main_window.action_import_directory.triggered.connect(self.import_directory)
         self.main_window.action_export_2d.triggered.connect(lambda: self.export_figure(self.figure_canvas_2d.figure))
@@ -360,6 +361,45 @@ class Controller:
         if self.unsaved_changes:
             pass
         sys.exit()
+
+    def copy_selected_file(self):
+        """Make a copy of the current list selection."""
+        if self.current_selection:
+            data = self.data_manager.get_copy_of_data_object(self.current_selection)
+
+            # build new filename as key
+            new_key = self._copy_filename(self.current_selection)
+
+            # add data to manager and key to list
+            self.data_manager.add_data_object(new_key, data)
+            self.main_window.insert_item_after_current_selection(new_key)
+        else:
+            self.main_window.display_status_bar_message("No data selected")
+
+    def _copy_filename(self, filepath: str) -> str:
+        """
+        Make copy of a filename.
+
+        The copy will have "_copy_N" concatenated to the filename with
+        N being an integer. This function has to ensure uniqueness of
+        the filename.
+
+        Example:
+            path/to/filename.ext -> path/to/filename_copy_0.ext
+        """
+        filename, extension = os.path.splitext(filepath)
+        number = 0
+        suffix = "_copy_"
+
+        while self.data_manager.filename_exists("".join([filename, extension])):
+            result = re.search("_copy_\d+", filename)
+            if result:
+                number = int(filename[result.start() + 6:]) + 1
+                filename = filename[:result.start()] + suffix + str(number)
+            else:
+                filename = filename + suffix + str(number)
+
+        return "".join([filename, extension])
 
     def import_files(self):
         """Opens a file dialog to select sicm files."""

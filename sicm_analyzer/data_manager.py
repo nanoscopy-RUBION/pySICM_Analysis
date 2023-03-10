@@ -1,3 +1,5 @@
+import os.path
+
 from sicm_analyzer import sicm_data
 import copy
 from typing import Callable
@@ -5,6 +7,25 @@ from typing import Callable
 # Constants for data collection value indexing
 UNDO_STACK = 0
 REDO_STACK = 1
+
+
+class UndoRedoData:
+    def __init__(self, data: sicm_data.SICMdata, name: str = ""):
+        """
+        This is a simple class to hold information for
+        undo and redo actions. This implementation of undo/redo
+        creates a copy of the underlying data before manipulations should
+        be performed.
+
+        It stores a string describing the performed action and a deepcopy the data
+        before it is manipulated. Although a deepcopy might be overkill for the current
+        implementation, for future extensions it might be necessary.
+
+        :param str name: a name describing the performed action
+        :param SICMdata data: SICMdata object
+        """
+        self.data = copy.deepcopy(data)
+        self.name = name
 
 
 class DataManager:
@@ -46,7 +67,9 @@ class DataManager:
             self._create_data_container_for_file(file=file)
 
     def _create_data_container_for_file(self, file: str):
-        """This function adds data imported from the passed to data collection.
+        """
+        This function adds data imported from the passed to data collection.
+
         Data collection is a dictionary in which the absolute file path is
         mapped to a tuple value. This tuple contains the following data at the
         indicated indexes:
@@ -71,9 +94,12 @@ class DataManager:
         a dictionary key in views."""
         new_files = []
         for file in files:
-            if file not in self.data_collection.keys():
+            if not self.filename_exists(file):
                 new_files.append(file)
         return new_files
+
+    def filename_exists(self, filename: str):
+        return filename in self.data_collection.keys()
 
     # Undo/Redo data manipulations
     ####################################################################################################################
@@ -148,6 +174,11 @@ class DataManager:
 
     # Misc
     ####################################################################################################################
+    def add_data_object(self, key: str, data: tuple[list[UndoRedoData], list[UndoRedoData]]):
+        """Adds a data object to the data manager.
+        """
+        self.data_collection[key] = data
+
     def get_data(self, key: str) -> sicm_data.SICMdata:
         """
         Returns a SICMdata object.
@@ -159,6 +190,16 @@ class DataManager:
         :param str key:
         """
         return self.data_collection.get(key)[UNDO_STACK][-1].data
+
+    def get_copy_of_data_object(self, key: str) -> tuple[list[UndoRedoData], list[UndoRedoData]]:
+        """
+        Returns a deep copy of a data object managed by the DataManager
+        The object has still to be added to the data manager.
+
+        :param str key:
+        """
+        data_copy = copy.deepcopy(self.data_collection.get(key))
+        return data_copy
 
     def reset_manipulations(self, key: str):
         """Clears the list of data manipulations and resets
@@ -206,20 +247,3 @@ class DataManager:
         return wrapper
 
 
-class UndoRedoData:
-    def __init__(self, data: sicm_data.SICMdata, name: str = ""):
-        """
-        This is a simple class to hold information for
-        undo and redo actions. This implementation of undo/redo
-        creates a copy of the underlying data before manipulations should
-        be performed.
-
-        It stores a string describing the performed action and a deepcopy the data
-        before it is manipulated. Although a deepcopy might be overkill for the current
-        implementation, for future extensions it might be necessary.
-
-        :param str name: a name describing the performed action
-        :param SICMdata data: SICMdata object
-        """
-        self.data = copy.deepcopy(data)
-        self.name = name
