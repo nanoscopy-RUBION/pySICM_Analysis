@@ -312,6 +312,7 @@ class MainWindow(QMainWindow):
         self.action_get_pixel_values = QAction("Get pixel values", self)
         self.action_measure_dist = QAction('&Measure distance', self)
         self.action_measure_dist.setEnabled(False)  # TODO
+        self.action_measure_roughness_batch = QAction("Roughness (batch)", self)
         action_measure_profile = QAction('&Measure profile', self)
         action_measure_profile.setEnabled(False)  # TODO
         self.action_set_rois = QAction("ROIs", self)
@@ -323,6 +324,7 @@ class MainWindow(QMainWindow):
         self.measure_menu.addAction(self.action_line_profile_tool)
         self.measure_menu.addAction(self.action_get_pixel_values)
         self.measure_menu.addAction(self.action_measure_dist)
+        self.measure_menu.addAction(self.action_measure_roughness_batch)
         self.measure_menu.addAction(action_measure_profile)
         self.measure_menu.addAction(self.action_set_rois)
         self.measure_menu.addAction(self.action_set_roi)

@@ -9,14 +9,14 @@ from pathlib import Path
 from os.path import join
 from matplotlib.figure import Figure
 import re
-
+import numpy as np
 from PyQt6.QtWidgets import QStyleFactory
 from PyQt6.QtCore import QPoint
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication, QFileDialog, QInputDialog
 
 from sicm_analyzer.data_manager import DataManager
-from sicm_analyzer.results import ResultsWindow
+from sicm_analyzer.results import SingleResultsWindow, TableResultsWindow
 from sicm_analyzer.colormap_dialog import ColorMapDialog
 from sicm_analyzer.crop_tool import CropToolWindow
 from sicm_analyzer.gui_main import MainWindow
@@ -36,6 +36,7 @@ from sicm_analyzer.set_rois_dialog import ROIsDialog
 from sicm_analyzer.measurements import polynomial_fifth_degree
 from sicm_analyzer.line_profile_window import LineProfileWindow
 from sicm_analyzer.data_fitting import poly_xx_fit
+from sicm_analyzer.measurements import get_roughness
 
 # APP CONSTANTS
 APP_NAME = "pySICM Analysis"
@@ -64,7 +65,8 @@ class Controller:
         self.unsaved_changes = False
         self.current_selection: str = ""
         self.cmap_dialog = None
-        self.results_window: ResultsWindow = None
+        self.results_window: SingleResultsWindow = None
+        self.table_results_window: TableResultsWindow = None
         self.view = View()
         self.figure_canvas_3d = GraphCanvas()
         self.figure_canvas_2d = GraphCanvas()
@@ -130,6 +132,7 @@ class Controller:
         self.main_window.action_line_profile_tool.triggered.connect(self.open_line_profile_tool)
         self.main_window.action_measure_dist.triggered.connect(self.measure_distance)
         self.main_window.action_get_pixel_values.triggered.connect(self.display_pixel_values)
+        self.main_window.action_measure_roughness_batch.triggered.connect(self.show_roughness_batch)
 
         # Other
         self.main_window.imported_files_list.currentItemChanged.connect(self.item_selection_changed_event)
@@ -743,12 +746,43 @@ class Controller:
         are also shown.
         """
         try:
-            self.results_window = ResultsWindow(self,
-                                                data=self.data_manager.get_data(self.current_selection),
-                                                parent=self.main_window,
-                                                )
-            self.results_window.open_window()
+            self.results_window = SingleResultsWindow(
+                data=self.data_manager.get_data(self.current_selection),
+                parent=self.main_window
+                )
+            self.results_window.show()
+        except TypeError:
+            pass
 
+    def show_roughness_batch(self):
+        """Shows a small window displaying roughness calculations of all checked scans.
+
+        Min and max values will also be shown.
+        """
+        try:
+            combined_data = {}
+            l_scan = []
+            l_min = []
+            l_max = []
+            l_roughness = []
+
+            for key in self.main_window.get_all_checked_items():
+                data = self.data_manager.get_data(key)
+                if isinstance(data, ScanBackstepMode):
+                    l_scan.append(key)
+                    l_roughness.append(get_roughness(data))
+                    l_min.append(np.min(data.z))
+                    l_max.append(np.max(data.z))
+            combined_data["scan"] = l_scan
+            combined_data["min"] = l_min
+            combined_data["max"] = l_max
+            combined_data["roughness"] = l_roughness
+
+            self.table_results_window = TableResultsWindow(
+                data=combined_data,
+                parent=self.main_window
+                )
+            self.table_results_window.show()
         except TypeError:
             pass
 

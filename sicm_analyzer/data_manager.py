@@ -1,5 +1,3 @@
-import os.path
-
 from sicm_analyzer import sicm_data
 import copy
 from typing import Callable
@@ -216,6 +214,10 @@ class DataManager:
     def remove_data(self, key: str):
         """Removes the data from the collection."""
         del self.data_collection[key]
+
+    def get_list_of_all_item_keys(self):
+        """Returns an iterable with all keys in the data collection."""
+        return self.data_collection.keys()
 
     def execute_func_on_current_data(self, func: Callable, key: str, action_name: str = "action"):
         """This wrapper function is used to make other functions undo/redoable.
