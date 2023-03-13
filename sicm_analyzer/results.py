@@ -1,6 +1,7 @@
-from PyQt6.QtCore import Qt
+from PyQt6 import QtGui
+from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtWidgets import QWidget, QPushButton, QVBoxLayout, QPlainTextEdit, QTableWidget, QTableWidgetItem, \
-    QAbstractItemView, QApplication
+    QAbstractItemView, QApplication, QSizePolicy, QMenu
 
 from sicm_analyzer.sicm_data import SICMdata
 from sicm_analyzer.measurements import get_roughness
@@ -40,13 +41,18 @@ class SingleResultsWindow(QWidget):
     def get_results(self, data: SICMdata):
         roughness = get_roughness(data)
         text = ""
-        text = text + "Fit Results:\n"
-        text = text + str(data.fit_results)
-        text = text + "\n\n"
-        text = text + f"Roughness: {roughness}\n"
+        text = text + f"Roughness: {roughness} µm\n"
         text = text + f"Minimum value: {np.min(data.z)} µm\n"
         text = text + f"Maximum value: {np.max(data.z)} µm\n"
+        text = text + "\n\n"
+        text = text + "Fit Results:\n"
+        text = text + str(data.fit_results)
+
         return text
+
+    def update_results(self, data: SICMdata):
+        self.text.clear()
+        self.text.insertPlainText(self.get_results(data))
 
 
 class TableResultsWindow(QWidget):
@@ -87,10 +93,23 @@ class TableResultsWindow(QWidget):
         self.table.resizeColumnsToContents()
         layout.addWidget(self.table)
 
-        self.button_close = QPushButton("Copy selection to clipboard")
-        self.button_close.clicked.connect(self.copy_selection_to_clipboard)
-        layout.addWidget(self.button_close)
+        self.button_close = QPushButton("Close")
+        self.button_close.clicked.connect(self.close)
 
+        self.table.sizeHint()
+        layout.addWidget(self.button_close)
+        layout.expandingDirections()
+
+        # context menu
+        self.context_menu = QMenu(self)
+        action_cp_table_clipboard = self.context_menu.addAction("Copy table to clipboard")
+        action_cp_selection_clipboard = self.context_menu.addAction("Copy selection to clipboard")
+
+        action_cp_table_clipboard.triggered.connect(self.copy_table_to_clipboard)
+        action_cp_selection_clipboard.triggered.connect(self.copy_selection_to_clipboard)
+
+    def contextMenuEvent(self, event: QtGui.QContextMenuEvent) -> None:
+        self.context_menu.exec(event.globalPos())
 
     def fill_table(self, data: dict[str, list[int | str | float]]):
         """Fills the table with data."""
@@ -101,6 +120,21 @@ class TableResultsWindow(QWidget):
                 table_item = QTableWidgetItem(str(item))
                 self.table.setItem(m, n, table_item)
         self.table.setHorizontalHeaderLabels(headers)
+
+    def copy_table_to_clipboard(self):
+        if self.table.rowCount() > 0:
+            rows = self.table.rowCount()
+            columns = self.table.columnCount()
+            lines = []
+            for r in range(rows):
+                line = []
+                for c in range(columns):
+                    line.append(str(self.table.item(r, c).text()))
+                lines.append(";".join(line))
+
+            QApplication.clipboard().setText("\n".join(lines))
+        else:
+            self.parent.display_status_bar_message("No data in table.")
 
     def copy_selection_to_clipboard(self):
         r = self.table.selectedIndexes()
@@ -119,5 +153,5 @@ class TableResultsWindow(QWidget):
                 s.append(str(i.data()))
             c.append(";".join(s))
 
-        print(QApplication.clipboard().setText("\n".join(c)))
+        QApplication.clipboard().setText("\n".join(c))
 

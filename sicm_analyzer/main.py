@@ -776,9 +776,9 @@ class Controller:
                     l_min.append(np.min(data.z))
                     l_max.append(np.max(data.z))
             combined_data["scan"] = l_scan
-            combined_data["min"] = l_min
-            combined_data["max"] = l_max
-            combined_data["roughness"] = l_roughness
+            combined_data["min [µm]"] = l_min
+            combined_data["max [µm]"] = l_max
+            combined_data["roughness [µm]"] = l_roughness
 
             self.table_results_window = TableResultsWindow(
                 data=combined_data,
