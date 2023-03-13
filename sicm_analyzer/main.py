@@ -113,6 +113,7 @@ class Controller:
         self.main_window.action_view_ratio.triggered.connect(self.open_aspect_ratio_input_dialog)
 
         # Data manipulation
+        self.main_window.action_batch_mode.triggered.connect(self.batch_mode_test)
         self.main_window.action_data_transpose_z.triggered.connect(self.transpose_z_of_current_view)
         self.main_window.action_data_minimum.triggered.connect(self.subtract_minimum_in_current_view)
         self.main_window.action_data_invert_z.triggered.connect(self.invert_z_in_current_view)
@@ -788,6 +789,15 @@ class Controller:
         except TypeError:
             pass
 
+    def batch_mode_test(self):
+        print("batch mode")
+
+        if self.current_selection:
+            action_list = []
+            data = self.data_manager.get_data(self.current_selection)
+            print(data.get)
+        else:
+            self.main_window.display_status_bar_message("Please select a scan file.")
 
 def main():
     app = QApplication(sys.argv)

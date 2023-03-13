@@ -119,25 +119,45 @@ class CropToolWindow(QDialog):
 
         In case of invalid input both QPoint objects will have
         the coordinates (0, 0)."""
+        # try:
+        #     x1 = int(self.edit_x1.text().strip() or "0")
+        #     y1 = int(self.edit_y1.text().strip() or "0")
+        #     x2 = int(self.edit_x2.text().strip() or "0")
+        #     y2 = int(self.edit_y2.text().strip() or "0")
+        #     point1 = QPoint(x1, y1)
+        #     point2 = QPoint(x2, y2)
+        #
+        #     if point1.x() <= point2.x():
+        #         point2 = point2 + QPoint(1, 0)
+        #     else:
+        #         point1 = point1 + QPoint(1, 0)
+        #     if point1.y() <= point2.y():
+        #         point2 = point2 + QPoint(0, 1)
+        #     else:
+        #         point1 = point1 + QPoint(0, 1)
+        # except ValueError:
+        #     point1 = QPoint()
+        #     point2 = QPoint()
         try:
             x1 = int(self.edit_x1.text().strip() or "0")
             y1 = int(self.edit_y1.text().strip() or "0")
             x2 = int(self.edit_x2.text().strip() or "0")
             y2 = int(self.edit_y2.text().strip() or "0")
-            point1 = QPoint(x1, y1)
-            point2 = QPoint(x2, y2)
 
-            if point1.x() <= point2.x():
-                point2 = point2 + QPoint(1, 0)
+            if x1 <= x2:
+                x2 = x2 + 1
             else:
-                point1 = point1 + QPoint(1, 0)
-            if point1.y() <= point2.y():
-                point2 = point2 + QPoint(0, 1)
+                x1 = x1 + 1
+            if y1 <= y2:
+                y2 = y2 + 1
             else:
-                point1 = point1 + QPoint(0, 1)
+                y1 = y1 + 1
+
+            point1 = (x1, y1)
+            point2 = (x2, y2)
         except ValueError:
-            point1 = QPoint()
-            point2 = QPoint()
+            point1 = (0, 0)
+            point2 = (0, 0)
         return point1, point2
 
     def activate_tool(self):

@@ -54,6 +54,7 @@ def get_coordinate_of_click(event) -> QPoint or None:
         return None
 
 
-def points_are_not_equal(point1: QPoint, point2: QPoint) -> bool:
+def points_are_not_equal(point1: tuple[int, int], point2: tuple[int, int]) -> bool: #point1: QPoint, point2: QPoint) -> bool:
     """Checks if two points have the same coordinates."""
-    return point1.x() != point2.x() and point1.y() != point2.y()
+    return point1 != point2
+    #return point1.x() != point2.x() and point1.y() != point2.y()

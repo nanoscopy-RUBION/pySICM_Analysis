@@ -245,6 +245,7 @@ class MainWindow(QMainWindow):
         self.view_menu.addAction(self.action_view_restore)
 
         # Manipulate data menu
+        self.action_batch_mode = QAction("Batch mode (experimental version)", self)
         self.action_data_crop_tool = QAction('Crop...', self)
         self.action_data_crop_select = QAction('Select area...', self)
         self.action_data_minimum = QAction('Subtract minimum', self)
@@ -273,8 +274,9 @@ class MainWindow(QMainWindow):
         self.action_data_reset = QAction('Reset data manipulations', self)
 
         self.data_menu = menubar.addMenu("&Manipulate data")
+        self.data_menu.addAction(self.action_batch_mode)
+        self.data_menu.addSeparator()
         self.data_menu.addAction(self.action_data_crop_tool)
-
         simple_menu = self.data_menu.addMenu('Simple Manipulations')
         simple_menu.addAction(self.action_data_minimum)
         simple_menu.addAction(self.action_data_transpose_z)

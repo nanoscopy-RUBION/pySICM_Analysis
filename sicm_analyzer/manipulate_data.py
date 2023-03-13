@@ -14,24 +14,38 @@ class MirrorAxis(enum.Enum):
 
 # Simple Manipulations
 # ______________________________________
-def crop(data: ScanBackstepMode, point1: QPoint, point2: QPoint):
+def crop(data: ScanBackstepMode, point1: tuple[int, int], point2: tuple[int, int]): #point1: QPoint, point2: QPoint):
     """Reduces the dimensions of the data to the area of a rectangle
     formed by the two points 1 and 2.
+
+    Points 1 and 2 are tuples of two integers.
 
     Dev note: If the gui framework is changed and PyQt (Qt) is no longer used
     the data type of point1 and 2 must be changed.
     """
-    width = abs(point1.x() - point2.x())
-    height = abs(point1.y() - point2.y())
 
-    if point1.x() < point2.x():
-        orig_x = point1.x()
+    width = abs(point1[0] - point2[0])
+    height = abs(point1[1] - point2[1])
+
+    if point1[0] < point2[0]:
+        orig_x = point1[0]
     else:
-        orig_x = point2.x()
-    if point1.y() < point2.y():
-        orig_y = point1.y()
+        orig_x = point2[0]
+    if point1[1] < point2[1]:
+        orig_y = point1[1]
     else:
-        orig_y = point2.y()
+        orig_y = point2[1]
+    # width = abs(point1.x() - point2.x())
+    # height = abs(point1.y() - point2.y())
+    #
+    # if point1.x() < point2.x():
+    #     orig_x = point1.x()
+    # else:
+    #     orig_x = point2.x()
+    # if point1.y() < point2.y():
+    #     orig_y = point1.y()
+    # else:
+    #     orig_y = point2.y()
 
     # note: the shape in 2D arrays is defined as Y * X
     data.z = data.z[orig_y:orig_y + height, orig_x:orig_x + width]
