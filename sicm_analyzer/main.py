@@ -596,6 +596,8 @@ class Controller:
                 if isinstance(current_data, ScanBackstepMode):
                     self.figure_canvas_3d.draw_graph(current_data, SURFACE_PLOT, self.view)
                     self.figure_canvas_2d.draw_graph(current_data, RASTER_IMAGE, self.view)
+                    if self.results_window:
+                        self.results_window.update_results(current_data)
 
                 if isinstance(current_data, ApproachCurve):
                     self.figure_canvas_3d.draw_graph(current_data)
