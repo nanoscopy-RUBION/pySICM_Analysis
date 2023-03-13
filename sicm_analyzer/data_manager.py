@@ -8,7 +8,7 @@ REDO_STACK = 1
 
 
 class UndoRedoData:
-    def __init__(self, data: sicm_data.SICMdata, name: str = ""):
+    def __init__(self, data: sicm_data.SICMdata, func=None, name: str = "", *args, **kwargs):
         """
         This is a simple class to hold information for
         undo and redo actions. This implementation of undo/redo
@@ -24,6 +24,15 @@ class UndoRedoData:
         """
         self.data = copy.deepcopy(data)
         self.name = name
+        self.func = func
+
+        self.arguments = {
+            "args": args,
+            "kwargs": kwargs
+        }
+        #print("action: " + name)
+        #print("args: " + str(self.arguments.get("args")))
+        #print("kwargs: " + str(self.arguments.get("kwargs")))
 
 
 class DataManager:
@@ -140,7 +149,7 @@ class DataManager:
         except IndexError:
             return ""
 
-    def get_undoable_manipulations_list(self, key) -> list[str]:
+    def get_undoable_manipulation_names_list(self, key) -> list[str]:
         """Returns a list with all data manipulations names
         that can be made undone.
 
@@ -152,13 +161,31 @@ class DataManager:
             # Therefore, all items but the first should be listed
             for item in self.data_collection.get(key)[UNDO_STACK][1:]:
                 items.append(item.name)
-        except IndexError:
-            pass
-        except TypeError:
-            pass
+        except IndexError as ie:
+            print(str(ie) + "in DataManager.get_undoable_manipulation_names_list")
+        except TypeError as te:
+            print(str(te) + "in DataManager.get_undoable_manipulation_names_list")
         return items
 
-    def _make_undoable_data_copy(self, key, action_name="action"):
+    def get_undoable_manipulation_items_list(self, key) -> list[UndoRedoData]:
+        """Returns a list with all data manipulations object
+        that can be made undone.
+
+        If there are no undoable manipulations an empty list
+        will be returned."""
+        items = []
+        try:
+            # The first item in the undo stack contains raw data
+            # Therefore, all items but the first should be listed
+            for item in self.data_collection.get(key)[UNDO_STACK][1:]:
+                items.append(item)
+        except IndexError as ie:
+            print(str(ie) + "in DataManager.get_undoable_manipulation_items_list")
+        except TypeError as te:
+            print(str(te) + "in DataManager.get_undoable_manipulation_items_list")
+        return items
+
+    def _make_undoable_data_copy(self, key, func, action_name="action", *args, **kwargs):
         """
         Creates a new UndoRedoData object and clears the redo stack.
 
@@ -167,7 +194,7 @@ class DataManager:
         would cause errors. Therefore, the redo stack must be cleared.
         """
         undo_stack = self.data_collection.get(key)[UNDO_STACK]
-        undo_stack.append(UndoRedoData(name=action_name, data=undo_stack[-1].data))
+        undo_stack.append(UndoRedoData(name=action_name, func=func, data=undo_stack[-1].data, *args, **kwargs))
         self.data_collection.get(key)[REDO_STACK].clear()
 
     # Misc
@@ -208,7 +235,7 @@ class DataManager:
         because the first element contains the raw data.
         """
         undo_stack = self.data_collection.get(key)[UNDO_STACK]
-        raw_data = UndoRedoData(name="Reset data", data=undo_stack[0].data)
+        raw_data = UndoRedoData(name="Reset data", func=self.reset_manipulations, data=undo_stack[0].data)
         undo_stack.append(raw_data)
 
     def remove_data(self, key: str):
@@ -219,7 +246,7 @@ class DataManager:
         """Returns an iterable with all keys in the data collection."""
         return self.data_collection.keys()
 
-    def execute_func_on_current_data(self, func: Callable, key: str, action_name: str = "action"):
+    def execute_func_on_current_data(self, func: Callable, key: str, action_name: str = "action", *args, **kwargs):
         """This wrapper function is used to make other functions undo/redoable.
         Wrap the function and pass a name for that action.
 
@@ -235,8 +262,6 @@ class DataManager:
             )(args, kwargs)
         """
 
-        # copy data and put on stack
-        # do manipulation on this new data object
         def wrapper(*args, **kwargs):
             """This wrapper will call the wrapped function first
             and then the listener_function of the DataManager if exists.
@@ -244,8 +269,6 @@ class DataManager:
             func(*args, **kwargs)
             self.listener_function()
 
-        self._make_undoable_data_copy(key, action_name)
+        self._make_undoable_data_copy(key, func, action_name, *args, **kwargs)
 
         return wrapper
-
-

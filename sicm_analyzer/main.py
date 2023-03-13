@@ -11,7 +11,6 @@ from matplotlib.figure import Figure
 import re
 import numpy as np
 from PyQt6.QtWidgets import QStyleFactory
-from PyQt6.QtCore import QPoint
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication, QFileDialog, QInputDialog
 
@@ -33,9 +32,8 @@ from sicm_analyzer.sicm_data import ApproachCurve, ScanBackstepMode, export_sicm
 from sicm_analyzer.view import View
 from sicm_analyzer.graph_canvas import SURFACE_PLOT, RASTER_IMAGE, APPROACH_CURVE
 from sicm_analyzer.set_rois_dialog import ROIsDialog
-from sicm_analyzer.measurements import polynomial_fifth_degree
+from sicm_analyzer.manipulate_data import fit_data
 from sicm_analyzer.line_profile_window import LineProfileWindow
-from sicm_analyzer.data_fitting import poly_xx_fit
 from sicm_analyzer.measurements import get_roughness
 
 # APP CONSTANTS
@@ -172,7 +170,7 @@ class Controller:
         .sicm."""
         try:
             data = self.data_manager.get_data(self.current_selection)
-            manipulations = self.data_manager.get_undoable_manipulations_list(self.current_selection)
+            manipulations = self.data_manager.get_undoable_manipulation_names_list(self.current_selection)
             if data and (data.scan_mode == sicm_data.BACKSTEP or data.scan_mode == sicm_data.FLOATING_BACKSTEP):
                 options = QFileDialog.Option(QFileDialog.Option.DontUseNativeDialog)
                 file_path = QFileDialog.getSaveFileName(parent=self.main_window,
@@ -199,7 +197,7 @@ class Controller:
                                                          options=options))
         for item in self.main_window.get_all_checked_items():
             data = self.data_manager.get_data(item)
-            manipulations = self.data_manager.get_undoable_manipulations_list(item)
+            manipulations = self.data_manager.get_undoable_manipulation_names_list(item)
             if data and (data.scan_mode == sicm_data.BACKSTEP or data.scan_mode == sicm_data.FLOATING_BACKSTEP):
                 if directory and os.path.isdir(directory):
                     name = Path(item).name
@@ -304,9 +302,10 @@ class Controller:
                 except ValueError:
                     radius = 1
                 self.data_manager.execute_func_on_current_data(
-                    filters.get(selected_filter),
+                    func=filters.get(selected_filter),
                     key=self.current_selection,
-                    action_name=f"selected_filter (px-size: {radius})"
+                    action_name=f"selected_filter (px-size: {radius})",
+                    px_radius=radius
                 )(self.data_manager.get_data(self.current_selection), radius)
 
     def plane_correction(self):
@@ -324,37 +323,27 @@ class Controller:
         """TODO: implement more functions"""
         if self.current_selection:
             self.main_window.set_wait_cursor()
+            fit_model = "polyXX symfit"
             self.data_manager.execute_func_on_current_data(
-                self._helper_for_fit,
+                func=fit_data,
                 key=self.current_selection,
-                action_name="Leveling (polyXX)"
-            )("polyXX")
+                action_name="Leveling (polyXX symfit)",
+                fit_model=fit_model
+            )(self.data_manager.get_data(self.current_selection), fit_model)
             self.main_window.set_default_cursor()
 
     def fit_to_polyXX_lmfit(self):
         """This function uses the lmfit module."""
         if self.current_selection:
             self.main_window.set_wait_cursor()
+            fit_model = "polyXX lmfit"
             self.data_manager.execute_func_on_current_data(
-                self._helper_for_fit,
+                func=fit_data,
                 key=self.current_selection,
-                action_name="Leveling (polyXX lmfit)"
-            )("polyXX lmfit")
+                action_name="Leveling (polyXX lmfit)",
+                fit_model=fit_model
+            )(self.data_manager.get_data(self.current_selection), fit_model)
             self.main_window.set_default_cursor()
-
-    def _helper_for_fit(self, fit_model: str):
-        """
-
-        """
-        fitted_z = 0
-        fit_results = ""
-        data = self.data_manager.get_data(self.current_selection)
-        if fit_model == "polyXX":
-            fitted_z, fit_results = polynomial_fifth_degree(data.x, data.y, data.z)
-        if fit_model == "polyXX lmfit":
-            fitted_z, fit_results = poly_xx_fit(data)
-        data.z = data.z - fitted_z
-        data.fit_results = fit_results
 
     def quit_application(self, event):
         # TODO dialogue unsaved changes
@@ -365,14 +354,19 @@ class Controller:
     def copy_selected_file(self):
         """Make a copy of the current list selection."""
         if self.current_selection:
-            data = self.data_manager.get_copy_of_data_object(self.current_selection)
+            try:
+                data = self.data_manager.get_copy_of_data_object(self.current_selection)
 
-            # build new filename as key
-            new_key = self._copy_filename(self.current_selection)
+                # build new filename as key
+                new_key = self._copy_filename(self.current_selection)
 
-            # add data to manager and key to list
-            self.data_manager.add_data_object(new_key, data)
-            self.main_window.insert_item_after_current_selection(new_key)
+                # add data to manager and key to list
+                self.data_manager.add_data_object(new_key, data)
+                self.main_window.insert_item_after_current_selection(new_key)
+            except TypeError as e:
+                print("Error in Main.copy_selected_file:")
+                print(e)
+                self.main_window.display_status_bar_message("Error during copy.")
         else:
             self.main_window.display_status_bar_message("No data selected")
 
@@ -573,7 +567,8 @@ class Controller:
             self.data_manager.execute_func_on_current_data(
                 flip_z_data,
                 key=self.current_selection,
-                action_name=action_name
+                action_name=action_name,
+                mirror_axis=axis
             )(self.data_manager.get_data(self.current_selection), mirror_axis=axis)
 
     def transform_to_height_differences(self):
@@ -620,7 +615,7 @@ class Controller:
                 )
 
                 self._update_undo_redo_menu_items()
-                manipulations = self.data_manager.get_undoable_manipulations_list(self.current_selection)
+                manipulations = self.data_manager.get_undoable_manipulation_names_list(self.current_selection)
                 self.main_window.set_data_manipulation_list_items(manipulations)
                 self.main_window.display_status_bar_message(message)
         except TypeError:
@@ -667,7 +662,7 @@ class Controller:
         self.main_window.set_default_cursor()
         self.update_figures_and_status()
 
-    def _select_area(self, point1: QPoint, point2: QPoint):
+    def _select_area(self, point1: tuple[int, int], point2: tuple[int, int]):
         print("TODO ROI selection")
         if points_are_not_equal(point1, point2):
             #self.current_selection.rois = (point1, point2)
@@ -692,12 +687,14 @@ class Controller:
             else:
                 self.main_window.display_status_bar_message("Action canceled: Data not cropped.")
 
-    def _crop_data(self, point1: QPoint, point2: QPoint):
+    def _crop_data(self, point1: tuple[int, int], point2: tuple[int, int]):
         if points_are_not_equal(point1, point2):
             self.data_manager.execute_func_on_current_data(
                 crop,
                 self.current_selection,
-                action_name="Crop data"
+                action_name="Crop data",
+                point1=point1,
+                point2=point2
             )(self.data_manager.get_data(self.current_selection), point1, point2)
         else:
             self.update_figures_and_status("Data not cropped.")
@@ -790,12 +787,41 @@ class Controller:
             pass
 
     def batch_mode_test(self):
-        print("batch mode")
-
         if self.current_selection:
-            action_list = []
-            data = self.data_manager.get_data(self.current_selection)
-            print(data.get)
+            try:
+                self.main_window.set_wait_cursor()
+                action_list = self.data_manager.get_undoable_manipulation_items_list(self.current_selection)
+
+                for scan in self.main_window.get_all_checked_items():
+                    for action in action_list:
+                        try:
+                            if action.name == "Reset data":
+                                self.data_manager.reset_manipulations(scan)
+                            else:
+                                self.data_manager.execute_func_on_current_data(
+                                    *action.arguments.get("args"),
+                                    **action.arguments.get("kwargs"),
+                                    func=action.func,
+                                    key=scan,
+                                    action_name=action.name,
+                                )(
+                                    self.data_manager.get_data(scan),
+                                    *action.arguments.get("args"),
+                                    **action.arguments.get("kwargs")
+                                )
+                        except Exception as e:
+                            print("Exception in Batch mode:")
+                            print('"' + action.name + '" on Scan "' + scan + '" not performed.')
+                            print(e)
+                            print("func: " + str(action.func))
+                            traceback.print_exc()
+                            print("------------------------")
+            except Exception as ex:
+                print("Exception during batch mode")
+                print(ex)
+            finally:
+                self.main_window.setEnabled(True)
+                self.main_window.set_default_cursor()
         else:
             self.main_window.display_status_bar_message("Please select a scan file.")
 

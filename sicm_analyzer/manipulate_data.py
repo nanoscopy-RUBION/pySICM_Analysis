@@ -1,8 +1,7 @@
 import numpy as np
-from PyQt6.QtCore import QPoint
 from scipy.interpolate import griddata
 from skimage.draw import disk
-
+from sicm_analyzer.data_fitting import polynomial_fifth_degree_symfit, poly_xx_fit
 from sicm_analyzer.sicm_data import SICMdata, ScanBackstepMode
 import enum
 
@@ -14,7 +13,7 @@ class MirrorAxis(enum.Enum):
 
 # Simple Manipulations
 # ______________________________________
-def crop(data: ScanBackstepMode, point1: tuple[int, int], point2: tuple[int, int]): #point1: QPoint, point2: QPoint):
+def crop(data: ScanBackstepMode, point1: tuple[int, int], point2: tuple[int, int]):
     """Reduces the dimensions of the data to the area of a rectangle
     formed by the two points 1 and 2.
 
@@ -35,17 +34,6 @@ def crop(data: ScanBackstepMode, point1: tuple[int, int], point2: tuple[int, int
         orig_y = point1[1]
     else:
         orig_y = point2[1]
-    # width = abs(point1.x() - point2.x())
-    # height = abs(point1.y() - point2.y())
-    #
-    # if point1.x() < point2.x():
-    #     orig_x = point1.x()
-    # else:
-    #     orig_x = point2.x()
-    # if point1.y() < point2.y():
-    #     orig_y = point1.y()
-    # else:
-    #     orig_y = point2.y()
 
     # note: the shape in 2D arrays is defined as Y * X
     data.z = data.z[orig_y:orig_y + height, orig_x:orig_x + width]
@@ -94,7 +82,7 @@ def height_diff_to_neighbour(data: ScanBackstepMode):
 
 # Filter Manipulations
 # ______________________________________
-def filter_median_temporal(data: ScanBackstepMode, px_neighbours=1):
+def filter_median_temporal(data: ScanBackstepMode, px_radius=1):
     """
     Sets each pixel equal to the median of itself, the l pixel measurements immediately before, and the l pixel 
     measurements immediately afterwards (2l+1 pixels in total).
@@ -107,7 +95,7 @@ def filter_median_temporal(data: ScanBackstepMode, px_neighbours=1):
     This feature may be extended to support different scan modes.
 
     :param data: This is the Z data that is to be smoothed. It can either be as a single array or in an ndarray.
-    :param px_neighbours: This is the number of measurements on either side (taken either immediately before or after) used to
+    :param px_radius: This is the number of measurements on either side (taken either immediately before or after) used to
     adjust each pixel. 
     :returns: new Z data adjusted using the described method. The existing object is not modified.
     """
@@ -116,11 +104,11 @@ def filter_median_temporal(data: ScanBackstepMode, px_neighbours=1):
     z = np.zeros(len(flattened))
 
     for i in np.arange(0, len(flattened)):
-        z[i] = np.median(flattened[np.max([i - px_neighbours, 0]):np.min([i + (px_neighbours + 1), len(flattened)])])
+        z[i] = np.median(flattened[np.max([i - px_radius, 0]):np.min([i + (px_radius + 1), len(flattened)])])
     data.z = z.reshape(shape, order='C')
 
 
-def filter_average_temporal(data: ScanBackstepMode, px_neighbours=1):
+def filter_average_temporal(data: ScanBackstepMode, px_radius=1):
     """
     Sets each pixel equal to the average of itself, the l pixel measurements immediately before, and the l pixel 
     measurements immediately afterwards (2l+1 pixels in total).
@@ -133,7 +121,7 @@ def filter_average_temporal(data: ScanBackstepMode, px_neighbours=1):
     This feature may be extended to support different scan modes.
 
     :param data: This is the Z data that is to be smoothed. It can either be as a single array or in an ndarray.
-    :param px_neighbours: This is the number of measurements on either side (taken either immediately before or after) used to
+    :param px_radius: This is the number of measurements on either side (taken either immediately before or after) used to
     adjust each pixel.
     :returns: new Z data adjusted using the described method. The existing object is not modified.
     """
@@ -142,7 +130,7 @@ def filter_average_temporal(data: ScanBackstepMode, px_neighbours=1):
     z = np.zeros(len(flattened))
 
     for i in np.arange(0, len(flattened)):
-        z[i] = np.mean(flattened[np.max([i - px_neighbours, 0]):np.min([i + (px_neighbours + 1), len(flattened)])])
+        z[i] = np.mean(flattened[np.max([i - px_radius, 0]):np.min([i + (px_radius + 1), len(flattened)])])
     data.z = z.reshape(shape, order='C')
 
 
@@ -184,6 +172,20 @@ def filter_average_spatial(data: ScanBackstepMode, px_radius=1):
         for j in np.arange(shape[1]):
             z[i, j] = np.mean(data.z[disk((i, j), px_radius, shape=shape)])
     data.z = z
+
+
+def fit_data(data: ScanBackstepMode, fit_model: str):
+    """
+
+    """
+    fitted_z = 0
+    fit_results = ""
+    if fit_model == "polyXX symfit":
+        fitted_z, fit_results = polynomial_fifth_degree_symfit(data.x, data.y, data.z)
+    if fit_model == "polyXX lmfit":
+        fitted_z, fit_results = poly_xx_fit(data)
+    data.z = data.z - fitted_z
+    data.fit_results = fit_results
 
 
 def fitting_objective(real, pred):

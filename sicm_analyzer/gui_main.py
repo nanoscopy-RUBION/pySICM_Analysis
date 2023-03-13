@@ -191,6 +191,7 @@ class MainWindow(QMainWindow):
         edit_menu = menubar.addMenu("Edit")
         edit_menu.addAction(self.action_undo)
         edit_menu.addAction(self.action_redo)
+        edit_menu.addSeparator()
         edit_menu.addAction(action_check_all)
         edit_menu.addAction(action_uncheck_all)
         edit_menu.addSeparator()

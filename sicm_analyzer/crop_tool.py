@@ -190,7 +190,12 @@ class CropToolWindow(QDialog):
         self._bind_on_change_events()
 
     def _update_preview(self):
-        point1, point2 = self.get_input_as_points()
+        p1, p2 = self.get_input_as_points()
+
+        # convert tuples to QPoint
+        point1 = QPoint(p1[0], p1[1])
+        point2 = QPoint(p2[0], p2[1])
+
         width = abs(point1.x() - point2.x())
         height = abs(point1.y() - point2.y())
 
