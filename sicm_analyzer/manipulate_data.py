@@ -174,6 +174,27 @@ def filter_average_spatial(data: ScanBackstepMode, px_radius=1):
     data.z = z
 
 
+def filter_single_outlier(data: ScanBackstepMode, point: tuple[int, int]):
+    """
+    Sets the value of a point to the median of its neighbours.
+
+    :param data: scan data object
+    :param point: a tuple containing x and y coordinates of the point to be filtered: point[x, y]
+    """
+    n = []  # list of neighbours
+    shape = data.z.shape
+    # find all neighbours of point:
+    # at "corners" a point has 3 neighbours
+    # at "edges" a point has 5 neighbours
+    # otherwise a point has 8 neighbours
+    for y in range(point[1] - 1, point[1] + 2):
+        if shape[0] > y >= 0:
+            for x in range(point[0] - 1, point[0] + 2):
+                if shape[1] > x >= 0 and (x, y) != point:
+                    n.append(data.z[y][x])
+    data.z[point[1], point[0]] = np.median(n)
+
+
 def fit_data(data: ScanBackstepMode, fit_model: str):
     """
 

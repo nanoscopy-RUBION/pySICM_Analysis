@@ -35,6 +35,7 @@ from sicm_analyzer.set_rois_dialog import ROIsDialog
 from sicm_analyzer.manipulate_data import fit_data
 from sicm_analyzer.line_profile_window import LineProfileWindow
 from sicm_analyzer.measurements import get_roughness
+from sicm_analyzer.manipulate_data import filter_single_outlier
 
 # APP CONSTANTS
 APP_NAME = "pySICM Analysis"
@@ -119,6 +120,7 @@ class Controller:
         self.main_window.action_data_flip_y.triggered.connect(self.flip_y)
         self.main_window.action_data_reset.triggered.connect(self.reset_current_data_manipulations)
         self.main_window.action_data_filter.triggered.connect(self.filter_current_view)
+        self.main_window.action_pick_outlier.triggered.connect(self.pick_outlier_and_turn_to_median)
         self.main_window.action_data_level_plane.triggered.connect(self.plane_correction)
         self.main_window.action_data_crop_tool.triggered.connect(self.open_crop_tool)
         self.main_window.action_data_to_height_diff.triggered.connect(self.transform_to_height_differences)
@@ -131,11 +133,11 @@ class Controller:
         self.main_window.action_line_profile_tool.triggered.connect(self.open_line_profile_tool)
         self.main_window.action_measure_dist.triggered.connect(self.measure_distance)
         self.main_window.action_get_pixel_values.triggered.connect(self.display_pixel_values)
-        self.main_window.action_measure_roughness_batch.triggered.connect(self.show_roughness_batch)
+        self.main_window.action_measure_roughness_batch.triggered.connect(self.show_results_table)
 
         # Other
         self.main_window.imported_files_list.currentItemChanged.connect(self.item_selection_changed_event)
-        self.main_window.action_results.triggered.connect(self.show_results)
+        self.main_window.action_results.triggered.connect(self.show_results_of_selection)
         # self.main_window.action_about.triggered.connect(self.about)
         self.main_window.set_drop_event_function(self.import_files_by_drag_and_drop)
         self.main_window.closeEvent = self.quit_application
@@ -732,6 +734,24 @@ class Controller:
                 clean_up_func=self.main_window.set_default_cursor
             )
 
+    def pick_outlier_and_turn_to_median(self):
+        if self.current_selection:
+            self.main_window.set_cross_cursor()
+            self.figure_canvas_2d.bind_mouse_events_for_pixel_mouse_over(
+                data=self.data_manager.get_data(self.current_selection),
+                view=self.view,
+                func=self._filter_outlier,
+                clean_up_func=self.main_window.set_default_cursor
+            )
+
+    def _filter_outlier(self, point: tuple[int, int]):
+        self.data_manager.execute_func_on_current_data(
+            filter_single_outlier,
+            key=self.current_selection,
+            action_name="Filtered single outlier",
+            point=point
+        )(self.data_manager.get_data(self.current_selection), point)
+
     def _calculate_distance_between_two_points(self, x_data, y_data):
         dist = math.dist((x_data[0], y_data[0]), (x_data[1], y_data[1]))
 
@@ -740,7 +760,7 @@ class Controller:
         self.roi_dialog = ROIsDialog(controller=self, parent=self.main_window)
         self.roi_dialog.open_window()
 
-    def show_results(self):
+    def show_results_of_selection(self):
         """Shows a small window displaying the results
         of roughness calculation and fit functions. Min and max values
         are also shown.
@@ -754,7 +774,7 @@ class Controller:
         except TypeError:
             pass
 
-    def show_roughness_batch(self):
+    def show_results_table(self):
         """Shows a small window displaying roughness calculations of all checked scans.
 
         Min and max values will also be shown.
@@ -824,6 +844,7 @@ class Controller:
                 self.main_window.set_default_cursor()
         else:
             self.main_window.display_status_bar_message("Please select a scan file.")
+
 
 def main():
     app = QApplication(sys.argv)

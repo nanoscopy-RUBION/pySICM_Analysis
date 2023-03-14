@@ -297,6 +297,8 @@ class GraphCanvas(FigureCanvasQTAgg):
                     self.mi.mouse_point1 = QPoint(int(event.xdata), int(event.ydata))
 
         if event.name == "button_release_event":
+            if self.function_after_mouse_events:
+                self.function_after_mouse_events((int(event.xdata), int(event.ydata)))
             if self.clean_up_function:
                 self.clean_up_function()
             self.unbind_mouse_events()

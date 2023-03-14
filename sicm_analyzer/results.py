@@ -1,8 +1,6 @@
-from PyQt6 import QtGui
-from PyQt6.QtCore import Qt, QSize
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QWidget, QPushButton, QVBoxLayout, QPlainTextEdit, QTableWidget, QTableWidgetItem, \
-    QAbstractItemView, QApplication, QSizePolicy, QMenu
-
+     QApplication, QMenu
 from sicm_analyzer.sicm_data import SICMdata
 from sicm_analyzer.measurements import get_roughness
 import numpy as np
@@ -88,17 +86,16 @@ class TableResultsWindow(QWidget):
         rows = len(data.keys())
         cols = len(data["scan"])
         self.table = QTableWidget(cols, rows)
+
+        layout.addWidget(self.table)
         self.table.setAlternatingRowColors(True)
         self.fill_table(data)
+        self.table.horizontalHeader().setStretchLastSection(True)
         self.table.resizeColumnsToContents()
-        layout.addWidget(self.table)
 
         self.button_close = QPushButton("Close")
         self.button_close.clicked.connect(self.close)
-
-        self.table.sizeHint()
         layout.addWidget(self.button_close)
-        layout.expandingDirections()
 
         # context menu
         self.context_menu = QMenu(self)
@@ -108,8 +105,11 @@ class TableResultsWindow(QWidget):
         action_cp_table_clipboard.triggered.connect(self.copy_table_to_clipboard)
         action_cp_selection_clipboard.triggered.connect(self.copy_selection_to_clipboard)
 
-    def contextMenuEvent(self, event: QtGui.QContextMenuEvent) -> None:
-        self.context_menu.exec(event.globalPos())
+        self.table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.table.customContextMenuRequested.connect(self.show_context_menu)
+
+    def show_context_menu(self, point):
+        self.context_menu.exec(self.table.mapToGlobal(point))
 
     def fill_table(self, data: dict[str, list[int | str | float]]):
         """Fills the table with data."""
