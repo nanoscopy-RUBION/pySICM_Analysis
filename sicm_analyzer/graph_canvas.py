@@ -292,9 +292,8 @@ class GraphCanvas(FigureCanvasQTAgg):
                     circle = Circle((x, y), 0.1, color="w", fill=True)
 
                     ylim_upper = self.figure.get_axes()[0].get_ylim()[1]
-
                     text = f"x: {x:.1f}, y: {y:.1f}, z: {self.current_data.z[int(y), int(x)]:.3f}"
-                    self.figure.get_axes()[0].annotate(text, xy=(1, ylim_upper+1.5), color="black", weight="bold", fontsize=8,
+                    self.figure.get_axes()[0].annotate(text, xy=(1, ylim_upper+0.5), color="black", weight="bold", fontsize=8,
                                                        bbox=dict(boxstyle="square,pad=0.5", fc="gray",),
                                                        annotation_clip=False)
                     self.draw()
@@ -303,7 +302,7 @@ class GraphCanvas(FigureCanvasQTAgg):
 
             if event.name == "button_release_event":
                 if self.function_after_mouse_events:
-                    self.function_after_mouse_events((int(self.mi.mouse_point1.x()), int(self.mi.mouse_point1.y())))
+                    self.function_after_mouse_events((int(event.xdata), int(event.ydata)))
                 if self.clean_up_function:
                     self.clean_up_function()
                 self.unbind_mouse_events()
