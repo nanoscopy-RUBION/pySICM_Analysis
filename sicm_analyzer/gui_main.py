@@ -8,7 +8,7 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QIcon, QAction, QActionGroup, QKeyEvent, QDragEnterEvent, QDropEvent, QCursor
 
 from PyQt6.QtWidgets import QHBoxLayout, QListWidget, QLabel, QWidget, QVBoxLayout, QSplitter, QStyle, \
-    QMainWindow, QToolBar, QAbstractItemView, QDockWidget, QGridLayout, QPlainTextEdit, QTextEdit
+    QMainWindow, QToolBar, QAbstractItemView, QDockWidget, QGridLayout, QPlainTextEdit, QTextEdit, QMenu
 
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 import matplotlib
@@ -122,9 +122,9 @@ class MainWindow(QMainWindow):
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.dock_2d_plot)
 
         # File menu
-        self.action_close_all = QAction(QIcon(join(self.icons_dir, "clear.png")), '&Close all', self)
-        self.action_close_selection = QAction("Close selection", self)
-        self.action_close_selection.setShortcut("Ctrl+D")
+        self.action_remove_all = QAction(QIcon(join(self.icons_dir, "clear.png")), '&Remove all', self)
+        self.action_remove_selection = QAction("Remove selection", self)
+        self.action_remove_selection.setShortcut("Ctrl+D")
         self.action_copy_selection = QAction("Copy selected file", self)
         self.action_preferences = QAction("Preferences", self)
         self.action_import_files = QAction(icon_files, "&Import Files...", self)
@@ -137,8 +137,8 @@ class MainWindow(QMainWindow):
         self.action_export_2d = QAction("2D graph", self)
         self.action_exit = QAction('&Exit', self)
 
-        file_menu.addAction(self.action_close_all)
-        file_menu.addAction(self.action_close_selection)
+        file_menu.addAction(self.action_remove_all)
+        file_menu.addAction(self.action_remove_selection)
         file_menu.addAction(self.action_copy_selection)
         file_menu.addSeparator()
         file_menu.addAction(self.action_preferences)
@@ -363,7 +363,7 @@ class MainWindow(QMainWindow):
         self.toolbar.addAction(self.action_import_files)
         self.toolbar.addAction(self.action_import_directory)
         self.toolbar.addSeparator()
-        self.toolbar.addAction(self.action_close_all)
+        self.toolbar.addAction(self.action_remove_all)
         self.toolbar.addAction(action_sort_ascending)
         self.toolbar.addAction(action_sort_descending)
         self.toolbar.addSeparator()
@@ -374,10 +374,25 @@ class MainWindow(QMainWindow):
         self.toolbar.addSeparator()
         self.addToolBar(self.toolbar)
 
+        # context menu
+        self.context_menu = QMenu(self)
+        self.context_menu.addAction(self.action_copy_selection)
+        self.context_menu.addAction(self.action_remove_selection)
+        self.context_menu.addAction(self.action_data_reset)
+        self.context_menu.addSeparator()
+        self.context_menu.addAction(self.action_undo)
+        self.context_menu.addAction(self.action_redo)
+
+        self.imported_files_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.imported_files_list.customContextMenuRequested.connect(self.show_context_menu)
+
         self.setGeometry(700, 350, 800, 800)
         self.statusBar().showMessage('Ready')
         self.setMinimumSize(300, 300)
         self.show()
+
+    def show_context_menu(self, point):
+        self.context_menu.exec(self.imported_files_list.mapToGlobal(point))
 
     def set_wait_cursor(self):
         self.setCursor(QCursor(Qt.CursorShape.WaitCursor))

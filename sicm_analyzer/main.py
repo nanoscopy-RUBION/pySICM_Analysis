@@ -82,8 +82,8 @@ class Controller:
     def connect_actions(self):
         """Connect functions with actions in the main window's menu."""
         # File menu
-        self.main_window.action_close_all.triggered.connect(self.close_all)
-        self.main_window.action_close_selection.triggered.connect(self.close_selection)
+        self.main_window.action_remove_all.triggered.connect(self.close_all)
+        self.main_window.action_remove_selection.triggered.connect(self.close_selection)
         self.main_window.action_copy_selection.triggered.connect(self.copy_selected_file)
         self.main_window.action_import_files.triggered.connect(self.import_files)
         self.main_window.action_import_directory.triggered.connect(self.import_directory)
