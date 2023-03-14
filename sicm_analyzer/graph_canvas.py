@@ -61,6 +61,7 @@ class GraphCanvas(FigureCanvasQTAgg):
         self.mi = MouseInteraction()
         self.function_after_mouse_events = None
         self.clean_up_function = None
+        self.show_mouse_over_label = True
         self.current_data: SICMdata = SICMdata()
         self.current_view: View = View()
         self.graph_type = ""
@@ -286,22 +287,26 @@ class GraphCanvas(FigureCanvasQTAgg):
 
                     x = event.xdata
                     y = event.ydata
-                    text = f"x: {x:.1f}, y: {y:.1f}, z: {self.current_data.z[int(y), int(x)]:.3f}"
+
                     self.draw_graph(self.current_data, RASTER_IMAGE, self.current_view)
                     circle = Circle((x, y), 0.1, color="w", fill=True)
-                    self.figure.get_axes()[0].add_patch(circle)
-                    self.figure.get_axes()[0].annotate(text, xy=(x, y), color="w", weight="bold", fontsize=8,
-                                                       bbox=dict(boxstyle="square,pad=0.5", fc="gray"))
+
+                    ylim_upper = self.figure.get_axes()[0].get_ylim()[1]
+
+                    text = f"x: {x:.1f}, y: {y:.1f}, z: {self.current_data.z[int(y), int(x)]:.3f}"
+                    self.figure.get_axes()[0].annotate(text, xy=(1, ylim_upper+1.5), color="black", weight="bold", fontsize=8,
+                                                       bbox=dict(boxstyle="square,pad=0.5", fc="gray",),
+                                                       annotation_clip=False)
                     self.draw()
                 else:
                     self.mi.mouse_point1 = QPoint(int(event.xdata), int(event.ydata))
 
-        if event.name == "button_release_event":
-            if self.function_after_mouse_events:
-                self.function_after_mouse_events((int(event.xdata), int(event.ydata)))
-            if self.clean_up_function:
-                self.clean_up_function()
-            self.unbind_mouse_events()
+            if event.name == "button_release_event":
+                if self.function_after_mouse_events:
+                    self.function_after_mouse_events((int(self.mi.mouse_point1.x()), int(self.mi.mouse_point1.y())))
+                if self.clean_up_function:
+                    self.clean_up_function()
+                self.unbind_mouse_events()
 
     def get_viewing_angles_from_3d_plot(self):
         """Returns the viewing angles from the 3D plot.
