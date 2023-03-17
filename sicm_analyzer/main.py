@@ -112,6 +112,8 @@ class Controller:
         self.main_window.action_view_restore.triggered.connect(self.restore_view_settings)
         self.main_window.action_view_colormap.triggered.connect(self.open_color_map_dialog)
         self.main_window.action_view_ratio.triggered.connect(self.open_aspect_ratio_input_dialog)
+        self.main_window.action_set_colormap_range.triggered.connect(self.set_colormap_range)
+        self.main_window.action_reset_colormap_range.triggered.connect(self.reset_colormap_range)
 
         # Data manipulation
         self.main_window.action_batch_mode.triggered.connect(self.batch_mode_test)
@@ -645,6 +647,33 @@ class Controller:
         except AttributeError:
             self.main_window.display_status_bar_message("ApproachCurves have no viewing angles.")
             self.view.set_viewing_angles()
+
+    def set_colormap_range(self):
+        """Open a small Dialog to enter two floats which will be
+        set as the lower and upper limits of the colormap."""
+        input_string, status = QInputDialog.getText(
+            self.main_window, "Set range for colormap", "Enter two floats (separated by a comma) for lower and upper limits of the colormap (0.0,10.0):"
+        )
+        limits = None
+        try:
+            if input_string:
+                lower, upper = input_string.split(",")
+                lower = lower.strip()
+                upper = upper.strip()
+                limits = (float(lower), float(upper))
+                self.view.set_colormap_limits(limits=limits)
+        except Exception as e:
+            print(e)
+            print(traceback.print_exc())
+            limits = None
+
+        self.view.set_colormap_limits(limits)
+        self.update_figures_and_status()
+
+    def reset_colormap_range(self):
+        """Reset the limits of the colormap to min and max value of the scan."""
+        self.view.set_colormap_limits(limits=None)
+        self.update_figures_and_status()
 
     def restore_view_settings(self):
         """Sets all viewing settings in the current View object
