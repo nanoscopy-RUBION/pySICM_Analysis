@@ -49,6 +49,8 @@ class MainWindow(QMainWindow):
         self.close_window = pyqtSignal()
         self.central_widget = QtWidgets.QWidget(self)
         self.imported_files_list = QListWidget(self)
+        # self.imported_files_list.setSelectionMode(QListWidget.SelectionMode.ExtendedSelection)
+        # self.imported_files_list.setSortingEnabled(True)
         self.imported_files_list.setDragDropMode(QListWidget.DragDropMode.InternalMove)
 
         self.data_manipulation_list = QListWidget(self)
@@ -126,6 +128,7 @@ class MainWindow(QMainWindow):
         self.action_remove_selection = QAction("Remove selection", self)
         self.action_remove_selection.setShortcut("Ctrl+D")
         self.action_copy_selection = QAction("Copy selected file", self)
+        self.action_rename_selection = QAction("Rename selected file", self)
         self.action_preferences = QAction("Preferences", self)
         self.action_import_files = QAction(icon_files, "&Import Files...", self)
         self.action_import_directory = QAction(icon_directory, '&Import Directory...', self)
@@ -140,6 +143,7 @@ class MainWindow(QMainWindow):
         file_menu.addAction(self.action_remove_all)
         file_menu.addAction(self.action_remove_selection)
         file_menu.addAction(self.action_copy_selection)
+        file_menu.addAction(self.action_rename_selection)
         file_menu.addSeparator()
         file_menu.addAction(self.action_preferences)
         file_menu.addSeparator()
@@ -352,7 +356,6 @@ class MainWindow(QMainWindow):
 
         # Key events
         self.imported_files_list.installEventFilter(self)
-        self.imported_files_list.setSortingEnabled(True)
         self.delete_key = None
         self.escape_key = None
 
@@ -377,6 +380,7 @@ class MainWindow(QMainWindow):
         # context menu
         self.context_menu = QMenu(self)
         self.context_menu.addAction(self.action_copy_selection)
+        self.context_menu.addAction(self.action_rename_selection)
         self.context_menu.addAction(self.action_remove_selection)
         self.context_menu.addAction(self.action_data_reset)
         self.context_menu.addSeparator()
@@ -489,7 +493,8 @@ class MainWindow(QMainWindow):
     def display_status_bar_message(self, message):
         self.statusBar().showMessage(message)
 
-    def add_items_to_list(self, items):
+    def add_items_to_list(self, items: list[str]):
+        """Adds a list item for each filename in the list."""
         for item in items:
             self.add_item_to_list(item)
 
@@ -507,6 +512,7 @@ class MainWindow(QMainWindow):
             | Qt.ItemFlag.ItemIsDragEnabled
         )
         checkable_item.setCheckState(Qt.CheckState.Checked)
+
         return checkable_item
 
     def __sort_list_items(self, order: Qt.SortOrder):
@@ -518,6 +524,11 @@ class MainWindow(QMainWindow):
         checkable_item = self._get_checkable_item(item)
         pos = self.imported_files_list.currentRow() + 1
         self.imported_files_list.insertItem(pos, checkable_item)
+
+    def change_item_name(self, new_name):
+        """Set a new name for the selected item."""
+        item = self.imported_files_list.selectedItems()[0]
+        item.setText(new_name)
 
     def get_all_checked_items(self) -> list[str]:
         items = []

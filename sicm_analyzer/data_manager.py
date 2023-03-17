@@ -15,6 +15,8 @@ class UndoRedoData:
         creates a copy of the underlying data before manipulations should
         be performed.
 
+        Parameters for func are stored in args and kwargs.
+
         It stores a string describing the performed action and a deepcopy the data
         before it is manipulated. Although a deepcopy might be overkill for the current
         implementation, for future extensions it might be necessary.
@@ -30,9 +32,6 @@ class UndoRedoData:
             "args": args,
             "kwargs": kwargs
         }
-        #print("action: " + name)
-        #print("args: " + str(self.arguments.get("args")))
-        #print("kwargs: " + str(self.arguments.get("kwargs")))
 
 
 class DataManager:
@@ -225,6 +224,13 @@ class DataManager:
         """
         data_copy = copy.deepcopy(self.data_collection.get(key))
         return data_copy
+
+    def rename_data_key(self, key: str, new_key: str):
+        """Rename key of data object."""
+        data = self.data_collection.get(key)
+        self.add_data_object(key=new_key, data=data)
+        del data
+        del self.data_collection[key]
 
     def reset_manipulations(self, key: str):
         """Clears the list of data manipulations and resets

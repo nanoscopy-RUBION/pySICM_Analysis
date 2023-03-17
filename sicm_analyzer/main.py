@@ -85,6 +85,7 @@ class Controller:
         self.main_window.action_remove_all.triggered.connect(self.close_all)
         self.main_window.action_remove_selection.triggered.connect(self.close_selection)
         self.main_window.action_copy_selection.triggered.connect(self.copy_selected_file)
+        self.main_window.action_rename_selection.triggered.connect(self.rename_selection)
         self.main_window.action_import_files.triggered.connect(self.import_files)
         self.main_window.action_import_directory.triggered.connect(self.import_directory)
         self.main_window.action_export_2d.triggered.connect(lambda: self.export_figure(self.figure_canvas_2d.figure))
@@ -169,22 +170,22 @@ class Controller:
         """Exports the z data of the current selection as a .sicm file.
 
         File extension is added when file name does not end with
-        .sicm."""
+        '.sicm'."""
         try:
             data = self.data_manager.get_data(self.current_selection)
             manipulations = self.data_manager.get_undoable_manipulation_names_list(self.current_selection)
             if data and (data.scan_mode == sicm_data.BACKSTEP or data.scan_mode == sicm_data.FLOATING_BACKSTEP):
+                name = Path(self.current_selection).name
                 options = QFileDialog.Option(QFileDialog.Option.DontUseNativeDialog)
                 file_path = QFileDialog.getSaveFileName(parent=self.main_window,
                                                         caption="Export manipulated data as .sicm file",
                                                         filter="SICM (*.sicm)",
-                                                        directory=DEFAULT_FILE_PATH,
+                                                        directory=os.path.join(DEFAULT_FILE_PATH, name),
                                                         initialFilter="SICM (*.sicm)",
                                                         options=options
                                                         )
                 if file_path[0]:
                     file, _ = self._get_file_name_with_extension(file_path)
-
                     export_sicm_file(file, sicm_data=data, manipulations=manipulations)
             else:
                 self.main_window.display_status_bar_message("No file exported.")
@@ -203,6 +204,8 @@ class Controller:
             if data and (data.scan_mode == sicm_data.BACKSTEP or data.scan_mode == sicm_data.FLOATING_BACKSTEP):
                 if directory and os.path.isdir(directory):
                     name = Path(item).name
+                    if not name.endswith(".sicm"):
+                        name = name + ".sicm"
                     full_path = os.path.join(directory, name)
                     export_sicm_file(full_path, data, manipulations=manipulations)
 
@@ -805,6 +808,27 @@ class Controller:
             self.table_results_window.show()
         except TypeError:
             pass
+
+    def rename_selection(self):
+        if self.current_selection:
+            dialog_input, status = QInputDialog.getText(
+                self.main_window,
+                "Rename selected file",
+                "Please enter a unique filename"
+            )
+            if status == QInputDialog.DialogCode.Accepted and dialog_input and self.current_selection != dialog_input:
+                if not self.data_manager.filename_exists(dialog_input):
+                    self.main_window.display_status_bar_message("Filename changed to: %s" % dialog_input)
+                    self.data_manager.rename_data_key(key=self.current_selection, new_key=dialog_input)
+                    self.main_window.change_item_name(dialog_input)
+                    # important: set current selection to new name to prevent null pointer exception when
+                    # performing manipulations without clicking on the selected item again
+                    self.current_selection = dialog_input
+                else:
+                    self.main_window.display_status_bar_message("Filename already exists")
+            else:
+                self.main_window.display_status_bar_message("Filename not changed")
+
 
     def batch_mode_test(self):
         if self.current_selection:
