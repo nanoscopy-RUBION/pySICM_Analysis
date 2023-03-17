@@ -155,6 +155,12 @@ class GraphCanvas(FigureCanvasQTAgg):
             norm = Normalize(vmin=np.min(self.current_data.get_data()[2]), vmax=np.max(self.current_data.get_data()[2]), clip=False)
             if self.current_view:
 
+                if self.current_view.colormap_limits:
+                    norm = Normalize(
+                        vmin=self.current_view.colormap_limits[0],
+                        vmax=self.current_view.colormap_limits[1],
+                        clip=False
+                    )
                 img = axes.plot_surface(*self.current_data.get_data(), norm=norm, cmap=self.current_view.color_map)
                 axes.set_box_aspect(aspect=self.current_view.aspect_ratio)
                 axes.azim = self.current_view.azim
@@ -163,8 +169,9 @@ class GraphCanvas(FigureCanvasQTAgg):
             else:
                 img = axes.plot_surface(*self.current_data.get_data(), norm=norm)
             self.set_colorbar(img, axes)
-        except:
-            pass
+        except Exception as e:
+            print(e)
+            print(traceback.print_exc())
 
     def draw_2d_plot_raster_image(self):
         """Draws a 2D raster image for 3-dimensional scanning data."""
@@ -177,7 +184,15 @@ class GraphCanvas(FigureCanvasQTAgg):
 
         if self.current_view:
             self.show_or_hide_axes(self.current_data, self.current_view, axes)
-            img = axes.pcolormesh(self.current_data.z, cmap=self.current_view.color_map)
+            if self.current_view.colormap_limits:
+                img = axes.pcolormesh(
+                    self.current_data.z,
+                    vmin=self.current_view.colormap_limits[0],
+                    vmax=self.current_view.colormap_limits[1],
+                    cmap=self.current_view.color_map
+                )
+            else:
+                img = axes.pcolormesh(self.current_data.z, cmap=self.current_view.color_map)
         else:
             img = axes.pcolormesh(self.current_data.z)
 

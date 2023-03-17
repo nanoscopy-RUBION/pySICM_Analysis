@@ -213,6 +213,8 @@ class MainWindow(QMainWindow):
         self.action_toggle_axes.setChecked(True)
         self.action_view_restore = QAction('&Restore view', self)
         self.action_view_ratio = QAction('Aspect ratio', self)
+        self.action_set_colormap_range = QAction("Set colormap range", self)
+        self.action_reset_colormap_range = QAction("Reset colormap range", self)
         action_view_surface = QAction('&Interpolate surface', self)
         action_view_surface.setEnabled(False)  # TODO
         action_view_xlimits = QAction('&Adjust x limits', self)
@@ -244,6 +246,8 @@ class MainWindow(QMainWindow):
 
         self.view_menu.addAction(self.action_store_angles)
         self.view_menu.addAction(self.action_view_ratio)
+        self.view_menu.addAction(self.action_set_colormap_range)
+        self.view_menu.addAction(self.action_reset_colormap_range)
         self.view_menu.addAction(action_view_surface)
         self.view_menu.addAction(action_view_xlimits)
         self.view_menu.addAction(action_view_ylimits)

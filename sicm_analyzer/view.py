@@ -20,6 +20,7 @@ class View:
         self.rois = (QPoint(), QPoint())
         self.azim: float = -60.0
         self.elev: float = 30.0
+        self.colormap_limits: tuple[float, float] | None = None
 
     def get_xlim(self):
         return self.xlims
@@ -32,6 +33,9 @@ class View:
         Changes the state of axis visibility.
         """
         self.axes_shown = not self.axes_shown
+
+    def set_colormap_limits(self, limits: tuple[float, float] | None):
+        self.colormap_limits = limits
 
     def toggle_color_bar(self):
         """
