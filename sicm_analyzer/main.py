@@ -85,6 +85,7 @@ class Controller:
         self.main_window.action_remove_all.triggered.connect(self.close_all)
         self.main_window.action_remove_selection.triggered.connect(self.close_selection)
         self.main_window.action_copy_selection.triggered.connect(self.copy_selected_file)
+        self.main_window.action_copy_checked.triggered.connect(self.copy_all_checked_files)
         self.main_window.action_rename_selection.triggered.connect(self.rename_selection)
         self.main_window.action_import_files.triggered.connect(self.import_files)
         self.main_window.action_import_directory.triggered.connect(self.import_directory)
@@ -359,21 +360,29 @@ class Controller:
     def copy_selected_file(self):
         """Make a copy of the current list selection."""
         if self.current_selection:
-            try:
-                data = self.data_manager.get_copy_of_data_object(self.current_selection)
-
-                # build new filename as key
-                new_key = self._copy_filename(self.current_selection)
-
-                # add data to manager and key to list
-                self.data_manager.add_data_object(new_key, data)
-                self.main_window.insert_item_after_current_selection(new_key)
-            except TypeError as e:
-                print("Error in Main.copy_selected_file:")
-                print(e)
-                self.main_window.display_status_bar_message("Error during copy.")
+            self._copy_file(key=self.current_selection)
         else:
             self.main_window.display_status_bar_message("No data selected")
+
+    def copy_all_checked_files(self):
+        """Make a copy of all files that are checked."""
+        for item in self.main_window.get_all_checked_items():
+            self._copy_file(item)
+
+    def _copy_file(self, key: str):
+        """Make a copy of the current list selection."""
+        try:
+            data = self.data_manager.get_copy_of_data_object(key)
+            # build new filename as key
+            new_key = self._copy_filename(key)
+            # add data to manager and key to list
+            self.data_manager.add_data_object(new_key, data)
+            self.main_window.insert_item_after_current_selection(new_key)
+        except TypeError as e:
+            print("Error in Main.copy_selected_file:")
+            print(e)
+            self.main_window.display_status_bar_message("Error during copy.")
+
 
     def _copy_filename(self, filepath: str) -> str:
         """

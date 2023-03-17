@@ -3,12 +3,13 @@ TODO add module documentation
 """
 import os
 from os.path import join
-from PyQt6 import QtWidgets, QtCore
+from pathlib import Path
+from PyQt6 import QtWidgets
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QIcon, QAction, QActionGroup, QKeyEvent, QDragEnterEvent, QDropEvent, QCursor
 
 from PyQt6.QtWidgets import QHBoxLayout, QListWidget, QLabel, QWidget, QVBoxLayout, QSplitter, QStyle, \
-    QMainWindow, QToolBar, QAbstractItemView, QDockWidget, QGridLayout, QPlainTextEdit, QTextEdit, QMenu
+    QMainWindow, QToolBar, QAbstractItemView, QDockWidget, QTextEdit, QMenu
 
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 import matplotlib
@@ -128,6 +129,7 @@ class MainWindow(QMainWindow):
         self.action_remove_selection = QAction("Remove selection", self)
         self.action_remove_selection.setShortcut("Ctrl+D")
         self.action_copy_selection = QAction("Copy selected file", self)
+        self.action_copy_checked = QAction("Copy checked files", self)
         self.action_rename_selection = QAction("Rename selected file", self)
         self.action_preferences = QAction("Preferences", self)
         self.action_import_files = QAction(icon_files, "&Import Files...", self)
@@ -143,6 +145,7 @@ class MainWindow(QMainWindow):
         file_menu.addAction(self.action_remove_all)
         file_menu.addAction(self.action_remove_selection)
         file_menu.addAction(self.action_copy_selection)
+        file_menu.addAction(self.action_copy_checked)
         file_menu.addAction(self.action_rename_selection)
         file_menu.addSeparator()
         file_menu.addAction(self.action_preferences)
@@ -504,6 +507,7 @@ class MainWindow(QMainWindow):
 
     def _get_checkable_item(self, item):
         """Create and return a list item which has a checkbox."""
+        #text = Path(item).name
         checkable_item = QtWidgets.QListWidgetItem(item)
         checkable_item.setFlags(
             Qt.ItemFlag.ItemIsUserCheckable
@@ -512,6 +516,8 @@ class MainWindow(QMainWindow):
             | Qt.ItemFlag.ItemIsDragEnabled
         )
         checkable_item.setCheckState(Qt.CheckState.Checked)
+        #checkable_item.setData(1, item)
+        #checkable_item.setToolTip(checkable_item.data(1))
 
         return checkable_item
 
