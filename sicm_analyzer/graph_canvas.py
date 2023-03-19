@@ -161,7 +161,10 @@ class GraphCanvas(FigureCanvasQTAgg):
                         vmax=self.current_view.colormap_limits[1],
                         clip=False
                     )
-                img = axes.plot_surface(*self.current_data.get_data(), norm=norm, cmap=self.current_view.color_map)
+                    img = axes.plot_surface(*self.current_data.get_data(), norm=norm, cmap=self.current_view.color_map)
+                    axes.set_zlim(self.current_view.colormap_limits)
+                else:
+                    img = axes.plot_surface(*self.current_data.get_data(), norm=norm, cmap=self.current_view.color_map)
                 axes.set_box_aspect(aspect=self.current_view.aspect_ratio)
                 axes.azim = self.current_view.azim
                 axes.elev = self.current_view.elev
