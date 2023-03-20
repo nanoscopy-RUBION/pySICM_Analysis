@@ -339,8 +339,8 @@ class MainWindow(QMainWindow):
         self.measure_menu.addAction(self.action_results)
         self.measure_menu.addAction(self.action_measure_roughness_batch)
         self.measure_menu.addSeparator()
-        self.action_line_profile_tool = QAction("Line profile tool...", self)
-        self.measure_menu.addAction(self.action_line_profile_tool)
+        self.action_height_profile_tool = QAction("Height profile tool...", self)
+        self.measure_menu.addAction(self.action_height_profile_tool)
         self.measure_menu.addAction(self.action_get_pixel_values)
         self.measure_menu.addAction(self.action_measure_dist)
 

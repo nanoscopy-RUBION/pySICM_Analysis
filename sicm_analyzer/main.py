@@ -33,7 +33,7 @@ from sicm_analyzer.view import View
 from sicm_analyzer.graph_canvas import SURFACE_PLOT, RASTER_IMAGE, APPROACH_CURVE
 from sicm_analyzer.set_rois_dialog import ROIsDialog
 from sicm_analyzer.manipulate_data import fit_data
-from sicm_analyzer.line_profile_window import LineProfileWindow
+from sicm_analyzer.height_profile_window import HeightProfileWindow
 from sicm_analyzer.measurements import get_roughness
 from sicm_analyzer.manipulate_data import filter_single_outlier
 
@@ -134,7 +134,7 @@ class Controller:
         # Measurement
         self.main_window.action_set_rois.triggered.connect(self.show_roi_dialog)
         self.main_window.action_set_roi.triggered.connect(self.select_roi_with_mouse)
-        self.main_window.action_line_profile_tool.triggered.connect(self.open_line_profile_tool)
+        self.main_window.action_height_profile_tool.triggered.connect(self.open_line_profile_tool)
         self.main_window.action_measure_dist.triggered.connect(self.measure_distance)
         self.main_window.action_get_pixel_values.triggered.connect(self.display_pixel_values)
         self.main_window.action_measure_roughness_batch.triggered.connect(self.show_results_table)
@@ -746,7 +746,7 @@ class Controller:
         if self.current_selection:
             data = self.data_manager.get_data(self.current_selection)
             if isinstance(data, ScanBackstepMode):
-                self.line_profile = LineProfileWindow(
+                self.line_profile = HeightProfileWindow(
                     data=data,
                     parent=self.main_window,
                     view=self.view
