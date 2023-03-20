@@ -1,9 +1,6 @@
-"""
-TODO add module documentation
-"""
+
 import os
 from os.path import join
-from pathlib import Path
 from PyQt6 import QtWidgets
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QIcon, QAction, QActionGroup, QKeyEvent, QDragEnterEvent, QDropEvent, QCursor
@@ -511,7 +508,6 @@ class MainWindow(QMainWindow):
 
     def _get_checkable_item(self, item):
         """Create and return a list item which has a checkbox."""
-        #text = Path(item).name
         checkable_item = QtWidgets.QListWidgetItem(item)
         checkable_item.setFlags(
             Qt.ItemFlag.ItemIsUserCheckable
@@ -520,9 +516,6 @@ class MainWindow(QMainWindow):
             | Qt.ItemFlag.ItemIsDragEnabled
         )
         checkable_item.setCheckState(Qt.CheckState.Checked)
-        #checkable_item.setData(1, item)
-        #checkable_item.setToolTip(checkable_item.data(1))
-
         return checkable_item
 
     def __sort_list_items(self, order: Qt.SortOrder):
@@ -548,15 +541,15 @@ class MainWindow(QMainWindow):
         return items
 
     def check_all_items(self):
-        """Sets the checkstate of all items in the imported files list to checked."""
+        """Sets the check state of all items in the imported files list to checked."""
         self._change_checkstate_of_all_items(Qt.CheckState.Checked)
 
     def uncheck_all_items(self):
-        """Sets the checkstate of all items in the imported files list to checked."""
+        """Sets the check state of all items in the imported files list to checked."""
         self._change_checkstate_of_all_items(Qt.CheckState.Unchecked)
 
     def _change_checkstate_of_all_items(self, state: Qt.CheckState):
-        """Sets the checkstate of all items in the imported files list."""
+        """Sets the check state of all items in the imported files list."""
         for i in range(self.imported_files_list.count()):
             self.imported_files_list.item(i).setCheckState(state)
 

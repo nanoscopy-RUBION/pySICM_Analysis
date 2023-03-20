@@ -661,18 +661,18 @@ class Controller:
                 lower = lower.strip()
                 upper = upper.strip()
                 limits = (float(lower), float(upper))
-                self.view.set_colormap_limits(limits=limits)
+                self.view.set_z_limits(limits=limits)
         except Exception as e:
             print(e)
             print(traceback.print_exc())
             limits = None
 
-        self.view.set_colormap_limits(limits)
+        self.view.set_z_limits(limits)
         self.update_figures_and_status()
 
     def reset_colormap_range(self):
         """Reset the limits of the colormap to min and max value of the scan."""
-        self.view.set_colormap_limits(limits=None)
+        self.view.set_z_limits(limits=None)
         self.update_figures_and_status()
 
     def restore_view_settings(self):
