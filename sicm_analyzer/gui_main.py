@@ -209,9 +209,10 @@ class MainWindow(QMainWindow):
         self.action_toggle_axes.setCheckable(True)
         self.action_toggle_axes.setChecked(True)
         self.action_view_restore = QAction('&Restore view', self)
+        self.action_view_restore_all = QAction('&Restore view for all', self)
         self.action_view_ratio = QAction('Aspect ratio', self)
-        self.action_set_colormap_range = QAction("Set colormap range", self)
-        self.action_reset_colormap_range = QAction("Reset colormap range", self)
+        self.action_set_z_limits = QAction("Set z limits", self)
+        self.action_reset_z_limits = QAction("Reset z limits", self)
         action_view_surface = QAction('&Interpolate surface', self)
         action_view_surface.setEnabled(False)  # TODO
         action_view_xlimits = QAction('&Adjust x limits', self)
@@ -229,6 +230,9 @@ class MainWindow(QMainWindow):
         self.action_set_axis_labels_micron = QAction("µm", self)
         self.action_set_axis_labels_micron.setCheckable(True)
 
+        self.action_apply_view_to_all = QAction("Apply view settings to all", self)
+        self.action_apply_view_to_checked = QAction("Apply view settings to checked", self)
+
         self.view_menu = menubar.addMenu("&View")
         self.view_menu.addAction(self.action_toggle_axes)
         axis_label_menu = self.view_menu.addMenu('Set axis labels to...')
@@ -243,15 +247,18 @@ class MainWindow(QMainWindow):
 
         self.view_menu.addAction(self.action_store_angles)
         self.view_menu.addAction(self.action_view_ratio)
-        self.view_menu.addAction(self.action_set_colormap_range)
-        self.view_menu.addAction(self.action_reset_colormap_range)
+        self.view_menu.addAction(self.action_set_z_limits)
+        self.view_menu.addAction(self.action_reset_z_limits)
         self.view_menu.addAction(action_view_surface)
         self.view_menu.addAction(action_view_xlimits)
         self.view_menu.addAction(action_view_ylimits)
         self.view_menu.addAction(self.action_view_colormap)
         self.view_menu.addAction(self.action_show_graphs)
         self.view_menu.addSeparator()
+        self.view_menu.addAction(self.action_apply_view_to_all)
+        self.view_menu.addAction(self.action_apply_view_to_checked)
         self.view_menu.addAction(self.action_view_restore)
+        self.view_menu.addAction(self.action_view_restore_all)
 
         # Manipulate data menu
         self.action_batch_mode = QAction("Batch mode (experimental version)", self)
@@ -495,6 +502,7 @@ class MainWindow(QMainWindow):
         self.dock_2d_plot.setWidget(canvas)
 
     def display_status_bar_message(self, message):
+        print(message)
         self.statusBar().showMessage(message)
 
     def add_items_to_list(self, items: list[str]):

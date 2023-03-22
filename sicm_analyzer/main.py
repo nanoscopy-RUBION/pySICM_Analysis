@@ -1,6 +1,7 @@
 import math
 import os
 import sys
+
 sys.path.append("")
 
 import traceback
@@ -21,15 +22,15 @@ from sicm_analyzer.crop_tool import CropToolWindow
 from sicm_analyzer.gui_main import MainWindow
 from sicm_analyzer.graph_canvas import GraphCanvas
 from sicm_analyzer.filter_dialog import FilterDialog
-from sicm_analyzer.manipulate_data import transpose_z_data, subtract_z_minimum, crop, invert_z_data, \
-    height_diff_to_neighbour
-from sicm_analyzer.manipulate_data import filter_median_temporal, filter_median_spatial, filter_average_temporal, \
-    filter_average_spatial
+from sicm_analyzer.manipulate_data import transpose_z_data, subtract_z_minimum, crop, invert_z_data
+from sicm_analyzer.manipulate_data import height_diff_to_neighbour
+from sicm_analyzer.manipulate_data import filter_median_temporal, filter_median_spatial
+from sicm_analyzer.manipulate_data import filter_average_temporal, filter_average_spatial
 from sicm_analyzer.manipulate_data import level_data, MirrorAxis, flip_z_data
 from sicm_analyzer.mouse_events import MouseInteraction, points_are_not_equal
 from sicm_analyzer import sicm_data
 from sicm_analyzer.sicm_data import ApproachCurve, ScanBackstepMode, export_sicm_file
-from sicm_analyzer.view import View
+from sicm_analyzer.view import View, ViewManager
 from sicm_analyzer.graph_canvas import SURFACE_PLOT, RASTER_IMAGE, APPROACH_CURVE
 from sicm_analyzer.set_rois_dialog import ROIsDialog
 from sicm_analyzer.manipulate_data import fit_data
@@ -46,7 +47,7 @@ SAMPLES_DIRECTORY = "samples"
 APP_ICON = "pySICMsplash.png"
 APP_ICON_PATH = join(APP_PATH, RESOURCE_DIRECTORY, ICONS_DIRECTORY, APP_ICON)
 APP_SAMPLES_PATH = join(APP_PATH, RESOURCE_DIRECTORY, SAMPLES_DIRECTORY)
-TITLE = f"{APP_NAME} (ver. 2023-03-01)"
+TITLE = f"{APP_NAME} (ver. 2023-03-22)"
 DEFAULT_FILE_PATH = os.getcwd()
 
 # FILTERS
@@ -66,7 +67,7 @@ class Controller:
         self.cmap_dialog = None
         self.results_window: SingleResultsWindow = None
         self.table_results_window: TableResultsWindow = None
-        self.view = View()
+        self.view_manager = ViewManager()
         self.figure_canvas_3d = GraphCanvas()
         self.figure_canvas_2d = GraphCanvas()
         self.mi = MouseInteraction()
@@ -82,8 +83,8 @@ class Controller:
     def connect_actions(self):
         """Connect functions with actions in the main window's menu."""
         # File menu
-        self.main_window.action_remove_all.triggered.connect(self.close_all)
-        self.main_window.action_remove_selection.triggered.connect(self.close_selection)
+        self.main_window.action_remove_all.triggered.connect(self.remove_all)
+        self.main_window.action_remove_selection.triggered.connect(self.remove_selection)
         self.main_window.action_copy_selection.triggered.connect(self.copy_selected_file)
         self.main_window.action_copy_checked.triggered.connect(self.copy_all_checked_files)
         self.main_window.action_rename_selection.triggered.connect(self.rename_selection)
@@ -106,14 +107,20 @@ class Controller:
 
         # View menu
         self.main_window.action_toggle_axes.triggered.connect(self.toggle_axes)
-        self.main_window.action_set_axis_labels_px.triggered.connect(self.update_figures_and_status)
-        self.main_window.action_set_axis_labels_micron.triggered.connect(self.update_figures_and_status)
+        # Clicking on buttons in a button group seems to return a bool which is
+        # passed to the connected function. This bool is captured by using the
+        # lambda expression as follows:
+        self.main_window.action_set_axis_labels_px.triggered.connect(lambda _: self.update_figures_and_status())
+        self.main_window.action_set_axis_labels_micron.triggered.connect(lambda _: self.update_figures_and_status())
         self.main_window.action_store_angles.triggered.connect(self.store_viewing_angles)
         self.main_window.action_view_restore.triggered.connect(self.restore_view_settings)
+        self.main_window.action_view_restore_all.triggered.connect(self.restore_view_settings_for_all)
         self.main_window.action_view_colormap.triggered.connect(self.open_color_map_dialog)
         self.main_window.action_view_ratio.triggered.connect(self.open_aspect_ratio_input_dialog)
-        self.main_window.action_set_colormap_range.triggered.connect(self.set_colormap_range)
-        self.main_window.action_reset_colormap_range.triggered.connect(self.reset_colormap_range)
+        self.main_window.action_set_z_limits.triggered.connect(self.set_z_limits)
+        self.main_window.action_reset_z_limits.triggered.connect(self.reset_colormap_range)
+        self.main_window.action_apply_view_to_all.triggered.connect(self.apply_view_to_all)
+        self.main_window.action_apply_view_to_checked.triggered.connect(self.apply_view_to_checked)
 
         # Data manipulation
         self.main_window.action_batch_mode.triggered.connect(self.batch_mode_test)
@@ -147,19 +154,21 @@ class Controller:
         self.main_window.closeEvent = self.quit_application
 
         # Key Events
-        self.main_window.delete_key = self.close_selection
+        self.main_window.delete_key = self.remove_selection
         self.main_window.escape_key = self.unbind_mouse_events
 
     def export_figure(self, figure: Figure):
         """Exports the current view of a figure."""
         options = QFileDialog.Option(QFileDialog.Option.DontUseNativeDialog)
-        file_path = QFileDialog.getSaveFileName(parent=self.main_window,
-                                                caption="Export figure as...",
-                                                filter="All files (*.*);;EPS (*.eps);;PDF (*.pdf);;JPEG (*.jpeg);;JPG (*.jpg);;PNG (*.png);;SVG (*.svg);;TIF (*.tif);;TIFF (*.tiff)",
-                                                directory=DEFAULT_FILE_PATH,
-                                                initialFilter="SVG (*.svg)",
-                                                options=options
-                                                )
+        file_path = QFileDialog.getSaveFileName(
+            parent=self.main_window,
+            caption="Export figure as...",
+            filter="All files (*.*);;EPS (*.eps);;PDF (*.pdf);;JPEG (*.jpeg);;JPG (*.jpg);;PNG (*.png);;SVG ("
+                   "*.svg);;TIF (*.tif);;TIFF (*.tiff)",
+            directory=DEFAULT_FILE_PATH,
+            initialFilter="SVG (*.svg)",
+            options=options
+        )
         if file_path[0]:
             file, extension = self._get_file_name_with_extension(file_path)
             try:
@@ -170,10 +179,11 @@ class Controller:
                 self.main_window.display_status_bar_message(f"Figure not exported: {message}")
 
     def export_sicm_data(self):
-        """Exports the z data of the current selection as a .sicm file.
+        """
+        Exports the z data of the current selection as a .sicm file.
 
-        File extension is added when file name does not end with
-        '.sicm'."""
+        File extension is added when file name does not end with '.sicm'.
+        """
         try:
             data = self.data_manager.get_data(self.current_selection)
             manipulations = self.data_manager.get_undoable_manipulation_names_list(self.current_selection)
@@ -257,13 +267,45 @@ class Controller:
         The selected color map can be applied to the current view
         or to all view objects at once.
         """
-        if not self.cmap_dialog:
-            self.cmap_dialog = ColorMapDialog(controller=self, parent=self.main_window)
+        self.cmap_dialog = ColorMapDialog(
+            controller=self,
+            parent=self.main_window
+        )
         self.cmap_dialog.open_window()
+
+    def _apply_colormap_to_view(self, view: View, cmap):
+        view.color_map = cmap
+
+    def apply_colormap_to_selection(self, cmap):
+        self._apply_colormap_to_view(
+            self.view_manager.get_view(self.current_selection),
+            cmap
+        )
+        self.update_figures_and_status()
+
+    def apply_colormap_to_checked(self, cmap):
+        keys = self.main_window.get_all_checked_items()
+        views = self.view_manager.get_views_of_list(keys)
+        for view in views:
+            self._apply_colormap_to_view(view, cmap)
+        self.update_figures_and_status()
+
+    def apply_colormap_to_all(self, cmap):
+        self._apply_colormap_to_multiple_views(
+            self.view_manager.get_all_views(),
+            cmap
+        )
+        self.update_figures_and_status()
+
+    def _apply_colormap_to_multiple_views(self, views: list[View], cmap):
+        for view in views:
+            self._apply_colormap_to_view(view, cmap)
 
     def open_aspect_ratio_input_dialog(self):
         input_string, apply = QInputDialog.getText(
-            self.main_window, "Aspect Ratio Dialog", "Enter an aspect ratio (X:Y:Z):"
+            self.main_window,
+            "Aspect Ratio Dialog",
+            "Enter an aspect ratio (X:Y:Z):"
         )
         aspect_r = self._extract_aspect_ratio_tuple_from_string(input_string)
         try:
@@ -282,16 +324,16 @@ class Controller:
         For invalid input strings an empty tuple is returned.
         """
         try:
-            splitted = input_string.split(":")
-            trimmed = [element.strip() for element in splitted]
+            split_string = input_string.split(":")
+            trimmed = [element.strip() for element in split_string]
             aspect_r = tuple([float(n) for n in trimmed])
-        except ValueError as e:
+        except ValueError:
             self.main_window.display_status_bar_message("Invalid input for aspect ratio")
             aspect_r = tuple()
         return aspect_r
 
     def change_aspect_ratio_for_current_view(self, aspect_r):
-        self.view.aspect_ratio = aspect_r
+        self.view_manager.get_view(self.current_selection).aspect_ratio = aspect_r
         self.update_figures_and_status()
 
     def filter_current_view(self):
@@ -385,7 +427,6 @@ class Controller:
             print(e)
             self.main_window.display_status_bar_message("Error during copy.")
 
-
     def _copy_filename(self, filepath: str) -> str:
         """
         Make copy of a filename.
@@ -466,13 +507,14 @@ class Controller:
                                                     )
         return filenames
 
-    def close_selection(self):
+    def remove_selection(self):
         """Remove selected item from import list."""
         try:
             index = self.main_window.imported_files_list.selectionModel().currentIndex().row()
             item = self.main_window.imported_files_list.currentItem()
             data_key = item.text()
             self.data_manager.remove_data(data_key)
+            self.view_manager.remove_view(data_key)
             self.main_window.imported_files_list.takeItem(index)
             if self.main_window.imported_files_list.count() == 0:
                 self.clear_canvases()
@@ -493,6 +535,7 @@ class Controller:
         self.main_window.set_wait_cursor()
         new_files = self.data_manager.get_files_without_duplicates(files)
         self.data_manager.import_files(files)
+        self.view_manager.create_views(files)
         if new_files:
             self.main_window.add_items_to_list(new_files)
             self.main_window.set_menus_enabled(True)
@@ -506,11 +549,12 @@ class Controller:
             self.main_window.display_status_bar_message("No files imported.")
         self.main_window.set_default_cursor()
 
-    def close_all(self):
+    def remove_all(self):
         """Removes all items from list widget and disables menus."""
         if self.main_window.imported_files_list.count() > 0:
             self.main_window.clear_list_widgets()
             self.data_manager.clear_all_data()
+            self.view_manager.clear_all_views()
             self.main_window.set_menus_enabled(False)
             self.main_window.set_undo_menu_items()
             self.main_window.set_redo_menu_items()
@@ -527,7 +571,7 @@ class Controller:
     def toggle_axes(self):
         """Shows or hides axes in figures.
         """
-        self.view.toggle_axes()
+        self.view_manager.get_view(self.current_selection).toggle_axes()
         self.update_figures_and_status()
 
     def item_selection_changed_event(self, item):
@@ -537,9 +581,13 @@ class Controller:
         if item:
             self.main_window.action_toggle_axes.setEnabled(True)
             self.current_selection = item.text()
-            self.main_window.set_menus_enabled(isinstance(self.data_manager.get_data(self.current_selection), ScanBackstepMode))
+            self.main_window.set_menus_enabled(
+                isinstance(self.data_manager.get_data(self.current_selection), ScanBackstepMode)
+            )
 
-            self.main_window.action_toggle_axes.setChecked(self.view.axes_shown)
+            self.main_window.action_toggle_axes.setChecked(
+                self.view_manager.get_view(self.current_selection).axes_shown
+            )
             self.update_figures_and_status()
         else:
             self.main_window.action_toggle_axes.setEnabled(False)
@@ -603,17 +651,18 @@ class Controller:
         try:
             if self.current_selection:
                 current_data = self.data_manager.get_data(self.current_selection)
-                self.view.show_as_px = self.main_window.action_set_axis_labels_px.isChecked()
+                current_view = self.view_manager.get_view(self.current_selection)
+                current_view.show_as_px = self.main_window.action_set_axis_labels_px.isChecked()
 
                 if isinstance(current_data, ScanBackstepMode):
-                    self.figure_canvas_3d.draw_graph(current_data, SURFACE_PLOT, self.view)
-                    self.figure_canvas_2d.draw_graph(current_data, RASTER_IMAGE, self.view)
+                    self.figure_canvas_3d.draw_graph(current_data, SURFACE_PLOT, current_view)
+                    self.figure_canvas_2d.draw_graph(current_data, RASTER_IMAGE, current_view)
                     if self.results_window:
                         self.results_window.update_results(current_data)
 
                 if isinstance(current_data, ApproachCurve):
                     self.figure_canvas_3d.draw_graph(current_data)
-                    self.figure_canvas_2d.draw_graph(current_data, APPROACH_CURVE, self.view)
+                    self.figure_canvas_2d.draw_graph(current_data, APPROACH_CURVE, current_view)
 
                 self.main_window.update_info_text(
                     scan_date=current_data.get_scan_date(),
@@ -634,7 +683,8 @@ class Controller:
                 manipulations = self.data_manager.get_undoable_manipulation_names_list(self.current_selection)
                 self.main_window.set_data_manipulation_list_items(manipulations)
                 self.main_window.display_status_bar_message(message)
-        except TypeError:
+        except TypeError as e:
+            print(e)
             print("No scan selected.")
 
     def store_viewing_angles(self):
@@ -643,16 +693,19 @@ class Controller:
         ApproachCurve. The viewing angles can only be obtained from surface plots.
         """
         try:
-            self.view.set_viewing_angles(*self.figure_canvas_3d.get_viewing_angles_from_3d_plot())
+            self.view_manager.get_view(self.current_selection).set_viewing_angles(
+                *self.figure_canvas_3d.get_viewing_angles_from_3d_plot())
         except AttributeError:
             self.main_window.display_status_bar_message("ApproachCurves have no viewing angles.")
-            self.view.set_viewing_angles()
+            self.view_manager.get_view(self.current_selection).set_viewing_angles()
 
-    def set_colormap_range(self):
+    def set_z_limits(self):
         """Open a small Dialog to enter two floats which will be
-        set as the lower and upper limits of the colormap."""
+        set as the lower and upper limits of the z axis."""
         input_string, status = QInputDialog.getText(
-            self.main_window, "Set range for colormap", "Enter two floats (separated by a comma) for lower and upper limits of the colormap (0.0,10.0):"
+            self.main_window,
+            "Set new z limits",
+            "Enter two floats (separated by a comma) for lower and upper z limits (0.0,10.0):"
         )
         limits = None
         try:
@@ -661,35 +714,50 @@ class Controller:
                 lower = lower.strip()
                 upper = upper.strip()
                 limits = (float(lower), float(upper))
-                self.view.set_z_limits(limits=limits)
+                self.view_manager.get_view(self.current_selection).set_z_limits(limits=limits)
         except Exception as e:
             print(e)
             print(traceback.print_exc())
             limits = None
 
-        self.view.set_z_limits(limits)
+        self.view_manager.get_view(self.current_selection).set_z_limits(limits)
         self.update_figures_and_status()
 
     def reset_colormap_range(self):
-        """Reset the limits of the colormap to min and max value of the scan."""
-        self.view.set_z_limits(limits=None)
+        """Reset the z limits to min and max values of the SICMdata z values."""
+        self.view_manager.get_view(self.current_selection).set_z_limits(limits=None)
         self.update_figures_and_status()
 
     def restore_view_settings(self):
-        """Sets all viewing settings in the current View object
-        to default values.
-        """
+        """Sets view settings in the current View object to default values."""
         try:
-            self.view.restore()
-            self.main_window.action_toggle_axes.setChecked(True)
-            self.main_window.action_set_axis_labels_px.setChecked(True)
-            self.update_figures_and_status()
-            self.main_window.show_graphs()
+            self.view_manager.get_view(self.current_selection).restore()
+            self._update_after_restore_view()
         except TypeError as e:
-            print('No view to restore')
             print(str(e))
-            print(traceback.format_exc())
-            print(sys.exc_info()[2])
+
+    def restore_view_settings_for_all(self):
+        """Resets view settings to default values for all imported files."""
+        try:
+            for view in self.view_manager.get_all_views():
+                view.restore()
+            self._update_after_restore_view()
+        except TypeError as e:
+            print(str(e))
+
+    def _update_after_restore_view(self):
+        self.main_window.action_toggle_axes.setChecked(True)
+        self.main_window.action_set_axis_labels_px.setChecked(True)
+        self.update_figures_and_status()
+        self.main_window.show_graphs()
+
+    def apply_view_to_checked(self):
+        keys = self.main_window.get_all_checked_items()
+        self.view_manager.apply_selected_to_list(self.current_selection, keys)
+        self.update_figures_and_status()
+
+    def apply_view_to_all(self):
+        self.view_manager.apply_selected_view_to_all(self.current_selection)
 
     def reset_current_data_manipulations(self):
         if self.current_selection:
@@ -698,7 +766,11 @@ class Controller:
 
     def select_roi_with_mouse(self):
         data = self.data_manager.get_data(self.current_selection)
-        self.figure_canvas_2d.draw_rectangle_on_raster_image(data=data, view=self.view, func=self._select_area)
+        self.figure_canvas_2d.draw_rectangle_on_raster_image(
+            data=data,
+            view=self.view_manager.get_view(self.current_selection),
+            func=self._select_area
+        )
 
     def unbind_mouse_events(self):
         self.figure_canvas_2d.unbind_mouse_events()
@@ -708,7 +780,7 @@ class Controller:
     def _select_area(self, point1: tuple[int, int], point2: tuple[int, int]):
         print("TODO ROI selection")
         if points_are_not_equal(point1, point2):
-            #self.current_selection.rois = (point1, point2)
+            # self.current_selection.rois = (point1, point2)
             self.update_figures_and_status("ROI set")
         else:
             self.update_figures_and_status("No ROI set.")
@@ -721,7 +793,7 @@ class Controller:
                 controller=self,
                 z_shape=z_array.shape,
                 data=data,
-                view=self.view,
+                view=self.view_manager.get_view(self.current_selection),
                 parent=self.main_window
             )
             if dialog.exec():
@@ -749,7 +821,7 @@ class Controller:
                 self.line_profile = HeightProfileWindow(
                     data=data,
                     parent=self.main_window,
-                    view=self.view
+                    view=self.view_manager.get_view(self.current_selection)
                 )
                 self.line_profile.show()
             else:
@@ -760,7 +832,7 @@ class Controller:
             self.main_window.set_cross_cursor()
             self.figure_canvas_2d.bind_mouse_events_for_draw_line(
                 data=self.data_manager.get_data(self.current_selection),
-                view=self.view,
+                view=self.view_manager.get_view(self.current_selection),
                 func=self._calculate_distance_between_two_points,
                 clean_up_func=self.main_window.set_default_cursor
             )
@@ -770,7 +842,7 @@ class Controller:
             self.main_window.set_cross_cursor()
             self.figure_canvas_2d.bind_mouse_events_for_pixel_mouse_over(
                 data=self.data_manager.get_data(self.current_selection),
-                view=self.view,
+                view=self.view_manager.get_view(self.current_selection),
                 func=None,
                 clean_up_func=self.main_window.set_default_cursor
             )
@@ -780,7 +852,7 @@ class Controller:
             self.main_window.set_cross_cursor()
             self.figure_canvas_2d.bind_mouse_events_for_pixel_mouse_over(
                 data=self.data_manager.get_data(self.current_selection),
-                view=self.view,
+                view=self.view_manager.get_view(self.current_selection),
                 func=self._filter_outlier,
                 clean_up_func=self.main_window.set_default_cursor
             )
@@ -810,7 +882,7 @@ class Controller:
             self.results_window = SingleResultsWindow(
                 data=self.data_manager.get_data(self.current_selection),
                 parent=self.main_window
-                )
+            )
             self.results_window.show()
         except TypeError:
             pass
@@ -842,7 +914,7 @@ class Controller:
             self.table_results_window = TableResultsWindow(
                 data=combined_data,
                 parent=self.main_window
-                )
+            )
             self.table_results_window.show()
         except TypeError:
             pass
@@ -866,7 +938,6 @@ class Controller:
                     self.main_window.display_status_bar_message("Filename already exists")
             else:
                 self.main_window.display_status_bar_message("Filename not changed")
-
 
     def batch_mode_test(self):
         if self.current_selection:
@@ -929,4 +1000,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

@@ -13,7 +13,7 @@ from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from matplotlib.colors import Normalize
 import sicm_analyzer.sicm_data
 from sicm_analyzer.mouse_events import MouseInteraction, COLUMN, ROW, CROSS
-from sicm_analyzer.sicm_data import SICMdata
+from sicm_analyzer.sicm_data import SICMdata, ScanBackstepMode
 from sicm_analyzer.view import View
 import numpy as np
 import math
@@ -591,13 +591,11 @@ class GraphCanvas(FigureCanvasQTAgg):
         self.draw_graph(self.current_data, RASTER_IMAGE, self.current_view)
         for rectangle in rectangles:
             self.figure.get_axes()[0].add_patch(rectangle)
-
+            unit = " px"
+            width = rectangle.get_width()
+            height = rectangle.get_height()
             try:
-                if self.current_view.show_as_px:
-                    unit = " px"
-                    width = rectangle.get_width()
-                    height = rectangle.get_height()
-                else:
+                if not self.current_view.show_as_px:
                     if isinstance(self.current_data, sicm_analyzer.sicm_data.ScanBackstepMode):
                         unit = " µm"
                         width = rectangle.get_width() * self.current_data.micron_to_pixel_factor_x()
@@ -614,31 +612,32 @@ class GraphCanvas(FigureCanvasQTAgg):
                 # show size of rectangle inside the rectangle
                 self.figure.get_axes()[0].annotate(x_text, xy=(rx+w/2, ry), color="w", weight="bold", fontsize=8)
                 self.figure.get_axes()[0].annotate(y_text, xy=(rx, ry+h/2), color="w", weight="bold", fontsize=8)
-            except:
-                pass
+            except Exception as e:
+                print(e)
         self.draw()
 
     def _add_line_to_raster_image(self, line: Line2D):
-        self.draw_graph(self.current_data, RASTER_IMAGE, self.current_view)
-        self.figure.get_axes()[0].add_patch(line)
-        ### TODO refactor
-        if self.current_view.show_as_px:
-            unit = " px"
-            xx = line.get_xdata()
-            yy = line.get_ydata()
-        else:
-            unit = " µm"
-            xx = [x * self.current_data.micron_to_pixel_factor_x() for x in line.get_xdata()]
-            yy = [y * self.current_data.micron_to_pixel_factor_y() for y in line.get_ydata()]
+        if isinstance(self.current_data, ScanBackstepMode):
+            self.draw_graph(self.current_data, RASTER_IMAGE, self.current_view)
+            self.figure.get_axes()[0].add_patch(line)
+            ### TODO refactor
+            if self.current_view.show_as_px:
+                unit = " px"
+                xx = line.get_xdata()
+                yy = line.get_ydata()
+            else:
+                unit = " µm"
+                xx = [x * self.current_data.micron_to_pixel_factor_x() for x in line.get_xdata()]
+                yy = [y * self.current_data.micron_to_pixel_factor_y() for y in line.get_ydata()]
 
-        dist = math.dist((xx[0], yy[0]), (xx[1], yy[1]))
-        text = str(round(dist, 2)) + unit
-        self.figure.get_axes()[0].annotate(
-            text,
-            xy=((line.get_xdata()[0]+line.get_xdata()[1])/2, (line.get_ydata()[0]+line.get_ydata()[1])/2),
-            color="w", weight="bold", fontsize=8
-        )
-        self.draw()
+            dist = math.dist((xx[0], yy[0]), (xx[1], yy[1]))
+            text = str(round(dist, 2)) + unit
+            self.figure.get_axes()[0].annotate(
+                text,
+                xy=((line.get_xdata()[0]+line.get_xdata()[1])/2, (line.get_ydata()[0]+line.get_ydata()[1])/2),
+                color="w", weight="bold", fontsize=8
+            )
+            self.draw()
 
     def unbind_mouse_events(self):
         """This function disconnects mouse events.

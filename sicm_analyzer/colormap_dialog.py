@@ -1,7 +1,9 @@
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QWidget, QComboBox, QPushButton, QVBoxLayout, QHBoxLayout
-
+from typing import Callable
 from matplotlib import cm
+
+from sicm_analyzer.view import View
 
 COLOR_MAPS = {
     "AFM hot": cm.afmhot,
@@ -21,11 +23,15 @@ COLOR_MAPS = {
 
 class ColorMapDialog(QWidget):
     """
-    This widget will appear as a free-floating window if
-    it has no parent.
+    This widget will appear as a free-floating window if it has no parent.
     """
 
     def __init__(self, controller, parent=None):
+        """
+        This widget will appear as a free-floating window if it has no parent.
+
+        """
+
         super().__init__()
         self.parent = parent
         self.setWindowTitle("Color Map Chooser")
@@ -36,20 +42,32 @@ class ColorMapDialog(QWidget):
         layout = QVBoxLayout()
         self.setLayout(layout)
 
-        hlayout = QHBoxLayout()
+        v_layout = QVBoxLayout()
         button_box = QWidget()
-        button_box.setLayout(hlayout)
+        button_box.setLayout(v_layout)
 
         self.cmap_combobox = QComboBox()
         self.cmap_combobox.addItems(COLOR_MAPS.keys())
 
-        self.button_apply = QPushButton("Apply")
+        self.button_apply = QPushButton("Apply to selected")
+        self.button_apply_to_checked = QPushButton("Apply to checked")
+        self.button_apply_to_all = QPushButton("Apply to all")
 
         layout.addWidget(self.cmap_combobox)
         layout.addWidget(button_box)
-        hlayout.addWidget(self.button_apply)
+        v_layout.addWidget(self.button_apply)
+        v_layout.addWidget(self.button_apply_to_checked)
+        v_layout.addWidget(self.button_apply_to_all)
 
-        self.button_apply.clicked.connect(self.apply_color_map_selection)
+        self.button_apply.clicked.connect(
+            lambda: self.controller.apply_colormap_to_selection(COLOR_MAPS.get(self.cmap_combobox.currentText()))
+        )
+        self.button_apply_to_checked.clicked.connect(
+            lambda: self.controller.apply_colormap_to_checked(COLOR_MAPS.get(self.cmap_combobox.currentText()))
+        )
+        self.button_apply_to_all.clicked.connect(
+            lambda: self.controller.apply_colormap_to_all(COLOR_MAPS.get(self.cmap_combobox.currentText()))
+        )
 
     def open_window(self):
         if self.isVisible():
@@ -59,10 +77,3 @@ class ColorMapDialog(QWidget):
             geometry.moveCenter(self.parent.geometry().center())
             self.setGeometry(geometry)
             self.show()
-
-    def apply_color_map_selection(self):
-        self._apply_color_map_to_view(self.controller.view, COLOR_MAPS.get(self.cmap_combobox.currentText()))
-        self.controller.update_figures_and_status()
-
-    def _apply_color_map_to_view(self, view, cmap):
-        view.color_map = cmap
