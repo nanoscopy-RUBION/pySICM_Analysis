@@ -7,9 +7,6 @@ Analysis tool for .sicm files created with our home-built SIC microscope.
 ## Known Bugs
 - see issues in Github repository
 
-## minor issues
-  - add hints for input (px or µm, index begins at 0)
-
 ## To Do
 - General:
   - clean up existing py files

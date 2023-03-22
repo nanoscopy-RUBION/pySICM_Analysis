@@ -11,7 +11,6 @@ from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from matplotlib.colors import Normalize
-
 import sicm_analyzer.sicm_data
 from sicm_analyzer.mouse_events import MouseInteraction, COLUMN, ROW, CROSS
 from sicm_analyzer.sicm_data import SICMdata
@@ -24,14 +23,26 @@ RASTER_IMAGE = "raster"
 APPROACH_CURVE = "approach"
 
 
+def convert_axes_labels_from_px_to_microns(data: SICMdata, axes):
+    """
+
+    """
+    x_ticks = axes.get_xticks()
+    y_ticks = axes.get_yticks()
+
+    if isinstance(data, sicm_analyzer.sicm_data.ScanBackstepMode):
+        axes.set_xticklabels([round(tick * data.micron_to_pixel_factor_x(), 2) for tick in x_ticks])
+        axes.set_yticklabels([round(tick * data.micron_to_pixel_factor_y(), 2) for tick in y_ticks])
+
+
 class GraphCanvas(FigureCanvasQTAgg):
     """Canvas for drawing graphs from .sicm data.
 
     This class implements all functions for plotting SICM data. Line profiles
     can also be drawn.
 
-    Drawing of redctangles on 2D raster images for defining, for examples,
-    regions of interest ROI is also supported.
+    Drawing of rectangles on 2D raster images for defining, for example,
+    regions of interest (ROI) is also supported.
 
     For mouse interaction with the plots two attributes are
     in this class:
@@ -61,6 +72,7 @@ class GraphCanvas(FigureCanvasQTAgg):
         self.mi = MouseInteraction()
         self.function_after_mouse_events = None
         self.clean_up_function = None
+        self.show_mouse_over_label = True
         self.current_data: SICMdata = SICMdata()
         self.current_view: View = View()
         self.graph_type = ""
@@ -108,35 +120,27 @@ class GraphCanvas(FigureCanvasQTAgg):
         self.figure.clear()
         self.draw()
 
-    def convert_axes_labels_from_px_to_microns(self, data: SICMdata, axes):
-        """
-
-        """
-        x_ticks = axes.get_xticks()
-        y_ticks = axes.get_yticks()
-
-        if isinstance(data, sicm_analyzer.sicm_data.ScanBackstepMode):
-            axes.set_xticklabels([round(tick * data.micron_to_pixel_factor_x(), 2) for tick in x_ticks])
-            axes.set_yticklabels([round(tick * data.micron_to_pixel_factor_y(), 2) for tick in y_ticks])
-
-    def show_or_hide_axes(self, data: SICMdata, view: View, axes):
-        if view.axes_shown:
+    def show_or_hide_axes(self, data: SICMdata, axes):
+        if self.current_view.axes_shown:
             x_ticks = [0, round(data.x_px / 2, 2), data.x_px]
             y_ticks = [0, round(data.y_px / 2, 2), data.y_px]
             axes.set_xticks(x_ticks)
             axes.set_yticks(y_ticks)
 
-            if view.show_as_px:
+            if self.current_view.show_as_px:
                 axis_label = "[px]"
             else:
-                self.convert_axes_labels_from_px_to_microns(data, axes)
+                convert_axes_labels_from_px_to_microns(data, axes)
                 axis_label = "[µm]"
 
             axes.set_xlabel("x dimension " + axis_label)
             axes.set_ylabel("y dimension " + axis_label)
             try:
-                # 2D plots have no zlabel
-                axes.set_zlabel("µm")  # z data is always in µm
+                # 2D plots have no z label
+                if self.current_view.z_in_nm:
+                    axes.set_z_label("nm")
+                else:
+                    axes.set_zlabel("µm")
             except:
                 pass
         else:
@@ -149,34 +153,59 @@ class GraphCanvas(FigureCanvasQTAgg):
         # graphs matplotlib will be unable to draw the graph
         # and crashes the program
         try:
-            #axes = self.figure.add_subplot(1, 1, 1, projection='3d')
             axes = self.figure.add_axes([0.1, 0.1, 0.5, 0.9], projection="3d")
-            norm = Normalize(vmin=np.min(self.current_data.get_data()[2]), vmax=np.max(self.current_data.get_data()[2]), clip=False)
+            norm = Normalize(
+                vmin=np.min(self.current_data.get_data()[2]),
+                vmax=np.max(self.current_data.get_data()[2]),
+                clip=False
+            )
             if self.current_view:
 
-                img = axes.plot_surface(*self.current_data.get_data(), norm=norm, cmap=self.current_view.color_map)
+                if self.current_view.z_limits:
+                    norm = Normalize(
+                        vmin=self.current_view.z_limits[0],
+                        vmax=self.current_view.z_limits[1],
+                        clip=False
+                    )
+                    img = axes.plot_surface(*self.current_data.get_data(), norm=norm, cmap=self.current_view.color_map)
+                    axes.set_zlim(self.current_view.z_limits)
+                else:
+                    img = axes.plot_surface(*self.current_data.get_data(), norm=norm, cmap=self.current_view.color_map)
+
                 axes.set_box_aspect(aspect=self.current_view.aspect_ratio)
                 axes.azim = self.current_view.azim
                 axes.elev = self.current_view.elev
-                self.show_or_hide_axes(self.current_data, self.current_view, axes)
+                self.show_or_hide_axes(self.current_data, axes)
+
+                #upper_x = np.max(np.max(axes.get_xticks()))
+                #upper_y = np.max(np.max(axes.get_yticks()))
+                #axes.set_ylim(self._new_padding(0, upper_y))
+                #axes.set_xlim(self._new_padding(0, upper_x))
             else:
                 img = axes.plot_surface(*self.current_data.get_data(), norm=norm)
             self.set_colorbar(img, axes)
-        except:
-            pass
+        except Exception as e:
+            print(e)
+            print(traceback.print_exc())
 
     def draw_2d_plot_raster_image(self):
         """Draws a 2D raster image for 3-dimensional scanning data."""
-        #axes = self.figure.add_subplot(1, 1, 1)
         axes = self.figure.add_axes([0.15, 0.1, 0.5, 0.9])
-        # use pcolormesh for scalable pixelmaps
-        # img = self.axes.imshow(view_object.z_data, cmap=view_object.color_map)
-        #if data.rois:
+
+        #  if data.rois:
         #    self.draw_roi(data)
 
         if self.current_view:
-            self.show_or_hide_axes(self.current_data, self.current_view, axes)
-            img = axes.pcolormesh(self.current_data.z, cmap=self.current_view.color_map)
+            self.show_or_hide_axes(self.current_data, axes)
+            if self.current_view.z_limits:
+                img = axes.pcolormesh(
+                    self.current_data.z,
+                    vmin=self.current_view.z_limits[0],
+                    vmax=self.current_view.z_limits[1],
+                    cmap=self.current_view.color_map
+                )
+            else:
+                img = axes.pcolormesh(self.current_data.z, cmap=self.current_view.color_map)
         else:
             img = axes.pcolormesh(self.current_data.z)
 
@@ -193,13 +222,13 @@ class GraphCanvas(FigureCanvasQTAgg):
         cb = self.figure.colorbar(img, cax=cax)
         cb.set_label(label="height in µm")
 
-    def draw_roi(self, data: SICMdata):
+    def draw_roi(self):
         """This function should be generalised to prevent code duplication.
         At the moment it is a quick and dirty implementation for testing
         ROIs."""
         try:
-            point1 = view_object.rois[0]
-            point2 = view_object.rois[1]
+            point1 = self.view.rois[0]
+            point2 = self.view.rois[1]
             if point1.x() < point2.x():
                 orig_x = point1.x()
             else:
@@ -281,25 +310,34 @@ class GraphCanvas(FigureCanvasQTAgg):
 
         """
         if event.inaxes:
-            if event.name == "motion_notify_event":
-                if self.mi.mouse_point1:
+            x = event.xdata
+            y = event.ydata
 
-                    x = event.xdata
-                    y = event.ydata
-                    text = f"x: {x:.1f}, y: {y:.1f}, z: {self.current_data.z[int(y), int(x)]:.3f}"
-                    self.draw_graph(self.current_data, RASTER_IMAGE, self.current_view)
-                    circle = Circle((x, y), 0.1, color="w", fill=True)
-                    self.figure.get_axes()[0].add_patch(circle)
-                    self.figure.get_axes()[0].annotate(text, xy=(x, y), color="w", weight="bold", fontsize=8,
-                                                       bbox=dict(boxstyle="square,pad=0.5", fc="gray"))
-                    self.draw()
-                else:
-                    self.mi.mouse_point1 = QPoint(int(event.xdata), int(event.ydata))
+            # prevent index out of bounds exception when cursor is not in plot range
+            if int(x) in range(self.current_data.z.shape[1]) and int(y) in range(self.current_data.z.shape[0]):
+                if event.name == "motion_notify_event":
+                    if self.mi.mouse_point1:
+                        self.draw_graph(self.current_data, RASTER_IMAGE, self.current_view)
+                        y_lim_upper = self.figure.get_axes()[0].get_ylim()[1]
+                        text = f"x: {x:.1f}, y: {y:.1f}, z: {self.current_data.z[int(y), int(x)]:.3f}"
+                        self.figure.get_axes()[0].annotate(
+                            text,
+                            xy=(1, y_lim_upper+0.5),
+                            color="black", weight="bold",
+                            fontsize=8,
+                            bbox=dict(boxstyle="square,pad=0.5", fc="gray"),
+                            annotation_clip=False
+                        )
+                        self.draw()
+                    else:
+                        self.mi.mouse_point1 = QPoint(int(event.xdata), int(event.ydata))
 
-        if event.name == "button_release_event":
-            if self.clean_up_function:
-                self.clean_up_function()
-            self.unbind_mouse_events()
+                if event.name == "button_release_event":
+                    if self.function_after_mouse_events:
+                        self.function_after_mouse_events((int(event.xdata), int(event.ydata)))
+                    if self.clean_up_function:
+                        self.clean_up_function()
+                    self.unbind_mouse_events()
 
     def get_viewing_angles_from_3d_plot(self):
         """Returns the viewing angles from the 3D plot.
@@ -368,13 +406,13 @@ class GraphCanvas(FigureCanvasQTAgg):
             if event.name == "button_release_event":
                 if self.mi.mouse_point1 is not None and self.mi.mouse_point2 is not None:
                     if self.mi.mouse_point1.x() <= self.mi.mouse_point2.x():
-                        self.mi.mouse_point2 = self.mi.mouse_point2 #+ QPoint(1, 0)
+                        self.mi.mouse_point2 = self.mi.mouse_point2
                     else:
-                        self.mi.mouse_point1 = self.mi.mouse_point1 #+ QPoint(1, 0)
+                        self.mi.mouse_point1 = self.mi.mouse_point1
                     if self.mi.mouse_point1.y() <= self.mi.mouse_point2.y():
-                        self.mi.mouse_point2 = self.mi.mouse_point2 #+ QPoint(0, 1)
+                        self.mi.mouse_point2 = self.mi.mouse_point2
                     else:
-                        self.mi.mouse_point1 = self.mi.mouse_point1 #+ QPoint(0, 1)
+                        self.mi.mouse_point1 = self.mi.mouse_point1
 
                     if self.function_after_mouse_events:
                         self.function_after_mouse_events(self.mi.mouse_point1, self.mi.mouse_point2)
@@ -387,13 +425,13 @@ class GraphCanvas(FigureCanvasQTAgg):
                 if self.mi.mouse_point1 is not None and self.mi.mouse_point2 is not None:
 
                     if self.mi.mouse_point1.x() <= self.mi.mouse_point2.x():
-                        self.mi.mouse_point2 = self.mi.mouse_point2 #+ QPoint(1, 0)
+                        self.mi.mouse_point2 = self.mi.mouse_point2
                     else:
-                        self.mi.mouse_point1 = self.mi.mouse_point1 #+ QPoint(1, 0)
+                        self.mi.mouse_point1 = self.mi.mouse_point1
                     if self.mi.mouse_point1.y() <= self.mi.mouse_point2.y():
-                        self.mi.mouse_point2 = self.mi.mouse_point2 #+ QPoint(0, 1)
+                        self.mi.mouse_point2 = self.mi.mouse_point2
                     else:
-                        self.mi.mouse_point1 = self.mi.mouse_point1 #+ QPoint(0, 1)
+                        self.mi.mouse_point1 = self.mi.mouse_point1
 
                     if self.function_after_mouse_events:
                         self.function_after_mouse_events(self.mi.mouse_point1, self.mi.mouse_point2)
@@ -413,15 +451,26 @@ class GraphCanvas(FigureCanvasQTAgg):
             if event.name == "motion_notify_event":
                 if self.mi.mouse_point1 is not None:
                     self.mi.mouse_point2 = (event.xdata, event.ydata)
-                    line = Line2D((self.mi.mouse_point1[0], self.mi.mouse_point2[0]), (self.mi.mouse_point1[1], self.mi.mouse_point2[1]), color="r", marker="x")
+                    line = Line2D(
+                        xdata=(self.mi.mouse_point1[0], self.mi.mouse_point2[0]),
+                        ydata=(self.mi.mouse_point1[1], self.mi.mouse_point2[1]),
+                        color="r",
+                        marker="x"
+                    )
                     self._add_line_to_raster_image(line)
                     if self.function_after_mouse_events:
-                        self.function_after_mouse_events((self.mi.mouse_point1[0], self.mi.mouse_point2[0]), (self.mi.mouse_point1[1], self.mi.mouse_point2[1]))
+                        self.function_after_mouse_events(
+                            (self.mi.mouse_point1[0], self.mi.mouse_point2[0]),
+                            (self.mi.mouse_point1[1], self.mi.mouse_point2[1])
+                        )
 
             if event.name == "button_release_event":
                 if self.mi.mouse_point1 is not None and self.mi.mouse_point2 is not None:
                     if self.function_after_mouse_events:
-                        self.function_after_mouse_events((self.mi.mouse_point1[0], self.mi.mouse_point2[0]), (self.mi.mouse_point1[1], self.mi.mouse_point2[1]))
+                        self.function_after_mouse_events(
+                            (self.mi.mouse_point1[0], self.mi.mouse_point2[0]),
+                            (self.mi.mouse_point1[1], self.mi.mouse_point2[1])
+                        )
                     if self.clean_up_function:
                         self.clean_up_function()
                 self.unbind_mouse_events()
@@ -430,7 +479,10 @@ class GraphCanvas(FigureCanvasQTAgg):
             if event.name == "button_release_event":
                 if self.mi.mouse_point1 is not None and self.mi.mouse_point2 is not None:
                     if self.function_after_mouse_events:
-                        self.function_after_mouse_events((self.mi.mouse_point1[0], self.mi.mouse_point2[0]), (self.mi.mouse_point1[1], self.mi.mouse_point2[1]))
+                        self.function_after_mouse_events(
+                            (self.mi.mouse_point1[0], self.mi.mouse_point2[0]),
+                            (self.mi.mouse_point1[1], self.mi.mouse_point2[1])
+                        )
                     if self.clean_up_function:
                         self.clean_up_function()
                 self.unbind_mouse_events()
@@ -443,31 +495,29 @@ class GraphCanvas(FigureCanvasQTAgg):
             if event.name == "motion_notify_event":
                 index = -1
                 rect = None
-                rect1 = None
-                rect2 = None
+
                 try:
                     self.mi.mouse_point1 = QPoint(int(event.xdata), int(event.ydata))
 
-                    if self.mi.kwargs.get("mode") == ROW:
-                        index = self.mi.mouse_point1.y()
-                        rect = self.get_row_rectangle(self.mi.mouse_point1)
-                    if self.mi.kwargs.get("mode") == COLUMN:
-                        index = self.mi.mouse_point1.x()
-                        rect = self.get_column_rectangle(self.mi.mouse_point1)
                     if self.mi.kwargs.get("mode") == CROSS:
                         y_index = self.mi.mouse_point1.x()
                         rect1 = self.get_column_rectangle(self.mi.mouse_point1)
                         x_index = self.mi.mouse_point1.y()
                         rect2 = self.get_row_rectangle(self.mi.mouse_point1)
-
-                    if self.mi.kwargs.get("mode") == CROSS:
                         self.add_rectangle_to_raster_image(rectangles=[rect1, rect2])
                         self.function_after_mouse_events(y_index, x_index)
                     else:
+                        if self.mi.kwargs.get("mode") == ROW:
+                            index = self.mi.mouse_point1.y()
+                            rect = self.get_row_rectangle(self.mi.mouse_point1)
+                        if self.mi.kwargs.get("mode") == COLUMN:
+                            index = self.mi.mouse_point1.x()
+                            rect = self.get_column_rectangle(self.mi.mouse_point1)
                         if rect:
                             self.add_rectangle_to_raster_image(rectangles=[rect])
-                        if self.function_after_mouse_events:
-                            self.function_after_mouse_events(self.mi.kwargs.get("mode"), index)
+                    if self.function_after_mouse_events:
+                        self.function_after_mouse_events(self.mi.kwargs.get("mode"), index)
+
                 except Exception as e:
                     print(traceback.format_exc())
                     print(type(e))
@@ -583,8 +633,11 @@ class GraphCanvas(FigureCanvasQTAgg):
 
         dist = math.dist((xx[0], yy[0]), (xx[1], yy[1]))
         text = str(round(dist, 2)) + unit
-        self.figure.get_axes()[0].annotate(text, xy=((line.get_xdata()[0]+line.get_xdata()[1])/2, (line.get_ydata()[0]+line.get_ydata()[1])/2), color="w", weight="bold", fontsize=8)
-        ####
+        self.figure.get_axes()[0].annotate(
+            text,
+            xy=((line.get_xdata()[0]+line.get_xdata()[1])/2, (line.get_ydata()[0]+line.get_ydata()[1])/2),
+            color="w", weight="bold", fontsize=8
+        )
         self.draw()
 
     def unbind_mouse_events(self):
@@ -602,7 +655,7 @@ class GraphCanvas(FigureCanvasQTAgg):
             self.figure.canvas.mpl_disconnect(self.mi.cid_press)
             self.figure.canvas.mpl_disconnect(self.mi.cid_move)
             self.figure.canvas.mpl_disconnect(self.mi.cid_release)
-        except AttributeError as e:
+        except AttributeError:
             pass
         self.function_after_mouse_events = None
         self.clean_up_function = None
@@ -617,7 +670,7 @@ class GraphCanvas(FigureCanvasQTAgg):
         if view.show_as_px:
             axis_label = "[px]"
         else:
-            self.convert_axes_labels_from_px_to_microns(data, axes)
+            convert_axes_labels_from_px_to_microns(data, axes)
             axis_label = "[µm]"
 
         axes.set_xlabel(f"distance {axis_label}")
@@ -636,7 +689,7 @@ class GraphCanvas(FigureCanvasQTAgg):
         if view.show_as_px:
             axis_label = "[px]"
         else:
-            self.convert_axes_labels_from_px_to_microns(data, axes)
+            convert_axes_labels_from_px_to_microns(data, axes)
             axis_label = "[µm]"
 
         axes.set_xlabel(f"distance {axis_label}")

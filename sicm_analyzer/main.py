@@ -11,7 +11,6 @@ from matplotlib.figure import Figure
 import re
 import numpy as np
 from PyQt6.QtWidgets import QStyleFactory
-from PyQt6.QtCore import QPoint
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication, QFileDialog, QInputDialog
 
@@ -33,10 +32,10 @@ from sicm_analyzer.sicm_data import ApproachCurve, ScanBackstepMode, export_sicm
 from sicm_analyzer.view import View
 from sicm_analyzer.graph_canvas import SURFACE_PLOT, RASTER_IMAGE, APPROACH_CURVE
 from sicm_analyzer.set_rois_dialog import ROIsDialog
-from sicm_analyzer.measurements import polynomial_fifth_degree
-from sicm_analyzer.line_profile_window import LineProfileWindow
-from sicm_analyzer.data_fitting import poly_xx_fit
+from sicm_analyzer.manipulate_data import fit_data
+from sicm_analyzer.height_profile_window import HeightProfileWindow
 from sicm_analyzer.measurements import get_roughness
+from sicm_analyzer.manipulate_data import filter_single_outlier
 
 # APP CONSTANTS
 APP_NAME = "pySICM Analysis"
@@ -83,9 +82,11 @@ class Controller:
     def connect_actions(self):
         """Connect functions with actions in the main window's menu."""
         # File menu
-        self.main_window.action_close_all.triggered.connect(self.close_all)
-        self.main_window.action_close_selection.triggered.connect(self.close_selection)
+        self.main_window.action_remove_all.triggered.connect(self.close_all)
+        self.main_window.action_remove_selection.triggered.connect(self.close_selection)
         self.main_window.action_copy_selection.triggered.connect(self.copy_selected_file)
+        self.main_window.action_copy_checked.triggered.connect(self.copy_all_checked_files)
+        self.main_window.action_rename_selection.triggered.connect(self.rename_selection)
         self.main_window.action_import_files.triggered.connect(self.import_files)
         self.main_window.action_import_directory.triggered.connect(self.import_directory)
         self.main_window.action_export_2d.triggered.connect(lambda: self.export_figure(self.figure_canvas_2d.figure))
@@ -111,6 +112,8 @@ class Controller:
         self.main_window.action_view_restore.triggered.connect(self.restore_view_settings)
         self.main_window.action_view_colormap.triggered.connect(self.open_color_map_dialog)
         self.main_window.action_view_ratio.triggered.connect(self.open_aspect_ratio_input_dialog)
+        self.main_window.action_set_colormap_range.triggered.connect(self.set_colormap_range)
+        self.main_window.action_reset_colormap_range.triggered.connect(self.reset_colormap_range)
 
         # Data manipulation
         self.main_window.action_batch_mode.triggered.connect(self.batch_mode_test)
@@ -121,6 +124,7 @@ class Controller:
         self.main_window.action_data_flip_y.triggered.connect(self.flip_y)
         self.main_window.action_data_reset.triggered.connect(self.reset_current_data_manipulations)
         self.main_window.action_data_filter.triggered.connect(self.filter_current_view)
+        self.main_window.action_pick_outlier.triggered.connect(self.pick_outlier_and_turn_to_median)
         self.main_window.action_data_level_plane.triggered.connect(self.plane_correction)
         self.main_window.action_data_crop_tool.triggered.connect(self.open_crop_tool)
         self.main_window.action_data_to_height_diff.triggered.connect(self.transform_to_height_differences)
@@ -130,14 +134,14 @@ class Controller:
         # Measurement
         self.main_window.action_set_rois.triggered.connect(self.show_roi_dialog)
         self.main_window.action_set_roi.triggered.connect(self.select_roi_with_mouse)
-        self.main_window.action_line_profile_tool.triggered.connect(self.open_line_profile_tool)
+        self.main_window.action_height_profile_tool.triggered.connect(self.open_line_profile_tool)
         self.main_window.action_measure_dist.triggered.connect(self.measure_distance)
         self.main_window.action_get_pixel_values.triggered.connect(self.display_pixel_values)
-        self.main_window.action_measure_roughness_batch.triggered.connect(self.show_roughness_batch)
+        self.main_window.action_measure_roughness_batch.triggered.connect(self.show_results_table)
 
         # Other
         self.main_window.imported_files_list.currentItemChanged.connect(self.item_selection_changed_event)
-        self.main_window.action_results.triggered.connect(self.show_results)
+        self.main_window.action_results.triggered.connect(self.show_results_of_selection)
         # self.main_window.action_about.triggered.connect(self.about)
         self.main_window.set_drop_event_function(self.import_files_by_drag_and_drop)
         self.main_window.closeEvent = self.quit_application
@@ -169,22 +173,22 @@ class Controller:
         """Exports the z data of the current selection as a .sicm file.
 
         File extension is added when file name does not end with
-        .sicm."""
+        '.sicm'."""
         try:
             data = self.data_manager.get_data(self.current_selection)
-            manipulations = self.data_manager.get_undoable_manipulations_list(self.current_selection)
+            manipulations = self.data_manager.get_undoable_manipulation_names_list(self.current_selection)
             if data and (data.scan_mode == sicm_data.BACKSTEP or data.scan_mode == sicm_data.FLOATING_BACKSTEP):
+                name = Path(self.current_selection).name
                 options = QFileDialog.Option(QFileDialog.Option.DontUseNativeDialog)
                 file_path = QFileDialog.getSaveFileName(parent=self.main_window,
                                                         caption="Export manipulated data as .sicm file",
                                                         filter="SICM (*.sicm)",
-                                                        directory=DEFAULT_FILE_PATH,
+                                                        directory=os.path.join(DEFAULT_FILE_PATH, name),
                                                         initialFilter="SICM (*.sicm)",
                                                         options=options
                                                         )
                 if file_path[0]:
                     file, _ = self._get_file_name_with_extension(file_path)
-
                     export_sicm_file(file, sicm_data=data, manipulations=manipulations)
             else:
                 self.main_window.display_status_bar_message("No file exported.")
@@ -199,10 +203,12 @@ class Controller:
                                                          options=options))
         for item in self.main_window.get_all_checked_items():
             data = self.data_manager.get_data(item)
-            manipulations = self.data_manager.get_undoable_manipulations_list(item)
+            manipulations = self.data_manager.get_undoable_manipulation_names_list(item)
             if data and (data.scan_mode == sicm_data.BACKSTEP or data.scan_mode == sicm_data.FLOATING_BACKSTEP):
                 if directory and os.path.isdir(directory):
                     name = Path(item).name
+                    if not name.endswith(".sicm"):
+                        name = name + ".sicm"
                     full_path = os.path.join(directory, name)
                     export_sicm_file(full_path, data, manipulations=manipulations)
 
@@ -304,9 +310,10 @@ class Controller:
                 except ValueError:
                     radius = 1
                 self.data_manager.execute_func_on_current_data(
-                    filters.get(selected_filter),
+                    func=filters.get(selected_filter),
                     key=self.current_selection,
-                    action_name=f"selected_filter (px-size: {radius})"
+                    action_name=f"selected_filter (px-size: {radius})",
+                    px_radius=radius
                 )(self.data_manager.get_data(self.current_selection), radius)
 
     def plane_correction(self):
@@ -324,37 +331,27 @@ class Controller:
         """TODO: implement more functions"""
         if self.current_selection:
             self.main_window.set_wait_cursor()
+            fit_model = "polyXX symfit"
             self.data_manager.execute_func_on_current_data(
-                self._helper_for_fit,
+                func=fit_data,
                 key=self.current_selection,
-                action_name="Leveling (polyXX)"
-            )("polyXX")
+                action_name="Leveling (polyXX symfit)",
+                fit_model=fit_model
+            )(self.data_manager.get_data(self.current_selection), fit_model)
             self.main_window.set_default_cursor()
 
     def fit_to_polyXX_lmfit(self):
         """This function uses the lmfit module."""
         if self.current_selection:
             self.main_window.set_wait_cursor()
+            fit_model = "polyXX lmfit"
             self.data_manager.execute_func_on_current_data(
-                self._helper_for_fit,
+                func=fit_data,
                 key=self.current_selection,
-                action_name="Leveling (polyXX lmfit)"
-            )("polyXX lmfit")
+                action_name="Leveling (polyXX lmfit)",
+                fit_model=fit_model
+            )(self.data_manager.get_data(self.current_selection), fit_model)
             self.main_window.set_default_cursor()
-
-    def _helper_for_fit(self, fit_model: str):
-        """
-
-        """
-        fitted_z = 0
-        fit_results = ""
-        data = self.data_manager.get_data(self.current_selection)
-        if fit_model == "polyXX":
-            fitted_z, fit_results = polynomial_fifth_degree(data.x, data.y, data.z)
-        if fit_model == "polyXX lmfit":
-            fitted_z, fit_results = poly_xx_fit(data)
-        data.z = data.z - fitted_z
-        data.fit_results = fit_results
 
     def quit_application(self, event):
         # TODO dialogue unsaved changes
@@ -365,16 +362,29 @@ class Controller:
     def copy_selected_file(self):
         """Make a copy of the current list selection."""
         if self.current_selection:
-            data = self.data_manager.get_copy_of_data_object(self.current_selection)
+            self._copy_file(key=self.current_selection)
+        else:
+            self.main_window.display_status_bar_message("No data selected")
 
+    def copy_all_checked_files(self):
+        """Make a copy of all files that are checked."""
+        for item in self.main_window.get_all_checked_items():
+            self._copy_file(item)
+
+    def _copy_file(self, key: str):
+        """Make a copy of the current list selection."""
+        try:
+            data = self.data_manager.get_copy_of_data_object(key)
             # build new filename as key
-            new_key = self._copy_filename(self.current_selection)
-
+            new_key = self._copy_filename(key)
             # add data to manager and key to list
             self.data_manager.add_data_object(new_key, data)
             self.main_window.insert_item_after_current_selection(new_key)
-        else:
-            self.main_window.display_status_bar_message("No data selected")
+        except TypeError as e:
+            print("Error in Main.copy_selected_file:")
+            print(e)
+            self.main_window.display_status_bar_message("Error during copy.")
+
 
     def _copy_filename(self, filepath: str) -> str:
         """
@@ -573,7 +583,8 @@ class Controller:
             self.data_manager.execute_func_on_current_data(
                 flip_z_data,
                 key=self.current_selection,
-                action_name=action_name
+                action_name=action_name,
+                mirror_axis=axis
             )(self.data_manager.get_data(self.current_selection), mirror_axis=axis)
 
     def transform_to_height_differences(self):
@@ -620,7 +631,7 @@ class Controller:
                 )
 
                 self._update_undo_redo_menu_items()
-                manipulations = self.data_manager.get_undoable_manipulations_list(self.current_selection)
+                manipulations = self.data_manager.get_undoable_manipulation_names_list(self.current_selection)
                 self.main_window.set_data_manipulation_list_items(manipulations)
                 self.main_window.display_status_bar_message(message)
         except TypeError:
@@ -636,6 +647,33 @@ class Controller:
         except AttributeError:
             self.main_window.display_status_bar_message("ApproachCurves have no viewing angles.")
             self.view.set_viewing_angles()
+
+    def set_colormap_range(self):
+        """Open a small Dialog to enter two floats which will be
+        set as the lower and upper limits of the colormap."""
+        input_string, status = QInputDialog.getText(
+            self.main_window, "Set range for colormap", "Enter two floats (separated by a comma) for lower and upper limits of the colormap (0.0,10.0):"
+        )
+        limits = None
+        try:
+            if input_string:
+                lower, upper = input_string.split(",")
+                lower = lower.strip()
+                upper = upper.strip()
+                limits = (float(lower), float(upper))
+                self.view.set_z_limits(limits=limits)
+        except Exception as e:
+            print(e)
+            print(traceback.print_exc())
+            limits = None
+
+        self.view.set_z_limits(limits)
+        self.update_figures_and_status()
+
+    def reset_colormap_range(self):
+        """Reset the limits of the colormap to min and max value of the scan."""
+        self.view.set_z_limits(limits=None)
+        self.update_figures_and_status()
 
     def restore_view_settings(self):
         """Sets all viewing settings in the current View object
@@ -667,7 +705,7 @@ class Controller:
         self.main_window.set_default_cursor()
         self.update_figures_and_status()
 
-    def _select_area(self, point1: QPoint, point2: QPoint):
+    def _select_area(self, point1: tuple[int, int], point2: tuple[int, int]):
         print("TODO ROI selection")
         if points_are_not_equal(point1, point2):
             #self.current_selection.rois = (point1, point2)
@@ -692,12 +730,14 @@ class Controller:
             else:
                 self.main_window.display_status_bar_message("Action canceled: Data not cropped.")
 
-    def _crop_data(self, point1: QPoint, point2: QPoint):
+    def _crop_data(self, point1: tuple[int, int], point2: tuple[int, int]):
         if points_are_not_equal(point1, point2):
             self.data_manager.execute_func_on_current_data(
                 crop,
                 self.current_selection,
-                action_name="Crop data"
+                action_name="Crop data",
+                point1=point1,
+                point2=point2
             )(self.data_manager.get_data(self.current_selection), point1, point2)
         else:
             self.update_figures_and_status("Data not cropped.")
@@ -706,7 +746,7 @@ class Controller:
         if self.current_selection:
             data = self.data_manager.get_data(self.current_selection)
             if isinstance(data, ScanBackstepMode):
-                self.line_profile = LineProfileWindow(
+                self.line_profile = HeightProfileWindow(
                     data=data,
                     parent=self.main_window,
                     view=self.view
@@ -735,6 +775,24 @@ class Controller:
                 clean_up_func=self.main_window.set_default_cursor
             )
 
+    def pick_outlier_and_turn_to_median(self):
+        if self.current_selection:
+            self.main_window.set_cross_cursor()
+            self.figure_canvas_2d.bind_mouse_events_for_pixel_mouse_over(
+                data=self.data_manager.get_data(self.current_selection),
+                view=self.view,
+                func=self._filter_outlier,
+                clean_up_func=self.main_window.set_default_cursor
+            )
+
+    def _filter_outlier(self, point: tuple[int, int]):
+        self.data_manager.execute_func_on_current_data(
+            filter_single_outlier,
+            key=self.current_selection,
+            action_name="Filtered single outlier",
+            point=point
+        )(self.data_manager.get_data(self.current_selection), point)
+
     def _calculate_distance_between_two_points(self, x_data, y_data):
         dist = math.dist((x_data[0], y_data[0]), (x_data[1], y_data[1]))
 
@@ -743,7 +801,7 @@ class Controller:
         self.roi_dialog = ROIsDialog(controller=self, parent=self.main_window)
         self.roi_dialog.open_window()
 
-    def show_results(self):
+    def show_results_of_selection(self):
         """Shows a small window displaying the results
         of roughness calculation and fit functions. Min and max values
         are also shown.
@@ -757,7 +815,7 @@ class Controller:
         except TypeError:
             pass
 
-    def show_roughness_batch(self):
+    def show_results_table(self):
         """Shows a small window displaying roughness calculations of all checked scans.
 
         Min and max values will also be shown.
@@ -789,15 +847,66 @@ class Controller:
         except TypeError:
             pass
 
-    def batch_mode_test(self):
-        print("batch mode")
-
+    def rename_selection(self):
         if self.current_selection:
-            action_list = []
-            data = self.data_manager.get_data(self.current_selection)
-            print(data.get)
+            dialog_input, status = QInputDialog.getText(
+                self.main_window,
+                "Rename selected file",
+                "Please enter a unique filename"
+            )
+            if status == QInputDialog.DialogCode.Accepted and dialog_input and self.current_selection != dialog_input:
+                if not self.data_manager.filename_exists(dialog_input):
+                    self.main_window.display_status_bar_message("Filename changed to: %s" % dialog_input)
+                    self.data_manager.rename_data_key(key=self.current_selection, new_key=dialog_input)
+                    self.main_window.change_item_name(dialog_input)
+                    # important: set current selection to new name to prevent null pointer exception when
+                    # performing manipulations without clicking on the selected item again
+                    self.current_selection = dialog_input
+                else:
+                    self.main_window.display_status_bar_message("Filename already exists")
+            else:
+                self.main_window.display_status_bar_message("Filename not changed")
+
+
+    def batch_mode_test(self):
+        if self.current_selection:
+            try:
+                self.main_window.set_wait_cursor()
+                action_list = self.data_manager.get_undoable_manipulation_items_list(self.current_selection)
+
+                for scan in self.main_window.get_all_checked_items():
+                    for action in action_list:
+                        try:
+                            if action.name == "Reset data":
+                                self.data_manager.reset_manipulations(scan)
+                            else:
+                                self.data_manager.execute_func_on_current_data(
+                                    *action.arguments.get("args"),
+                                    **action.arguments.get("kwargs"),
+                                    func=action.func,
+                                    key=scan,
+                                    action_name=action.name,
+                                )(
+                                    self.data_manager.get_data(scan),
+                                    *action.arguments.get("args"),
+                                    **action.arguments.get("kwargs")
+                                )
+                        except Exception as e:
+                            print("Exception in Batch mode:")
+                            print('"' + action.name + '" on Scan "' + scan + '" not performed.')
+                            print(e)
+                            print("func: " + str(action.func))
+                            traceback.print_exc()
+                            print("------------------------")
+            except Exception as ex:
+                print("Exception during batch mode")
+                print(ex)
+            finally:
+                self.main_window.setEnabled(True)
+                self.main_window.set_default_cursor()
         else:
             self.main_window.display_status_bar_message("Please select a scan file.")
+
 
 def main():
     app = QApplication(sys.argv)

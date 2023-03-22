@@ -13,28 +13,29 @@ import numpy as np
 from os.path import join
 import os
 
+from sicm_analyzer.view import View
 
-class LineProfileWindow(QWidget):
-    """A small window for displaying line profile data.
+
+class HeightProfileWindow(QWidget):
+    """A small window for displaying height profiles.
 
     The canvas is an instance of GraphCanvas and thus
-    supports all functionality of the class.
-
-    A button for exporting the displayed data as
-    a csv file is included.
+    supports all functionality of that class, i.e. mouse
+    interactions with the graph.
     """
 
     def __init__(self, data: ScanBackstepMode, parent: QWidget = None, view=None):
         # to have a separate window set parent to None
-        super(LineProfileWindow, self).__init__(parent=None)
+        super(HeightProfileWindow, self).__init__(parent=None)
 
         self.data = data
         self.parent = parent
-        self.view = view
+        self.view: View = view
         self.x1 = []
         self.y1 = []
         self.x2 = []
         self.y2 = []
+        self.x_is_row = True
 
         self.parent = parent
 
@@ -116,7 +117,7 @@ class LineProfileWindow(QWidget):
         """
         options = QFileDialog.Option(QFileDialog.Option.DontUseNativeDialog)
         file_path = QFileDialog.getSaveFileName(parent=self,
-                                                caption="Export line profile data as csv file",
+                                                caption="Export height profile data as csv file",
                                                 filter="All files (*.*);;CSV (*.csv)",
                                                 # directory=DEFAULT_FILE_PATH,
                                                 initialFilter="CSV (*.csv)",
@@ -134,14 +135,25 @@ class LineProfileWindow(QWidget):
                     writer.writerow([self.x1[i], self.y1[i]])
 
     def update_plot(self, x: numpy.ndarray, y: numpy.ndarray):
-        self.x1 = x.tolist()
+        if self.view.show_as_px:
+            self.x1 = x.tolist()
+        else:
+            if self.x_is_row:
+                self.x1 = [value * self.data.micron_to_pixel_factor_x() for value in x]
+            else:
+                self.x1 = [value * self.data.micron_to_pixel_factor_y() for value in x]
         self.y1 = y.tolist()
         self.canvas_lines.draw_line_plot(x, y, self.data, self.view)
 
     def update_xy_line_profile_plot(self, x_x, x_y, y_x, y_y):
-        self.x1 = x_x.tolist()
+        if self.view.show_as_px:
+            self.x1 = x_x.tolist()
+            self.x2 = y_x.tolist()
+        else:
+            self.x1 = [value * self.data.micron_to_pixel_factor_x() for value in x_x]
+            self.x2 = [value * self.data.micron_to_pixel_factor_y() for value in y_x]
+
         self.y1 = x_y.tolist()
-        self.x2 = y_x.tolist()
         self.y2 = y_y.tolist()
         self.canvas_lines.draw_xy_line_profiles(x_x, x_y, y_x, y_y, self.data, self.view)
 
@@ -167,7 +179,11 @@ class LineProfileWindow(QWidget):
             dst = (y_data[1], x_data[1])
             plot = measure.profile_line(image=self.data.z, src=src, dst=dst, linewidth=1, reduce_func=None)
             a = range(plot.shape[0])
-            x = np.array(a)
+            if self.view.show_as_px:
+                x = np.array(a)
+            else:
+                x = np.array(a) * self.data.micron_to_pixel_factor_x()
+
             self.update_plot(x=x, y=plot)
         except Exception as e:
             print(e)
@@ -184,6 +200,7 @@ class LineProfileWindow(QWidget):
         """Selection mode is row.
         """
         self.set_cross_cursor()
+        self.x_is_row = True
         self.canvas_data.bind_mouse_events_for_showing_line_profile(
             data=self.data,
             view=self.view,
@@ -196,6 +213,7 @@ class LineProfileWindow(QWidget):
         """Selection mode is column.
         """
         self.set_cross_cursor()
+        self.x_is_row = False
         self.canvas_data.bind_mouse_events_for_showing_line_profile(
             data=self.data,
             view=self.view,
@@ -207,6 +225,7 @@ class LineProfileWindow(QWidget):
     def select_line_profile_line(self):
         """Selection mode is custom line."""
         self.set_cross_cursor()
+        self.x_is_row = True
         self.canvas_data.bind_mouse_events_for_draw_line(
             data=self.data,
             view=self.view,
@@ -219,6 +238,7 @@ class LineProfileWindow(QWidget):
         updated on mouse movement over the 2D canvas.
         """
         self.set_cross_cursor()
+        self.x_is_row = True
         self.canvas_data.bind_mouse_events_for_showing_line_profile(
             data=self.data,
             view=self.view,

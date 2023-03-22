@@ -1,14 +1,12 @@
-"""
-TODO add module documentation
-"""
+
 import os
 from os.path import join
-from PyQt6 import QtWidgets, QtCore
+from PyQt6 import QtWidgets
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QIcon, QAction, QActionGroup, QKeyEvent, QDragEnterEvent, QDropEvent, QCursor
 
 from PyQt6.QtWidgets import QHBoxLayout, QListWidget, QLabel, QWidget, QVBoxLayout, QSplitter, QStyle, \
-    QMainWindow, QToolBar, QAbstractItemView, QDockWidget, QGridLayout, QPlainTextEdit, QTextEdit
+    QMainWindow, QToolBar, QAbstractItemView, QDockWidget, QTextEdit, QMenu
 
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 import matplotlib
@@ -49,6 +47,8 @@ class MainWindow(QMainWindow):
         self.close_window = pyqtSignal()
         self.central_widget = QtWidgets.QWidget(self)
         self.imported_files_list = QListWidget(self)
+        # self.imported_files_list.setSelectionMode(QListWidget.SelectionMode.ExtendedSelection)
+        # self.imported_files_list.setSortingEnabled(True)
         self.imported_files_list.setDragDropMode(QListWidget.DragDropMode.InternalMove)
 
         self.data_manipulation_list = QListWidget(self)
@@ -122,10 +122,12 @@ class MainWindow(QMainWindow):
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.dock_2d_plot)
 
         # File menu
-        self.action_close_all = QAction(QIcon(join(self.icons_dir, "clear.png")), '&Close all', self)
-        self.action_close_selection = QAction("Close selection", self)
-        self.action_close_selection.setShortcut("Ctrl+D")
+        self.action_remove_all = QAction(QIcon(join(self.icons_dir, "clear.png")), '&Remove all', self)
+        self.action_remove_selection = QAction("Remove selection", self)
+        self.action_remove_selection.setShortcut("Ctrl+D")
         self.action_copy_selection = QAction("Copy selected file", self)
+        self.action_copy_checked = QAction("Copy checked files", self)
+        self.action_rename_selection = QAction("Rename selected file", self)
         self.action_preferences = QAction("Preferences", self)
         self.action_import_files = QAction(icon_files, "&Import Files...", self)
         self.action_import_directory = QAction(icon_directory, '&Import Directory...', self)
@@ -137,9 +139,11 @@ class MainWindow(QMainWindow):
         self.action_export_2d = QAction("2D graph", self)
         self.action_exit = QAction('&Exit', self)
 
-        file_menu.addAction(self.action_close_all)
-        file_menu.addAction(self.action_close_selection)
+        file_menu.addAction(self.action_remove_all)
+        file_menu.addAction(self.action_remove_selection)
         file_menu.addAction(self.action_copy_selection)
+        file_menu.addAction(self.action_copy_checked)
+        file_menu.addAction(self.action_rename_selection)
         file_menu.addSeparator()
         file_menu.addAction(self.action_preferences)
         file_menu.addSeparator()
@@ -191,6 +195,7 @@ class MainWindow(QMainWindow):
         edit_menu = menubar.addMenu("Edit")
         edit_menu.addAction(self.action_undo)
         edit_menu.addAction(self.action_redo)
+        edit_menu.addSeparator()
         edit_menu.addAction(action_check_all)
         edit_menu.addAction(action_uncheck_all)
         edit_menu.addSeparator()
@@ -205,6 +210,8 @@ class MainWindow(QMainWindow):
         self.action_toggle_axes.setChecked(True)
         self.action_view_restore = QAction('&Restore view', self)
         self.action_view_ratio = QAction('Aspect ratio', self)
+        self.action_set_colormap_range = QAction("Set colormap range", self)
+        self.action_reset_colormap_range = QAction("Reset colormap range", self)
         action_view_surface = QAction('&Interpolate surface', self)
         action_view_surface.setEnabled(False)  # TODO
         action_view_xlimits = QAction('&Adjust x limits', self)
@@ -236,6 +243,8 @@ class MainWindow(QMainWindow):
 
         self.view_menu.addAction(self.action_store_angles)
         self.view_menu.addAction(self.action_view_ratio)
+        self.view_menu.addAction(self.action_set_colormap_range)
+        self.view_menu.addAction(self.action_reset_colormap_range)
         self.view_menu.addAction(action_view_surface)
         self.view_menu.addAction(action_view_xlimits)
         self.view_menu.addAction(action_view_ylimits)
@@ -252,6 +261,7 @@ class MainWindow(QMainWindow):
         self.action_data_transpose_z = QAction('Transpose Z', self)
         self.action_data_invert_z = QAction("Invert z", self)
         self.action_data_filter = QAction("Filter data...", self)
+        self.action_pick_outlier = QAction("Pick outlier", self)
         self.action_data_flip_x = QAction("X", self)
         self.action_data_flip_y = QAction("Y", self)
         self.action_data_level_plane = QAction('Plane', self)
@@ -285,6 +295,7 @@ class MainWindow(QMainWindow):
         flip_menu.addAction(self.action_data_flip_x)
         flip_menu.addAction(self.action_data_flip_y)
         self.data_menu.addAction(self.action_data_filter)
+        self.data_menu.addAction(self.action_pick_outlier)
         flatten_menu = self.data_menu.addMenu('Leveling')
         flatten_menu.addAction(self.action_data_level_plane)
         flatten_menu.addAction(action_data_paraboloid)
@@ -325,8 +336,8 @@ class MainWindow(QMainWindow):
         self.measure_menu.addAction(self.action_results)
         self.measure_menu.addAction(self.action_measure_roughness_batch)
         self.measure_menu.addSeparator()
-        self.action_line_profile_tool = QAction("Line profile tool...", self)
-        self.measure_menu.addAction(self.action_line_profile_tool)
+        self.action_height_profile_tool = QAction("Height profile tool...", self)
+        self.measure_menu.addAction(self.action_height_profile_tool)
         self.measure_menu.addAction(self.action_get_pixel_values)
         self.measure_menu.addAction(self.action_measure_dist)
 
@@ -349,7 +360,6 @@ class MainWindow(QMainWindow):
 
         # Key events
         self.imported_files_list.installEventFilter(self)
-        self.imported_files_list.setSortingEnabled(True)
         self.delete_key = None
         self.escape_key = None
 
@@ -360,7 +370,7 @@ class MainWindow(QMainWindow):
         self.toolbar.addAction(self.action_import_files)
         self.toolbar.addAction(self.action_import_directory)
         self.toolbar.addSeparator()
-        self.toolbar.addAction(self.action_close_all)
+        self.toolbar.addAction(self.action_remove_all)
         self.toolbar.addAction(action_sort_ascending)
         self.toolbar.addAction(action_sort_descending)
         self.toolbar.addSeparator()
@@ -371,10 +381,26 @@ class MainWindow(QMainWindow):
         self.toolbar.addSeparator()
         self.addToolBar(self.toolbar)
 
+        # context menu
+        self.context_menu = QMenu(self)
+        self.context_menu.addAction(self.action_copy_selection)
+        self.context_menu.addAction(self.action_rename_selection)
+        self.context_menu.addAction(self.action_remove_selection)
+        self.context_menu.addAction(self.action_data_reset)
+        self.context_menu.addSeparator()
+        self.context_menu.addAction(self.action_undo)
+        self.context_menu.addAction(self.action_redo)
+
+        self.imported_files_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.imported_files_list.customContextMenuRequested.connect(self.show_context_menu)
+
         self.setGeometry(700, 350, 800, 800)
         self.statusBar().showMessage('Ready')
         self.setMinimumSize(300, 300)
         self.show()
+
+    def show_context_menu(self, point):
+        self.context_menu.exec(self.imported_files_list.mapToGlobal(point))
 
     def set_wait_cursor(self):
         self.setCursor(QCursor(Qt.CursorShape.WaitCursor))
@@ -471,7 +497,8 @@ class MainWindow(QMainWindow):
     def display_status_bar_message(self, message):
         self.statusBar().showMessage(message)
 
-    def add_items_to_list(self, items):
+    def add_items_to_list(self, items: list[str]):
+        """Adds a list item for each filename in the list."""
         for item in items:
             self.add_item_to_list(item)
 
@@ -501,6 +528,11 @@ class MainWindow(QMainWindow):
         pos = self.imported_files_list.currentRow() + 1
         self.imported_files_list.insertItem(pos, checkable_item)
 
+    def change_item_name(self, new_name):
+        """Set a new name for the selected item."""
+        item = self.imported_files_list.selectedItems()[0]
+        item.setText(new_name)
+
     def get_all_checked_items(self) -> list[str]:
         items = []
         for i in range(self.imported_files_list.count()):
@@ -509,15 +541,15 @@ class MainWindow(QMainWindow):
         return items
 
     def check_all_items(self):
-        """Sets the checkstate of all items in the imported files list to checked."""
+        """Sets the check state of all items in the imported files list to checked."""
         self._change_checkstate_of_all_items(Qt.CheckState.Checked)
 
     def uncheck_all_items(self):
-        """Sets the checkstate of all items in the imported files list to checked."""
+        """Sets the check state of all items in the imported files list to checked."""
         self._change_checkstate_of_all_items(Qt.CheckState.Unchecked)
 
     def _change_checkstate_of_all_items(self, state: Qt.CheckState):
-        """Sets the checkstate of all items in the imported files list."""
+        """Sets the check state of all items in the imported files list."""
         for i in range(self.imported_files_list.count()):
             self.imported_files_list.item(i).setCheckState(state)
 
