@@ -226,9 +226,13 @@ class MainWindow(QMainWindow):
 
         self.action_set_axis_labels_px = QAction("pixels", self)
         self.action_set_axis_labels_px.setCheckable(True)
-
         self.action_set_axis_labels_micron = QAction("µm", self)
         self.action_set_axis_labels_micron.setCheckable(True)
+
+        self.action_set_z_axis_label_micron = QAction("µm", self)
+        self.action_set_z_axis_label_micron.setCheckable(True)
+        self.action_set_z_axis_label_nano = QAction("nm", self)
+        self.action_set_z_axis_label_nano.setCheckable(True)
 
         self.action_apply_view_to_all = QAction("Apply view settings to all", self)
         self.action_apply_view_to_checked = QAction("Apply view settings to checked", self)
@@ -239,11 +243,22 @@ class MainWindow(QMainWindow):
         axis_label_menu.addAction(self.action_set_axis_labels_px)
         axis_label_menu.addAction(self.action_set_axis_labels_micron)
 
+        z_axis_label_menu = self.view_menu.addMenu('Show z axis in...')
+        z_axis_label_menu.setEnabled(False)
+        z_axis_label_menu.addAction(self.action_set_z_axis_label_micron)
+        z_axis_label_menu.addAction(self.action_set_z_axis_label_nano)
+
         action_group_axis_labels = QActionGroup(self)
         action_group_axis_labels.addAction(self.action_set_axis_labels_px)
         action_group_axis_labels.addAction(self.action_set_axis_labels_micron)
         action_group_axis_labels.setExclusive(True)
         self.action_set_axis_labels_px.setChecked(True)
+
+        action_group_z_axis_label = QActionGroup(self)
+        action_group_z_axis_label.addAction(self.action_set_z_axis_label_micron)
+        action_group_z_axis_label.addAction(self.action_set_z_axis_label_nano)
+        action_group_z_axis_label.setExclusive(True)
+        self.action_set_z_axis_label_micron.setChecked(True)
 
         self.view_menu.addAction(self.action_store_angles)
         self.view_menu.addAction(self.action_view_ratio)

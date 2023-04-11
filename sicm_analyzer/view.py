@@ -175,3 +175,4 @@ class ViewManager:
     def clear_all_views(self):
         """Delete all View objects."""
         self.views.clear()
+

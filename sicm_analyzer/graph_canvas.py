@@ -138,14 +138,16 @@ class GraphCanvas(FigureCanvasQTAgg):
             try:
                 # 2D plots have no z label
                 if self.current_view.z_in_nm:
-                    axes.set_z_label("nm")
+                    axes.set_zlabel("height in nm")
                 else:
-                    axes.set_zlabel("µm")
+                    axes.set_zlabel("height in µm")
             except:
                 pass
         else:
             axes.axis(False)
 
+    def unit_factor(self):
+        return 1000.0 if self.current_view.z_in_nm else 1.0
     def draw_3d_plot(self):
         """Draws a 3d surface plot for scanning data."""
 
@@ -154,6 +156,7 @@ class GraphCanvas(FigureCanvasQTAgg):
         # and crashes the program
         try:
             axes = self.figure.add_axes([0.1, 0.1, 0.5, 0.9], projection="3d")
+
             norm = Normalize(
                 vmin=np.min(self.current_data.get_data()[2]),
                 vmax=np.max(self.current_data.get_data()[2]),
@@ -177,10 +180,9 @@ class GraphCanvas(FigureCanvasQTAgg):
                 axes.elev = self.current_view.elev
                 self.show_or_hide_axes(self.current_data, axes)
 
-                #upper_x = np.max(np.max(axes.get_xticks()))
-                #upper_y = np.max(np.max(axes.get_yticks()))
-                #axes.set_ylim(self._new_padding(0, upper_y))
-                #axes.set_xlim(self._new_padding(0, upper_x))
+                #TODO z in nm
+                #axes.set_zticklabels([tick * self.unit_factor() for tick in axes.get_zticks()])
+
             else:
                 img = axes.plot_surface(*self.current_data.get_data(), norm=norm)
             self.set_colorbar(img, axes)
@@ -191,9 +193,6 @@ class GraphCanvas(FigureCanvasQTAgg):
     def draw_2d_plot_raster_image(self):
         """Draws a 2D raster image for 3-dimensional scanning data."""
         axes = self.figure.add_axes([0.15, 0.1, 0.5, 0.9])
-
-        #  if data.rois:
-        #    self.draw_roi(data)
 
         if self.current_view:
             self.show_or_hide_axes(self.current_data, axes)
@@ -220,7 +219,9 @@ class GraphCanvas(FigureCanvasQTAgg):
                          borderpad=-6
                          )
         cb = self.figure.colorbar(img, cax=cax)
-        cb.set_label(label="height in µm")
+        z_unit = "nm" if self.current_view.z_in_nm else "µm"
+        z_label = "height in " + z_unit
+        cb.set_label(label=z_label)
 
     def draw_roi(self):
         """This function should be generalised to prevent code duplication.

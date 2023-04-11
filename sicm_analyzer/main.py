@@ -112,6 +112,8 @@ class Controller:
         # lambda expression as follows:
         self.main_window.action_set_axis_labels_px.triggered.connect(lambda _: self.update_figures_and_status())
         self.main_window.action_set_axis_labels_micron.triggered.connect(lambda _: self.update_figures_and_status())
+        self.main_window.action_set_z_axis_label_nano.triggered.connect(lambda _: self.update_figures_and_status())
+        self.main_window.action_set_z_axis_label_micron.triggered.connect(lambda _: self.update_figures_and_status())
         self.main_window.action_store_angles.triggered.connect(self.store_viewing_angles)
         self.main_window.action_view_restore.triggered.connect(self.restore_view_settings)
         self.main_window.action_view_restore_all.triggered.connect(self.restore_view_settings_for_all)
@@ -653,6 +655,7 @@ class Controller:
                 current_data = self.data_manager.get_data(self.current_selection)
                 current_view = self.view_manager.get_view(self.current_selection)
                 current_view.show_as_px = self.main_window.action_set_axis_labels_px.isChecked()
+                current_view.z_in_nm = self.main_window.action_set_z_axis_label_nano.isChecked()
 
                 if isinstance(current_data, ScanBackstepMode):
                     self.figure_canvas_3d.draw_graph(current_data, SURFACE_PLOT, current_view)
@@ -748,6 +751,7 @@ class Controller:
     def _update_after_restore_view(self):
         self.main_window.action_toggle_axes.setChecked(True)
         self.main_window.action_set_axis_labels_px.setChecked(True)
+        self.main_window.action_set_z_axis_label_micron.setChecked(True)
         self.update_figures_and_status()
         self.main_window.show_graphs()
 
