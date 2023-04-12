@@ -423,6 +423,7 @@ class Controller:
             new_key = self._copy_filename(key)
             # add data to manager and key to list
             self.data_manager.add_data_object(new_key, data)
+            self.view_manager.copy_view(key, new_key)
             self.main_window.insert_item_after_current_selection(new_key)
         except TypeError as e:
             print("Error in Main.copy_selected_file:")

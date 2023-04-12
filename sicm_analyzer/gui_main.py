@@ -640,6 +640,7 @@ class MainWindow(QMainWindow):
                f"<tr>" \
                f"<td><b>Scan mode:</b></td> <td>{scan_mode}</td>" \
                f"</tr>" \
+               f"<tr><td colspan='2'><hr/></td></tr>" \
                f"<tr>" \
                f"<td><b>x pixels:</b></td> <td>{x_px}</td>" \
                f"</tr>" \
@@ -664,6 +665,7 @@ class MainWindow(QMainWindow):
                f"<tr>" \
                f"<td><b>y size [µm] (raw):</b></td> <td>{y_size_raw}</td>" \
                f"</tr>" \
+               f"<tr><td colspan='2'><hr/></td></tr>" \
                f"<tr>" \
                f"<td><b>Previous manipulations:</b></td> <td>{manipulations}</td>" \
                f"</tr>" \

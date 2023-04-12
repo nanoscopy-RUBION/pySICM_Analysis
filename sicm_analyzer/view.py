@@ -1,3 +1,4 @@
+import copy
 
 import matplotlib
 from PyQt6.QtCore import QPoint
@@ -154,6 +155,15 @@ class ViewManager:
         :param key: a unique string to reference a SICMdata object
         """
         self.views[key] = View()
+
+    def copy_view(self, key: str, new_key: str):
+        """Copies the view object of key.
+
+        :param key: a unique string to reference a SICMdata object
+        :param new_key: a unique string to reference a SICMdata object
+        """
+        view_copy = copy.deepcopy(self.views.get(key))
+        self.views[new_key] = view_copy
 
     def create_views(self, keys: list[str]):
         """Instantiates a new View object which is associated with
