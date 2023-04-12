@@ -517,7 +517,6 @@ class MainWindow(QMainWindow):
         self.dock_2d_plot.setWidget(canvas)
 
     def display_status_bar_message(self, message):
-        print(message)
         self.statusBar().showMessage(message)
 
     def add_items_to_list(self, items: list[str]):
