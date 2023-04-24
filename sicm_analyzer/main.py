@@ -356,7 +356,7 @@ class Controller:
                 self.data_manager.execute_func_on_current_data(
                     func=filters.get(selected_filter),
                     key=self.current_selection,
-                    action_name=f"selected_filter (px-size: {radius})",
+                    action_name=f"{selected_filter} (px-size: {radius})",
                     px_radius=radius
                 )(self.data_manager.get_data(self.current_selection), radius)
 
