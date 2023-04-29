@@ -35,6 +35,13 @@ def convert_axes_labels_from_px_to_microns(data: SICMdata, axes):
         axes.set_yticklabels([round(tick * data.micron_to_pixel_factor_y(), 2) for tick in y_ticks])
 
 
+def convert_x_axis_labels_from_px_to_microns(data: SICMdata, axes):
+    x_ticks = axes.get_xticks()
+
+    if isinstance(data, sicm_analyzer.sicm_data.ScanBackstepMode):
+        axes.set_xticklabels([round(tick * data.micron_to_pixel_factor_x(), 2) for tick in x_ticks])
+
+
 class GraphCanvas(FigureCanvasQTAgg):
     """Canvas for drawing graphs from .sicm data.
 
@@ -670,7 +677,7 @@ class GraphCanvas(FigureCanvasQTAgg):
         if view.show_as_px:
             axis_label = "[px]"
         else:
-            convert_axes_labels_from_px_to_microns(data, axes)
+            convert_x_axis_labels_from_px_to_microns(data, axes)
             axis_label = "[µm]"
 
         axes.set_xlabel(f"distance {axis_label}")
@@ -689,7 +696,7 @@ class GraphCanvas(FigureCanvasQTAgg):
         if view.show_as_px:
             axis_label = "[px]"
         else:
-            convert_axes_labels_from_px_to_microns(data, axes)
+            convert_x_axis_labels_from_px_to_microns(data, axes)
             axis_label = "[µm]"
 
         axes.set_xlabel(f"distance {axis_label}")
