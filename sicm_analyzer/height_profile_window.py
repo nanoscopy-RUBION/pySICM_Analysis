@@ -179,10 +179,7 @@ class HeightProfileWindow(QWidget):
             dst = (y_data[1], x_data[1])
             plot = measure.profile_line(image=self.data.z, src=src, dst=dst, linewidth=1, reduce_func=None)
             a = range(plot.shape[0])
-            if self.view.show_as_px:
-                x = np.array(a)
-            else:
-                x = np.array(a) * self.data.micron_to_pixel_factor_x()
+            x = np.array(a)
 
             self.update_plot(x=x, y=plot)
         except Exception as e:
