@@ -596,6 +596,9 @@ class Controller:
             self.main_window.action_toggle_axes.setChecked(
                 self.view_manager.get_view(self.current_selection).axes_shown
             )
+            self.main_window.action_toggle_edge_lines.setChecked(
+                self.view_manager.get_view(self.current_selection).rasterized
+            )
             self.update_figures_and_status()
         else:
             self.main_window.action_toggle_axes.setEnabled(False)

@@ -208,7 +208,7 @@ class MainWindow(QMainWindow):
         self.action_toggle_axes = QAction('&Show axes', self)
         self.action_toggle_axes.setCheckable(True)
         self.action_toggle_axes.setChecked(True)
-        self.action_toggle_edge_lines = QAction('&Show lines', self)
+        self.action_toggle_edge_lines = QAction('Hide lines', self)
         self.action_toggle_edge_lines.setCheckable(True)
         self.action_toggle_edge_lines.setChecked(True)
         self.action_view_restore = QAction('&Restore view', self)
