@@ -208,6 +208,9 @@ class MainWindow(QMainWindow):
         self.action_toggle_axes = QAction('&Show axes', self)
         self.action_toggle_axes.setCheckable(True)
         self.action_toggle_axes.setChecked(True)
+        self.action_toggle_edge_lines = QAction('&Show lines', self)
+        self.action_toggle_edge_lines.setCheckable(True)
+        self.action_toggle_edge_lines.setChecked(True)
         self.action_view_restore = QAction('&Restore view', self)
         self.action_view_restore_all = QAction('&Restore view for all', self)
         self.action_view_ratio = QAction('Aspect ratio', self)
@@ -239,6 +242,7 @@ class MainWindow(QMainWindow):
 
         self.view_menu = menubar.addMenu("&View")
         self.view_menu.addAction(self.action_toggle_axes)
+        self.view_menu.addAction(self.action_toggle_edge_lines)
         axis_label_menu = self.view_menu.addMenu('Set axis labels to...')
         axis_label_menu.addAction(self.action_set_axis_labels_px)
         axis_label_menu.addAction(self.action_set_axis_labels_micron)

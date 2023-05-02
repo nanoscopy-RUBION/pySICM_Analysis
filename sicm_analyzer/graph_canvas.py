@@ -192,6 +192,11 @@ class GraphCanvas(FigureCanvasQTAgg):
 
             else:
                 img = axes.plot_surface(*self.current_data.get_data(), norm=norm)
+
+            if self.current_view.rasterized:
+                img._facecolors2d = img._facecolor3d
+                img._edgecolors2d = img._edgecolor3d
+                img.set_edgecolor("face")
             self.set_colorbar(img, axes)
         except Exception as e:
             print(e)
@@ -208,12 +213,13 @@ class GraphCanvas(FigureCanvasQTAgg):
                     self.current_data.z,
                     vmin=self.current_view.z_limits[0],
                     vmax=self.current_view.z_limits[1],
-                    cmap=self.current_view.color_map
+                    cmap=self.current_view.color_map,
                 )
             else:
                 img = axes.pcolormesh(self.current_data.z, cmap=self.current_view.color_map)
         else:
             img = axes.pcolormesh(self.current_data.z)
+        img.set_rasterized(self.current_view.rasterized)
 
         axes.set_aspect("equal")
         self.set_colorbar(img, axes)

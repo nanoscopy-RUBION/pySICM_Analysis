@@ -107,6 +107,7 @@ class Controller:
 
         # View menu
         self.main_window.action_toggle_axes.triggered.connect(self.toggle_axes)
+        self.main_window.action_toggle_edge_lines.triggered.connect(self.toggle_edge_lines)
         # Clicking on buttons in a button group seems to return a bool which is
         # passed to the connected function. This bool is captured by using the
         # lambda expression as follows:
@@ -143,7 +144,7 @@ class Controller:
         # Measurement
         self.main_window.action_set_rois.triggered.connect(self.show_roi_dialog)
         self.main_window.action_set_roi.triggered.connect(self.select_roi_with_mouse)
-        self.main_window.action_height_profile_tool.triggered.connect(self.open_line_profile_tool)
+        self.main_window.action_height_profile_tool.triggered.connect(self.open_height_profile_tool)
         self.main_window.action_measure_dist.triggered.connect(self.measure_distance)
         self.main_window.action_get_pixel_values.triggered.connect(self.display_pixel_values)
         self.main_window.action_measure_roughness_batch.triggered.connect(self.show_results_table)
@@ -572,9 +573,13 @@ class Controller:
         self.figure_canvas_2d.draw_white_canvas()
 
     def toggle_axes(self):
-        """Shows or hides axes in figures.
-        """
+        """Shows or hides axes in figures."""
         self.view_manager.get_view(self.current_selection).toggle_axes()
+        self.update_figures_and_status()
+
+    def toggle_edge_lines(self):
+        """Shows or hides edges in figures."""
+        self.view_manager.get_view(self.current_selection).toggle_edges()
         self.update_figures_and_status()
 
     def item_selection_changed_event(self, item):
@@ -819,7 +824,7 @@ class Controller:
         else:
             self.update_figures_and_status("Data not cropped.")
 
-    def open_line_profile_tool(self):
+    def open_height_profile_tool(self):
         if self.current_selection:
             data = self.data_manager.get_data(self.current_selection)
             if isinstance(data, ScanBackstepMode):

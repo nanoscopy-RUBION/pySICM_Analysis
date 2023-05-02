@@ -21,6 +21,8 @@ class View:
         self.rois = (QPoint(), QPoint())
         self.azim: float = -60.0
         self.elev: float = 30.0
+        # rasterized is used as a workaround to get rid of edges in pcolormesh
+        self.rasterized: bool = False  # False means show edges
         self.x_limits: tuple[float, float] | None = None
         self.y_limits: tuple[float, float] | None = None
         self.z_limits: tuple[float, float] | None = None
@@ -30,6 +32,14 @@ class View:
         Changes the state of axis visibility.
         """
         self.axes_shown = not self.axes_shown
+
+    def toggle_edges(self):
+        """
+        Changes the state of rasterized.
+
+        Rasterized is used as a workaroud to show or hide edge lines in 2D plots.
+        """
+        self.rasterized = not self.rasterized
 
     def set_x_limits(self, limits: tuple[float, float] | None):
         self.x_limits = limits
