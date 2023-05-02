@@ -224,6 +224,7 @@ class MainWindow(QMainWindow):
         action_view_ylimits.setEnabled(False)  # TODO
         self.action_view_colormap = QAction('Colormap', self)
         self.action_store_angles = QAction('Store viewing angles', self)
+        self.action_restore_angles = QAction('Restore default viewing angles', self)
         self.action_show_graphs = QAction("Show plot windows", self)
         self.action_show_graphs.triggered.connect(self.show_graphs)
 
@@ -264,7 +265,13 @@ class MainWindow(QMainWindow):
         action_group_z_axis_label.setExclusive(True)
         self.action_set_z_axis_label_micron.setChecked(True)
 
-        self.view_menu.addAction(self.action_store_angles)
+        viewing_angles_menu = self.view_menu.addMenu("Viewing angles...")
+        self.current_angles_label = QAction("Stored angles: Azim=-60.0, Elev=30.0")
+        self.current_angles_label.setEnabled(False)
+        viewing_angles_menu.addAction(self.current_angles_label)
+        viewing_angles_menu.addAction(self.action_store_angles)
+        viewing_angles_menu.addAction(self.action_restore_angles)
+
         self.view_menu.addAction(self.action_view_ratio)
         self.view_menu.addAction(self.action_set_z_limits)
         self.view_menu.addAction(self.action_reset_z_limits)
@@ -522,6 +529,11 @@ class MainWindow(QMainWindow):
 
     def display_status_bar_message(self, message):
         self.statusBar().showMessage(message)
+
+    def update_viewing_angles_label(self, azim: float, elev: float):
+        a = str(round(azim, 1))
+        e = str(round(elev, 1))
+        self.current_angles_label.setText(f"Stored angles: Azim={a}, Elev={e}")
 
     def add_items_to_list(self, items: list[str]):
         """Adds a list item for each filename in the list."""

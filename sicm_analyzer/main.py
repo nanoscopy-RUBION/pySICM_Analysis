@@ -116,6 +116,7 @@ class Controller:
         self.main_window.action_set_z_axis_label_nano.triggered.connect(lambda _: self.update_figures_and_status())
         self.main_window.action_set_z_axis_label_micron.triggered.connect(lambda _: self.update_figures_and_status())
         self.main_window.action_store_angles.triggered.connect(self.store_viewing_angles)
+        self.main_window.action_restore_angles.triggered.connect(self.restore_viewing_angles)
         self.main_window.action_view_restore.triggered.connect(self.restore_view_settings)
         self.main_window.action_view_restore_all.triggered.connect(self.restore_view_settings_for_all)
         self.main_window.action_view_colormap.triggered.connect(self.open_color_map_dialog)
@@ -693,6 +694,10 @@ class Controller:
 
                 self._update_undo_redo_menu_items()
                 manipulations = self.data_manager.get_undoable_manipulation_names_list(self.current_selection)
+                self.main_window.update_viewing_angles_label(
+                    self.view_manager.get_view(self.current_selection).azim,
+                    self.view_manager.get_view(self.current_selection).elev,
+                )
                 self.main_window.set_data_manipulation_list_items(manipulations)
                 self.main_window.display_status_bar_message(message)
         except TypeError as e:
@@ -710,6 +715,15 @@ class Controller:
         except AttributeError:
             self.main_window.display_status_bar_message("ApproachCurves have no viewing angles.")
             self.view_manager.get_view(self.current_selection).set_viewing_angles()
+        self.main_window.update_viewing_angles_label(
+            self.view_manager.get_view(self.current_selection).azim,
+            self.view_manager.get_view(self.current_selection).elev
+        )
+
+    def restore_viewing_angles(self):
+        """Sets viewing angles to default values."""
+        self.view_manager.get_view(self.current_selection).set_viewing_angles()
+        self.update_figures_and_status("Viewing angles set to default values (Azimuth: -60.0, Elevation: 30.0)")
 
     def set_z_limits(self):
         """Open a small Dialog to enter two floats which will be
@@ -733,6 +747,31 @@ class Controller:
             limits = None
 
         self.view_manager.get_view(self.current_selection).set_z_limits(limits)
+        self.update_figures_and_status()
+
+    def set_viewing_angles_by_input(self):
+        """Open a small Dialog to enter two floats which will be
+        set as the lower and upper limits of the z axis."""
+        input_string, status = QInputDialog.getText(
+            self.main_window,
+            "Set new viewing angles",
+            "Enter two floats (separated by a comma) for Azimuth and elevation angle (e.g.: -60.0,30.0):"
+        )
+        old_azim = self.view_manager.get_view(self.current_selection).azim
+        old_elev = self.view_manager.get_view(self.current_selection).elev
+        try:
+            if input_string:
+                azim, elev = input_string.split(",")
+                azim = azim.strip()
+                elev = elev.strip()
+                azim = float(azim)
+                elev = float(elev)
+                self.view_manager.get_view(self.current_selection).set_viewing_angles(azim=azim, elev=elev)
+        except Exception as e:
+            print(e)
+            print(traceback.print_exc())
+            self.view_manager.get_view(self.current_selection).set_viewing_angles(azim=old_azim, elev=old_elev)
+
         self.update_figures_and_status()
 
     def reset_colormap_range(self):
