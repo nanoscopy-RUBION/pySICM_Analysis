@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Lesslich"
+  given-names: "Heiko M."
+  orcid: "https://orcid.org/0000-0002-5546-4676"
+title: "pySICM Analysis"
+version: 0.1.0
+doi:
+date-released: 2023-05-12
+url: "https://github.com/nanoscopy-RUBION/pySICM_Analysis"
