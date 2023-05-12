@@ -830,7 +830,7 @@ class Controller:
         self.update_figures_and_status()
 
     def _select_area(self, point1: tuple[int, int], point2: tuple[int, int]):
-        print("TODO ROI selection")
+        #TODO ROI selection
         if points_are_not_equal(point1, point2):
             # self.current_selection.rois = (point1, point2)
             self.update_figures_and_status("ROI set")
