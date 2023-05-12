@@ -1,38 +1,11 @@
 # pySICM Analysis
-Analysis tool for .sicm files created with our home-built SIC microscope.
+Analysis tool for .sicm files created with our home-built Scanning Ion Conductance Microscope (SICM).
 
-## Prerequisites
+This program is loosely based on a Matlab program written by Dr. Patrick Happel. It still has beta status and will be updated infrequently in the future. At the moment, it is limited to display and manipulate data produced by our own SICM setup which is controlled by another python software written by Dr. Patrick Happel.
+
+### Prerequisites
 - Python 3.10
+- PyQt 6
 
-## Known Bugs
-- see issues in Github repository
-
-## To Do
-- General:
-  - clean up existing py files
-- New Functions:
-  - set ROIs 
-  - evaluate roughness from single/multiple ROIs
-- Export function
-  - Export view object
-- ApproachCurve analysis
-- Reorganize View class
-  - add fields to store more view options
-  - axis limits
-- Data manipulations:
-  - add more level/flatten functions
-    - line-wise leveling
-    - polynomial
-    - area exclusion
-    - three point
-    - histogram
-  - interpolation
-- Batch mode:
-  - store a list of actions which can be applied to selected sicm measurements
-- Colormap window
-  - Create custom color maps
-- Measurement of:
-  - Profile
-- About window
-  - program version info screen and licence
-  - user manual
+### Instructions
+Run `python sicm_analysis/main.py` from the project's root folder
