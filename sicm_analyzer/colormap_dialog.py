@@ -17,7 +17,14 @@ COLOR_MAPS = {
     "Summer": cm.summer,
     "Summer (reverse)": cm.summer_r,
     "Viridis": cm.viridis,
-    "Seriös cool": cm.YlGnBu_r
+    "Seriös cool": cm.YlGnBu_r,
+    "Spectral": cm.Spectral,
+    "RdYlBu": cm.RdYlBu,
+    "Magma": cm.magma,
+    "BrBG": cm.BrBG,
+    "Monotone": cm.binary,
+    "Earth": cm.gist_earth,
+    "Ocean": cm.ocean
 }
 
 
