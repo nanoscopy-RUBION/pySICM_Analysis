@@ -5,10 +5,10 @@ import matplotlib.colors as mcolors
 from PyQt6.QtGui import QIcon, QColor, QPixmap, QDoubleValidator
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
-from PyQt6.QtWidgets import QApplication, QGridLayout, QLineEdit, QLabel, QCheckBox, QDialog
+from PyQt6.QtWidgets import QApplication, QGridLayout, QLineEdit, QLabel, QCheckBox, QDialog, QSlider
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QWidget, QComboBox, QPushButton, QVBoxLayout, QHBoxLayout
+from PyQt6.QtWidgets import QWidget, QComboBox, QPushButton, QVBoxLayout, QHBoxLayout, QColorDialog, QSpinBox
 from typing import Callable
 from matplotlib import cm
 
@@ -144,6 +144,7 @@ class CustomColorMapDialog(QDialog):
         self.v1_layout = QVBoxLayout()
         self.v1_layout.setSpacing(10)
         self.setLayout(self.v1_layout)
+        # TODO change the layout of self to include v box layout
 
         # horizontal layout 2 - num_colors box
         self.num_colors_box = QComboBox()
@@ -233,6 +234,22 @@ class CustomColorMapDialog(QDialog):
             self.update_line_edit_state
         )
 
+        # ________________________________________________________________________________________
+        # below this line is the newly added functionality for the color chooser
+
+        # self.v2_layout = QVBoxLayout()
+        #
+        # self.box_num_colors = QWidget()
+        # num_colors_grid = QGridLayout()
+        # self.box_num_colors.setLayout(num_colors_grid)
+        # self.label_num_colors = QLabel("Number of Colors:")
+        # self.spinbox_num_colors = QSpinBox()
+        # self.spinbox_num_colors.setMinimum(2)
+        # self.spinbox_num_colors.setMaximum(8)
+        # self.spinbox_num_colors.displayIntegerBase()
+        # num_colors_grid.addWidget(self.label_num_colors, 0, 0)
+        # num_colors_grid.addWidget(self.spinbox_num_colors, 0, 1)
+
     def update_line_edit_state(self):
         self.position_1_box.setText('0.000')
         self.position_2_box.setReadOnly(not self.position_2_box.isReadOnly())
@@ -296,6 +313,43 @@ class CustomColorMapDialog(QDialog):
         if self.isVisible():
             self.hide()
         self.exec()
+
+    class ColorModule(QWidget):
+
+        def __init__(self, num_id: int):
+            super().__init__()
+            self.id = num_id
+            self.custom_color = 'no color selected'
+
+            grid = QGridLayout()
+
+            self.label_id = QLabel("Color " + str(num_id))
+            self.combobox_predefined = QComboBox()
+            icon_dict = create_color_icon_dictionary()
+            add_icons_to_combobox_items(self.combobox_predefined, icon_dict)
+            self.check_custom_color = QCheckBox("Use custom?")
+            self.button_choose_color = QPushButton('Choose')
+            self.button_choose_color.setDisabled(True)
+            self.label_swatch = QLabel('swatch')
+            self.label_hexcolor = QLabel('Hexcolor: ')
+            self.line_hexcolor = QLineEdit('select')
+            self.line_hexcolor.setReadOnly(True)
+
+            grid.addWidget(self.label_id, 0, 0)
+            grid.addWidget(self.combobox_predefined, 1, 0, 1, 3)
+            grid.addWidget(self.check_custom_color, 2, 0, 1, 2)
+            grid.addWidget(self.button_choose_color, 2, 2)
+            grid.addWidget(self.label_swatch, 3, 0)
+            grid.addWidget(self.label_hexcolor, 3, 1)
+            grid.addWidget(self.line_hexcolor, 3, 2)
+
+            self.setLayout(grid)
+
+            self.check_custom_color.stateChanged.connect(self.update_choose_button)
+
+        def update_choose_button(self):
+            self.button_choose_color.setEnabled(not self.button_choose_color.isEnabled())
+            self.combobox_predefined.setEnabled(not self.combobox_predefined.isEnabled())
 
 
 # Takes in a list of strings (colors), and returns a concatenated string separated by dashes
@@ -373,17 +427,87 @@ def create_color_icon_dictionary():
     return color_icons
 
 
+class ColorPicker(QDialog):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Custom Color Dialog")
+
+        layout = QGridLayout()
+
+        self.red_slider = QSlider(Qt.Orientation.Horizontal)
+        self.red_slider.setRange(0, 255)
+        self.red_slider.valueChanged.connect(self.update_color)
+        self.red_value = QLineEdit()
+        self.red_value.setReadOnly(True)
+        layout.addWidget(QLabel("Red:"), 0, 0)
+        layout.addWidget(self.red_slider, 0, 1)
+        layout.addWidget(self.red_value, 0, 2)
+
+        self.green_slider = QSlider(Qt.Orientation.Horizontal)
+        self.green_slider.setRange(0, 255)
+        self.green_slider.valueChanged.connect(self.update_color)
+        self.green_value = QLineEdit()
+        self.green_value.setReadOnly(True)
+        layout.addWidget(QLabel("Green:"), 1, 0)
+        layout.addWidget(self.green_slider, 1, 1)
+        layout.addWidget(self.green_value, 1, 2)
+
+        self.blue_slider = QSlider(Qt.Orientation.Horizontal)
+        self.blue_slider.setRange(0, 255)
+        self.blue_slider.valueChanged.connect(self.update_color)
+        self.blue_value = QLineEdit()
+        self.blue_value.setReadOnly(True)
+        layout.addWidget(QLabel("Blue:"), 2, 0)
+        layout.addWidget(self.blue_slider, 2, 1)
+        layout.addWidget(self.blue_value, 2, 2)
+
+        self.alpha_slider = QSlider(Qt.Orientation.Horizontal)
+        self.alpha_slider.setRange(0, 255)
+        self.alpha_slider.setSliderPosition(255)
+        self.alpha_slider.valueChanged.connect(self.update_color)
+        self.alpha_value = QLineEdit()
+        self.alpha_value.setReadOnly(True)
+        layout.addWidget(QLabel("Alpha:"), 3, 0)
+        layout.addWidget(self.alpha_slider, 3, 1)
+        layout.addWidget(self.alpha_value, 3, 2)
+
+        self.label_color_display = QLabel("Preview:")
+        layout.addWidget(self.label_color_display, 4, 0)
+        self.color_display = QLabel()
+        layout.addWidget(self.color_display, 4, 1, 1, 3)
+
+        self.button_add_color = QPushButton("Add to colorlist")
+        layout.addWidget(self.button_add_color, 5, 0, 1, 3)
+
+        self.setLayout(layout)
+
+        self.button_add_color.clicked.connect(self.close_view)
+
+    def close_view(self):
+        self.close()
+
+    def update_color(self):
+        red = self.red_slider.value()
+        green = self.green_slider.value()
+        blue = self.blue_slider.value()
+        alpha = self.alpha_slider.value()
+
+        color = f"rgba({red}, {green}, {blue}, {alpha})"
+        self.color_display.setStyleSheet(f"background-color: {color}")
+
+        self.red_value.setText(str(red))
+        self.green_value.setText(str(green))
+        self.blue_value.setText(str(blue))
+        self.alpha_value.setText(str(alpha))
+
+
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    testApp = CustomColorMapDialog()
-    testApp.show()
+    # testApp = CustomColorMapDialog()
+    # testApp.show()
 
-    # test_colors = ['blue', 'white', 'red']
-    #
-    # test_cmap = create_custom_cmap(test_colors)
-    # plt.cm.register_cmap(name="CL_test", cmap=test_cmap)
-    #
-    # test to see if my colormap is being registered correctly with the plt cm registry
-    # preview_colorbar(plt.cm.get_cmap('CL_test'))
+    color_picker = QColorDialog()
+    color_picker.setOptions(QColorDialog.ColorDialogOption.DontUseNativeDialog)
+    color_picker.show()
 
     sys.exit(app.exec())
