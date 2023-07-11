@@ -1,16 +1,18 @@
-import sys
+import csv
+import os
 
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 from PyQt6.QtGui import QIcon, QColor, QPixmap, QDoubleValidator
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
-from PyQt6.QtWidgets import QApplication, QGridLayout, QLineEdit, QLabel, QCheckBox, QDialog, QSlider
+from PyQt6.QtWidgets import QApplication, QGridLayout, QLineEdit, QLabel, QCheckBox, QDialog, QSlider, \
+    QSpacerItem, QSizePolicy, QFileDialog
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QWidget, QComboBox, QPushButton, QVBoxLayout, QHBoxLayout, QColorDialog, QSpinBox
-from typing import Callable
 from matplotlib import cm
+import numpy as np
 
 COLOR_MAPS = {
     "AFM hot": cm.afmhot,
@@ -33,13 +35,6 @@ COLOR_MAPS = {
     "Earth": cm.gist_earth,
     "Ocean": cm.ocean
 }
-
-NUM_COLORS = {"2": 2,
-              "3": 3,
-              "4": 4,
-              "5": 5,
-              "6": 6
-              }
 
 
 class ColorMapDialog(QWidget):
@@ -100,10 +95,10 @@ class ColorMapDialog(QWidget):
             lambda: self.controller.apply_colormap_to_all(self.find_cmap(self.cmap_combobox.currentText()))
         )
 
-    # check if current_text is a value in the COLOR_MAPS defined dictionary
-    # if it is, then get_cmap() and set self.current_cmap
-    # otherwise, self.current_cmap will already be set via custom cmap dialog
     def find_cmap(self, current_text):
+        """ check if current_text is a value in COLOR_MAPS defined dictionary
+        if it is, then get_cmap() and set self.current_cmap
+        otherwise, self.current_cmap will already be set via custom cmap dialog"""
         if current_text in COLOR_MAPS.keys():
             self.current_cmap = COLOR_MAPS.get(current_text)
             return self.current_cmap
@@ -120,14 +115,12 @@ class ColorMapDialog(QWidget):
             self.show()
 
     def open_custom_cmap_window(self):
-        # print("open_custom_cmap_window()")
         self.cmap_window = CustomColorMapDialog()
+        # self.cmap_window.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self.cmap_window.open_cmap_window()
         self.current_custom_cmap = self.cmap_window.get_cmap()
         self.cmap_combobox.addItem(self.cmap_window.get_cmap().name)
-
-        # print("I've reached the end of open_custom_cmap_window().")
-        # print("The current cmap is" + self.current_cmap.name)
+        # TODO address why you can't click the create custom cmap button twice (2nd time quits program)
 
 
 class CustomColorMapDialog(QDialog):
@@ -135,7 +128,7 @@ class CustomColorMapDialog(QDialog):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Custom Color Map Editor")
-        self.setFixedSize(650, 500)
+        # self.setFixedSize(650, 500)
         self.setContentsMargins(20, 20, 20, 20)
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
         self.positions = None
@@ -143,12 +136,12 @@ class CustomColorMapDialog(QDialog):
         # overall vertical layout
         self.v1_layout = QVBoxLayout()
         self.v1_layout.setSpacing(10)
-        self.setLayout(self.v1_layout)
-        # TODO change the layout of self to include v box layout
+
+        # ______OLD LAYOUT___________________________________________________________________________________________
 
         # horizontal layout 2 - num_colors box
         self.num_colors_box = QComboBox()
-        self.num_colors_box.addItems(NUM_COLORS)
+        # self.num_colors_box.addItems(NUM_COLORS)
 
         # alternative horizontal layout 3 - grid layout
         h3_layout_grid = QGridLayout()
@@ -201,9 +194,9 @@ class CustomColorMapDialog(QDialog):
         self.preview_button = QPushButton("Preview Color Map")
 
         # horizontal layout 5 - color bar preview
-        h5_layout = QHBoxLayout()
-        self.color_bar_preview_widget = QWidget()
-        self.color_bar_preview_widget.setLayout(h5_layout)
+        # h5_layout = QHBoxLayout()
+        # self.color_bar_preview_widget = QWidget()
+        # self.color_bar_preview_widget.setLayout(h5_layout)
 
         self.colors = ['black', 'grey', 'white']
         self.cmap = create_custom_cmap(self.colors)
@@ -234,21 +227,257 @@ class CustomColorMapDialog(QDialog):
             self.update_line_edit_state
         )
 
-        # ________________________________________________________________________________________
+        # ____________NEW LAYOUT__________________________________________________________________________________
         # below this line is the newly added functionality for the color chooser
 
-        # self.v2_layout = QVBoxLayout()
-        #
-        # self.box_num_colors = QWidget()
-        # num_colors_grid = QGridLayout()
-        # self.box_num_colors.setLayout(num_colors_grid)
-        # self.label_num_colors = QLabel("Number of Colors:")
-        # self.spinbox_num_colors = QSpinBox()
-        # self.spinbox_num_colors.setMinimum(2)
-        # self.spinbox_num_colors.setMaximum(8)
-        # self.spinbox_num_colors.displayIntegerBase()
-        # num_colors_grid.addWidget(self.label_num_colors, 0, 0)
-        # num_colors_grid.addWidget(self.spinbox_num_colors, 0, 1)
+        # default values
+        self.num_colors = 6
+        self.name = "n/a"
+
+        self.v2_layout = QVBoxLayout()
+        self.v2_layout.setSpacing(10)
+
+        self.box_num_colors = QWidget()
+        grid_num_colors = QGridLayout()
+        self.box_num_colors.setLayout(grid_num_colors)
+        self.label_num_colors = QLabel("Number of Colors (2-6):")
+        self.spinbox_num_colors = QSpinBox()
+        self.spinbox_num_colors.lineEdit().setReadOnly(True)
+        self.spinbox_num_colors.setMinimum(2)
+        self.spinbox_num_colors.setMaximum(6)
+        self.spinbox_num_colors.displayIntegerBase()
+        self.button_apply_num = QPushButton("Apply Number of Colors")
+        grid_num_colors.addWidget(self.label_num_colors, 0, 0)
+        grid_num_colors.addWidget(self.spinbox_num_colors, 0, 1)
+        grid_num_colors.addWidget(self.button_apply_num, 0, 2)
+
+        self.box_six_colors = QWidget()
+        grid_six_colors = QGridLayout()
+        self.box_six_colors.setLayout(grid_six_colors)
+        self.placeholder = QSpacerItem(50, 15, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self.color1 = CustomColorMapDialog.ColorModule(1)
+        self.first_colormod = self.color1
+        self.color2 = CustomColorMapDialog.ColorModule(2)
+        self.color3 = CustomColorMapDialog.ColorModule(3)
+        self.color4 = CustomColorMapDialog.ColorModule(4)
+        self.color5 = CustomColorMapDialog.ColorModule(5)
+        self.color6 = CustomColorMapDialog.ColorModule(6)
+        self.last_colormod = self.color6
+        self.color_modules = [self.color1, self.color2, self.color3, self.color4, self.color5, self.color6]
+        self.modules_dict = {obj.num_id: obj for obj in self.color_modules}
+        self.set_equal_positioning()
+        grid_six_colors.addWidget(self.color1, 0, 0)
+        grid_six_colors.addWidget(self.color2, 0, 1)
+        grid_six_colors.addWidget(self.color3, 0, 2)
+        grid_six_colors.addWidget(self.color4, 0, 3)
+        grid_six_colors.addWidget(self.color5, 0, 4)
+        grid_six_colors.addWidget(self.color6, 0, 5)
+
+        self.button_preview_cbar = QPushButton("Preview Custom Colormap")
+
+        self.colors = ['black', 'grey', 'white']
+        self.cmap = create_custom_cmap(self.colors)
+
+        self.color_bar_fig = generate_colorbar_figure(self.cmap)
+        self.figure = FigureCanvas(self.color_bar_fig)
+
+        self.box_save_options = QWidget()
+        grid_save_options = QGridLayout()
+        self.box_save_options.setLayout(grid_save_options)
+        self.button_load_cmap = QPushButton("Load Saved Cmap")
+        self.button_save_cmap = QPushButton("Save As")
+        self.button_use_cmap = QPushButton("Use cmap")
+        grid_save_options.addWidget(self.button_load_cmap, 0, 0)
+        grid_save_options.addWidget(self.button_save_cmap, 0, 1, 1, 4)
+        grid_save_options.addWidget(self.button_use_cmap, 0, 5)
+
+        self.v2_layout.addWidget(self.box_num_colors)
+        self.v2_layout.addWidget(self.box_six_colors)
+        self.v2_layout.addItem(self.placeholder)
+        self.v2_layout.addWidget(self.button_preview_cbar)
+        self.v2_layout.addWidget(self.figure)
+        self.v2_layout.addItem(self.placeholder)
+        self.v2_layout.addWidget(self.box_save_options)
+
+        self.button_apply_num.clicked.connect(self.apply_num_colors_visible)
+        self.button_preview_cbar.clicked.connect(self.set_colorbar_preview)
+        # self.line_cmap_name.textEdited.connect(self.enforce_line_edit_suffix)
+        self.button_load_cmap.clicked.connect(self.get_cmap_data_from_file)
+        self.button_save_cmap.clicked.connect(self.open_save_cmap_window)
+        self.button_use_cmap.clicked.connect(self.save_and_close)
+        # __________________________________________________________________________________________________________
+        # WHEN READY, SET LAYOUT OF SELF TO SWITCH BETWEEN OLD AND NEW UI ------------------------------------------
+
+        self.setLayout(self.v2_layout)
+
+    def load_cmap_data_to_editor(self, data):
+        self.spinbox_num_colors.setValue(len(data))
+        self.apply_num_colors_visible()
+
+        counter = 0
+
+        for x in data:
+            mod = self.color_modules[counter]
+            if "True" in x[0]:
+                mod.check_custom_color.setChecked(True)
+                mod.update_choose_button()
+                parsed = self.parse_tuple(x[1])
+                mod.custom_color = parsed
+                mod.position = x[2]
+                mod.line_position.setText(str(x[2]))
+            else:
+                mod.combobox_predefined.setCurrentText(x[1])
+                mod.position = x[2]
+                mod.line_position.setText(str(x[2]))
+
+            counter = counter + 1
+
+        self.set_colorbar_preview()
+
+    def get_cmap_data_from_file(self):
+        loader = QFileDialog()
+        loader.setAcceptMode(QFileDialog.AcceptMode.AcceptOpen)
+        options = loader.Option(QFileDialog.Option.DontUseNativeDialog)
+        path = loader.getOpenFileName(
+            caption="Open Colormap File",
+            directory=os.getcwd(),
+            filter="CSV (*.csv)",
+            options=options
+        )
+        self.cmap_data = self.extract_cmap_data_from_csv(path[0])
+        self.cmap.name = self.extract_filename(str(path[0]))
+        self.load_cmap_data_to_editor(self.cmap_data)
+
+    def open_save_cmap_window(self):
+        directories = QFileDialog()
+        directories.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
+        directories.setFileMode(QFileDialog.FileMode.AnyFile)
+        directories.setDefaultSuffix("csv")
+        options = directories.Option(QFileDialog.Option.DontUseNativeDialog)
+        filepath = directories.getSaveFileName(
+            caption="Save Colormap As",
+            directory=os.getcwd(),
+            filter="CSV (*.csv)",
+            options=options
+        )
+        string_filepath = filepath[0]
+        if not string_filepath.endswith(".csv"):
+            string_filepath += ".csv"
+        data = self.get_data_for_csv()
+        self.write_cmap_to_csv(data, string_filepath)
+        self.cmap.name = self.extract_filename(str(string_filepath))
+
+    def extract_filename(self, path):
+        filename_with_extension = os.path.basename(path)
+        filename, _ = os.path.splitext(filename_with_extension)
+        return filename
+
+    def get_data_for_csv(self):
+        clrs = self.get_dynamic_color_text()
+        psns = self.get_dynamic_positions()
+        bools = []
+        for mod in self.color_modules:
+            if mod.num_id > self.num_colors:
+                continue
+            else:
+                bools.append(mod.check_custom_color.isChecked())
+
+        rtn = tuple(zip(bools, clrs, psns))
+        return rtn
+
+    def write_cmap_to_csv(self, data, filename):
+        with open(filename, 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(['isCustom', 'Color', 'Position'])  # Write header row
+            writer.writerows(data)  # Write data rows
+
+    """
+    Figuring out the file format for this
+    
+    isCustom, color, position
+    False, magenta, 0.000
+    True, (0.123, 0.468, 0.899, 1.000), 0.40
+    False, dark slate gray, 1.000
+    
+    isCustom: bool
+    color: either a CSS4 name or a RBGA tuple (R, G, B, A)
+    position: float between 0 and 1
+    """
+
+    def parse_tuple(self, string):
+        try:
+            values = string.strip('()').split(',')
+            if len(values) != 4:
+                raise ValueError("Input does not represent a tuple of length 4.")
+
+            parsed_tuple = tuple(float(val.strip()) for val in values)
+            return parsed_tuple
+        except ValueError as e:
+            raise ValueError("Invalid tuple string format.") from e
+
+    def extract_cmap_data_from_csv(self, filename):
+        data = []
+        with open(filename, 'r') as csvfile:
+            reader = csv.reader(csvfile)
+            next(reader)  # Skip the header row
+            for row in reader:
+                isCustom, color, position = row
+                print(row)
+                print(row[0])
+                print(row[1])
+                print(row[2])
+                data.append((isCustom, color, float(position)))
+        print("extracted data from the csv file: ")
+        print(data)
+        return data
+
+    def set_colorbar_preview(self):
+        self.v2_layout.replaceWidget(self.figure, self.update_colormap())
+
+    def update_colormap(self):
+        # self.test_getters() # TODO debug uncomment
+        self.cmap = create_custom_cmap(self.get_dynamic_color_text(), self.get_dynamic_positions())
+
+        self.color_bar_fig = generate_colorbar_figure(self.cmap)
+        self.figure = FigureCanvas(self.color_bar_fig)
+
+        return self.figure
+
+    def test_getters(self):
+        print("colors:")
+        print(self.get_dynamic_color_text())
+        print("positions:")
+        print(self.get_dynamic_positions())
+
+    def set_equal_positioning(self):
+        positions = np.linspace(0.000, 1.000, self.num_colors)
+
+        for i in range(self.num_colors):
+            self.color_modules[i].line_position.setText(str(positions[i]))
+
+        self.first_colormod.line_position.setReadOnly(True)
+        self.last_colormod.line_position.setReadOnly(True)
+
+    def get_dynamic_positions(self):
+        pos = []
+
+        for i in range(self.num_colors):
+            pos.append(float(self.color_modules[i].line_position.text()))
+
+        return pos
+
+    def get_dynamic_color_text(self):
+        col = []
+
+        for mod in self.color_modules:
+            if mod.num_id > self.num_colors:
+                break
+            if not mod.check_custom_color.isChecked():
+                col.append(mod.combobox_predefined.currentText())
+            else:
+                col.append(mod.custom_color)
+
+        return col
 
     def update_line_edit_state(self):
         self.position_1_box.setText('0.000')
@@ -276,7 +505,7 @@ class CustomColorMapDialog(QDialog):
             return selected_positions
 
     def validate_position_input(self, positions):
-        if not all(positions[i] < positions[i+1] for i in range(len(positions)-1)):
+        if not all(positions[i] < positions[i + 1] for i in range(len(positions) - 1)):
             return False
         else:
             return True
@@ -305,67 +534,115 @@ class CustomColorMapDialog(QDialog):
         return self.cmap
 
     def save_and_close(self):
-        # print("custom color map dialog: self.cmap.name = " + self.cmap.name)
         self.close()
 
-    # self.exec() creates a modal window!! self.open() creates a window in parallel to colormapdialog
+    # self.exec() creates a modal window!! better than self.open(), which creates a window in parallel to colormapdialog
     def open_cmap_window(self):
         if self.isVisible():
             self.hide()
         self.exec()
 
+    def apply_num_colors_visible(self):
+        self.num_colors = self.spinbox_num_colors.value()
+        self.last_colormod.line_position.setReadOnly(False)
+        self.last_colormod = self.modules_dict.get(self.num_colors)
+
+        for x in self.color_modules:
+            if x.num_id > self.num_colors:
+                if x.hidden:
+                    continue
+                else:
+                    x.toggle_hidden()
+            else:
+                if x.hidden:
+                    x.toggle_hidden()
+
+        self.set_equal_positioning()
+
     class ColorModule(QWidget):
+        """Creates a small widget for each color containing id, option to choose predefined/custom, and set position"""
 
         def __init__(self, num_id: int):
             super().__init__()
-            self.id = num_id
-            self.custom_color = 'no color selected'
+            self.num_id = num_id
+            self.hidden = False
+            self.isFirstColor = False
+            self.isLastColor = False
+            self.position = -1.000
+            self.custom_color = '(0.2, 0.3, 0.4, 1)'
+            self.setWindowTitle("Color " + str(num_id))
 
             grid = QGridLayout()
 
-            self.label_id = QLabel("Color " + str(num_id))
+            self.label_id = QLabel("COLOR " + str(num_id) + "   ")
             self.combobox_predefined = QComboBox()
             icon_dict = create_color_icon_dictionary()
             add_icons_to_combobox_items(self.combobox_predefined, icon_dict)
             self.check_custom_color = QCheckBox("Use custom?")
             self.button_choose_color = QPushButton('Choose')
             self.button_choose_color.setDisabled(True)
-            self.label_swatch = QLabel('swatch')
+            self.label_swatch = QLabel('.')
             self.label_hexcolor = QLabel('Hexcolor: ')
             self.line_hexcolor = QLineEdit('select')
             self.line_hexcolor.setReadOnly(True)
+            self.label_spacer = QSpacerItem(50, 15, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+            self.label_position = QLabel("Position (0-1):")
+            self.line_position = QLineEdit()
 
-            grid.addWidget(self.label_id, 0, 0)
+            grid.addWidget(self.label_id, 0, 0, 1, 3)
             grid.addWidget(self.combobox_predefined, 1, 0, 1, 3)
-            grid.addWidget(self.check_custom_color, 2, 0, 1, 2)
-            grid.addWidget(self.button_choose_color, 2, 2)
-            grid.addWidget(self.label_swatch, 3, 0)
-            grid.addWidget(self.label_hexcolor, 3, 1)
-            grid.addWidget(self.line_hexcolor, 3, 2)
+            grid.addItem(self.label_spacer, 2, 0)
+            grid.addWidget(self.check_custom_color, 3, 0, 1, 2)
+            grid.addWidget(self.button_choose_color, 3, 2)
+            grid.addWidget(self.label_swatch, 5, 0)
+            grid.addWidget(self.label_hexcolor, 5, 1)
+            grid.addWidget(self.line_hexcolor, 5, 2)
+            grid.addItem(self.label_spacer, 6, 0)
+            grid.addWidget(self.label_position, 7, 0, 1, 2)
+            grid.addWidget(self.line_position, 7, 2)
 
             self.setLayout(grid)
 
             self.check_custom_color.stateChanged.connect(self.update_choose_button)
 
+            self.button_choose_color.clicked.connect(self.open_colorpicker_dialog)
+
+        def open_colorpicker_dialog(self):
+            self.picker = QColorDialog()
+            self.picker.setOptions(QColorDialog.ColorDialogOption.DontUseNativeDialog)
+            self.picker.exec()
+
+            whole_rgb = self.picker.currentColor().getRgb()
+            self.custom_color = tuple(value / 256 for value in whole_rgb)
+
+            color = f"rgba({self.custom_color[0] * 256}, " \
+                    f"{self.custom_color[1] * 256}, " \
+                    f"{self.custom_color[2] * 256}, " \
+                    f"{self.custom_color[3] * 256})"
+            self.label_swatch.setStyleSheet(f"background-color: {color}")
+
         def update_choose_button(self):
+            if not self.check_custom_color.isChecked():
+                self.label_swatch.setStyleSheet("background-color: transparent")
             self.button_choose_color.setEnabled(not self.button_choose_color.isEnabled())
             self.combobox_predefined.setEnabled(not self.combobox_predefined.isEnabled())
 
-
-# Takes in a list of strings (colors), and returns a concatenated string separated by dashes
-def color_namer(colors):
-    rtn = ""
-    for color in colors:
-        rtn += color + "-"
-    rtn = rtn[:-1]
-
-    return rtn
+        def toggle_hidden(self):
+            self.hidden = not self.hidden
+            self.label_id.setHidden(not self.label_id.isHidden())
+            self.combobox_predefined.setHidden(not self.combobox_predefined.isHidden())
+            self.check_custom_color.setHidden(not self.check_custom_color.isHidden())
+            self.button_choose_color.setHidden(not self.button_choose_color.isHidden())
+            self.label_swatch.setHidden(not self.label_swatch.isHidden())
+            self.label_hexcolor.setHidden(not self.label_hexcolor.isHidden())
+            self.line_hexcolor.setHidden(not self.line_hexcolor.isHidden())
+            self.label_position.setHidden(not self.label_position.isHidden())
+            self.line_position.setHidden(not self.line_position.isHidden())
 
 
 # takes EMPTY QComboBox and a color dictionary (key=color_name(string), value=icon(QIcon)) & adds
 # a new item (colorname) and sets the icon for that item for every entry in qcombobox.
 def add_icons_to_combobox_items(qcombobox: QComboBox, color_dictionary):
-
     counter = 0
 
     for color_name in color_dictionary:
@@ -379,28 +656,27 @@ def create_custom_cmap(user_colors: list, positions=None):
     if len(user_colors) < 2:
         raise ValueError('The length of user_colors was less than 2')
 
-    map_name = color_namer(user_colors)
-
     if positions is not None:
         zipped_colors_positions = tuple(zip(positions, user_colors))
-        cmap = LinearSegmentedColormap.from_list(map_name, zipped_colors_positions, N=256)
+        cmap = LinearSegmentedColormap.from_list("temp", zipped_colors_positions, N=256)
     else:
-        cmap = LinearSegmentedColormap.from_list(map_name, user_colors, N=256)
+        cmap = LinearSegmentedColormap.from_list("temp", user_colors, N=256)
 
     return cmap
 
-
-# test function to preview custom color map with mpl color bar
-def preview_colorbar(cmap):
-    fig, ax = plt.subplots(figsize=(6, 1))
-    fig.subplots_adjust(bottom=0.5)
-
-    fig.colorbar(plt.cm.ScalarMappable(cmap=cmap),
-                 cax=ax, orientation='horizontal', label='Preview ColorMap')
-    plt.show()
-
+#
+# # test function to preview custom color map with mpl color bar
+# def preview_colorbar(cmap):
+#     fig, ax = plt.subplots(figsize=(6, 1))
+#     fig.subplots_adjust(bottom=0.5)
+#
+#     fig.colorbar(plt.cm.ScalarMappable(cmap=cmap),
+#                  cax=ax, orientation='horizontal', label='Preview ColorMap')
+#     plt.show()
+#
 
 def generate_colorbar_figure(cmap):
+    """Creates a new matplotlib figure that contains the colorbar preview"""
     fig, ax = plt.subplots(figsize=(6, 1))
     fig.subplots_adjust(bottom=0.25)
 
@@ -409,9 +685,10 @@ def generate_colorbar_figure(cmap):
     return fig
 
 
-# creates a dictionary where the key is a string containing color_name from mcolors.CSS4 color list and the value
-# is a QIcon object that will display the corresponding color
 def create_color_icon_dictionary():
+    """dictionary for matching color names to color icons in predefined lists
+    key: string containing color_name from mcolors.CSS4 color list
+    value: QIcon object that displays a small swatch of corresponding color"""
     color_icons = {}
 
     for color_name, color_value in mcolors.CSS4_COLORS.items():
@@ -427,87 +704,49 @@ def create_color_icon_dictionary():
     return color_icons
 
 
-class ColorPicker(QDialog):
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("Custom Color Dialog")
+def write_to_csv_test(data, filename):
+    with open(filename, 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(['isCustom', 'Color', 'Position'])  # Write header row
+        writer.writerows(data)  # Write data rows
 
-        layout = QGridLayout()
 
-        self.red_slider = QSlider(Qt.Orientation.Horizontal)
-        self.red_slider.setRange(0, 255)
-        self.red_slider.valueChanged.connect(self.update_color)
-        self.red_value = QLineEdit()
-        self.red_value.setReadOnly(True)
-        layout.addWidget(QLabel("Red:"), 0, 0)
-        layout.addWidget(self.red_slider, 0, 1)
-        layout.addWidget(self.red_value, 0, 2)
+def print_something():
+    print("woohoo!")
 
-        self.green_slider = QSlider(Qt.Orientation.Horizontal)
-        self.green_slider.setRange(0, 255)
-        self.green_slider.valueChanged.connect(self.update_color)
-        self.green_value = QLineEdit()
-        self.green_value.setReadOnly(True)
-        layout.addWidget(QLabel("Green:"), 1, 0)
-        layout.addWidget(self.green_slider, 1, 1)
-        layout.addWidget(self.green_value, 1, 2)
 
-        self.blue_slider = QSlider(Qt.Orientation.Horizontal)
-        self.blue_slider.setRange(0, 255)
-        self.blue_slider.valueChanged.connect(self.update_color)
-        self.blue_value = QLineEdit()
-        self.blue_value.setReadOnly(True)
-        layout.addWidget(QLabel("Blue:"), 2, 0)
-        layout.addWidget(self.blue_slider, 2, 1)
-        layout.addWidget(self.blue_value, 2, 2)
-
-        self.alpha_slider = QSlider(Qt.Orientation.Horizontal)
-        self.alpha_slider.setRange(0, 255)
-        self.alpha_slider.setSliderPosition(255)
-        self.alpha_slider.valueChanged.connect(self.update_color)
-        self.alpha_value = QLineEdit()
-        self.alpha_value.setReadOnly(True)
-        layout.addWidget(QLabel("Alpha:"), 3, 0)
-        layout.addWidget(self.alpha_slider, 3, 1)
-        layout.addWidget(self.alpha_value, 3, 2)
-
-        self.label_color_display = QLabel("Preview:")
-        layout.addWidget(self.label_color_display, 4, 0)
-        self.color_display = QLabel()
-        layout.addWidget(self.color_display, 4, 1, 1, 3)
-
-        self.button_add_color = QPushButton("Add to colorlist")
-        layout.addWidget(self.button_add_color, 5, 0, 1, 3)
-
-        self.setLayout(layout)
-
-        self.button_add_color.clicked.connect(self.close_view)
-
-    def close_view(self):
-        self.close()
-
-    def update_color(self):
-        red = self.red_slider.value()
-        green = self.green_slider.value()
-        blue = self.blue_slider.value()
-        alpha = self.alpha_slider.value()
-
-        color = f"rgba({red}, {green}, {blue}, {alpha})"
-        self.color_display.setStyleSheet(f"background-color: {color}")
-
-        self.red_value.setText(str(red))
-        self.green_value.setText(str(green))
-        self.blue_value.setText(str(blue))
-        self.alpha_value.setText(str(alpha))
+def extract_filename_test(path):
+    filename_with_extension = os.path.basename(path)
+    filename, _ = os.path.splitext(filename_with_extension)
+    return filename
 
 
 if __name__ == '__main__':
-    app = QApplication(sys.argv)
-    # testApp = CustomColorMapDialog()
-    # testApp.show()
+    # app = QApplication(sys.argv)
+    # # testApp = CustomColorMapDialog()
+    # # testApp.show()
+    #
+    # color_picker = QColorDialog()
+    # color_picker.setOptions(QColorDialog.ColorDialogOption.DontUseNativeDialog)
+    # color_picker.exec()
+    #
+    # color_picker.colorSelected.connect(print_something)
+    # print(color_picker.currentColor().getRgb())
+    #
+    # sys.exit(app.exec())
 
-    color_picker = QColorDialog()
-    color_picker.setOptions(QColorDialog.ColorDialogOption.DontUseNativeDialog)
-    color_picker.show()
+    # list = [(False, "blue", 0.000),
+    #         (False, "green", 0.300),
+    #         (False, "white", 0.600),
+    #         (False, "orange", 1.000)
+    #         ]
+    #
+    # name = "noWorry.csv"
+    #
+    # write_to_csv_test(list, name)
 
-    sys.exit(app.exec())
+    filepath = "/Users/claire/GitHubRepos/pySICM_Analysis/sicm_analyzer/tester1.csv"
+
+    st = extract_filename_test(filepath)
+
+    print(st)
