@@ -271,11 +271,15 @@ class Controller:
         The selected color map can be applied to the current view
         or to all view objects at once.
         """
+        if self.cmap_dialog:
+            self.cmap_dialog.destroy()
+
         self.cmap_dialog = ColorMapDialog(
             controller=self,
             parent=self.main_window
         )
         self.cmap_dialog.open_window()
+
 
     def _apply_colormap_to_view(self, view: View, cmap):
         view.color_map = cmap
