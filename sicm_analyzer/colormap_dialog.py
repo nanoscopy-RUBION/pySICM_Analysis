@@ -7,7 +7,7 @@ from PyQt6.QtGui import QIcon, QColor, QPixmap, QDoubleValidator
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from PyQt6.QtWidgets import QApplication, QGridLayout, QLineEdit, QLabel, QCheckBox, QDialog, QSlider, \
-    QSpacerItem, QSizePolicy, QFileDialog
+    QSpacerItem, QSizePolicy, QFileDialog, QMessageBox
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QWidget, QComboBox, QPushButton, QVBoxLayout, QHBoxLayout, QColorDialog, QSpinBox
@@ -67,7 +67,7 @@ class ColorMapDialog(QWidget):
         button_box = QWidget()
         button_box.setLayout(v_layout)
 
-        self.button_custom_cmap = QPushButton("Create custom color map")
+        self.button_custom_cmap = QPushButton("Create/Load Custom Color Map")
 
         self.cmap_combobox = QComboBox()
         self.cmap_combobox.addItems(COLOR_MAPS.keys())
@@ -85,7 +85,6 @@ class ColorMapDialog(QWidget):
 
         self.button_custom_cmap.clicked.connect(
             self.open_custom_cmap_window
-            # self.new_open_custom_cmap_window
         )
         self.button_apply.clicked.connect(
             lambda: self.controller.apply_colormap_to_selection(self.find_cmap(self.cmap_combobox.currentText()))
@@ -234,6 +233,7 @@ class CustomColorMapDialog(QDialog):
         self.num_colors = 6
         self.name = "n/a"
         self.cmap_data = []
+        self.cmap = cm.get_cmap("viridis")
 
         self.v2_layout = QVBoxLayout()
         self.v2_layout.setSpacing(10)
@@ -246,7 +246,7 @@ class CustomColorMapDialog(QDialog):
         self.spinbox_num_colors.lineEdit().setReadOnly(True)
         self.spinbox_num_colors.setMinimum(2)
         self.spinbox_num_colors.setMaximum(6)
-        self.spinbox_num_colors.displayIntegerBase()
+        self.spinbox_num_colors.setDisplayIntegerBase(6)
         self.button_apply_num = QPushButton("Apply Number of Colors")
         grid_num_colors.addWidget(self.label_num_colors, 0, 0)
         grid_num_colors.addWidget(self.spinbox_num_colors, 0, 1)
@@ -255,7 +255,6 @@ class CustomColorMapDialog(QDialog):
         self.box_six_colors = QWidget()
         grid_six_colors = QGridLayout()
         self.box_six_colors.setLayout(grid_six_colors)
-        # self.placeholder = QSpacerItem(50, 15, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         self.color1 = ColorModule(1)
         self.first_colormod = self.color1
         self.color2 = ColorModule(2)
@@ -277,7 +276,7 @@ class CustomColorMapDialog(QDialog):
         self.button_preview_cbar = QPushButton("Preview Custom Colormap")
 
         self.colors = ['black', 'grey', 'white']
-        self.cmap = create_custom_cmap(self.colors)
+        self.cmap = self.create_custom_cmap(self.colors)
 
         self.color_bar_fig = generate_colorbar_figure(self.cmap)
         self.figure = FigureCanvas(self.color_bar_fig)
@@ -288,17 +287,16 @@ class CustomColorMapDialog(QDialog):
         self.button_load_cmap = QPushButton("Load Saved Cmap")
         self.button_save_cmap = QPushButton("Save As")
         self.button_use_cmap = QPushButton("Use cmap")
+        self.button_use_cmap.setEnabled(False)
         grid_save_options.addWidget(self.button_load_cmap, 0, 0)
         grid_save_options.addWidget(self.button_save_cmap, 0, 1, 1, 4)
         grid_save_options.addWidget(self.button_use_cmap, 0, 5)
 
         self.v2_layout.addWidget(self.box_num_colors)
         self.v2_layout.addWidget(self.box_six_colors)
-        # self.v2_layout.addItem(self.placeholder)
         self.v2_layout.addItem(QSpacerItem(50, 15, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed))
         self.v2_layout.addWidget(self.button_preview_cbar)
         self.v2_layout.addWidget(self.figure)
-        # self.v2_layout.addItem(self.placeholder)
         self.v2_layout.addItem(QSpacerItem(50, 15, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed))
         self.v2_layout.addWidget(self.box_save_options)
 
@@ -336,8 +334,6 @@ class CustomColorMapDialog(QDialog):
             counter = counter + 1
 
         self.set_colorbar_preview()
-        # TODO loading a cmap from a file does not keep the name of the cmap, because the name gets 
-        # TODO overwritten when data is sent to self.set_colorbar_preview()
 
     def get_cmap_data_from_file(self):
         loader = QFileDialog()
@@ -349,13 +345,12 @@ class CustomColorMapDialog(QDialog):
             filter="CSV (*.csv)",
             options=options
         )
-        self.cmap_data = extract_cmap_data_from_csv(path[0])
-        self.cmap.name = extract_filename(str(path[0]))
-        print("get_cmap_data_from_file - self.cmap.name: " + str(self.cmap.name))
-        self.load_cmap_data_to_editor(self.cmap_data)
+        if (path[0] is not None) and (path[0] != ''):
+            self.cmap_data = extract_cmap_data_from_csv(path[0])
+            self.cmap.name = extract_filename(str(path[0]))
+            self.load_cmap_data_to_editor(self.cmap_data)
 
-    # TODO validate positional input
-    # TODO disable save button until you are sure that all the fields have relevant data in them.
+
     def open_save_cmap_window(self):
         directories = QFileDialog()
         directories.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
@@ -389,14 +384,24 @@ class CustomColorMapDialog(QDialog):
         return rtn
 
     def set_colorbar_preview(self):
+        self.button_use_cmap.setEnabled(True)
         self.v2_layout.replaceWidget(self.figure, self.update_colormap())
 
     def update_colormap(self):
-        self.cmap = create_custom_cmap(self.get_dynamic_color_text(), self.get_dynamic_positions())
-        self.color_bar_fig = generate_colorbar_figure(self.cmap)
-        self.figure = FigureCanvas(self.color_bar_fig)
-        return self.figure
+        try:
+            positions = self.get_dynamic_positions()
+            self.cmap = self.create_custom_cmap(self.get_dynamic_color_text(), positions)
+            self.color_bar_fig = generate_colorbar_figure(self.cmap)
+            self.figure = FigureCanvas(self.color_bar_fig)
+            return self.figure
+        except ValueError:
+            error_msg = QMessageBox.critical(self, "Invalid Positional Input",
+                                             "Invalid Positional Input \nPosition mapping points must be "
+                                             "in increasing order from 0.0 to 1.0.",
+                                             buttons=QMessageBox.StandardButton.Ok,
+                                             defaultButton=QMessageBox.StandardButton.Ok)
 
+    # TODO delete once finished with testing
     def test_getters(self):
         print("colors:")
         print(self.get_dynamic_color_text())
@@ -418,6 +423,9 @@ class CustomColorMapDialog(QDialog):
         for i in range(self.num_colors):
             pos.append(float(self.color_modules[i].line_position.text()))
 
+        if not all(pos[i] < pos[i + 1] for i in range(len(pos) - 1)):
+            raise ValueError
+
         return pos
 
     def get_dynamic_color_text(self):
@@ -432,6 +440,26 @@ class CustomColorMapDialog(QDialog):
                 col.append(mod.custom_color)
 
         return col
+
+    def create_custom_cmap(self, user_colors: list, positions=None):
+        """
+        Takes in a list of user specified colors (len > 1) and returns color map
+        """
+        if len(user_colors) < 2:
+            raise ValueError('The length of user_colors was less than 2')
+
+        name = 'xxTemp'
+
+        if (self.cmap.name != "n/a") or (self.cmap.name != "xxTemp"):
+            name = self.cmap.name
+
+        if positions is not None:
+            zipped_colors_positions = tuple(zip(positions, user_colors))
+            cmap = LinearSegmentedColormap.from_list(name, zipped_colors_positions, N=256)
+        else:
+            cmap = LinearSegmentedColormap.from_list(name, user_colors, N=256)
+
+        return cmap
 
     def get_cmap(self):
         return self.cmap
@@ -675,22 +703,6 @@ def add_icons_to_combobox_items(qcombobox: QComboBox, color_dictionary):
         counter = counter + 1
 
 
-def create_custom_cmap(user_colors: list, positions=None):
-    """
-    Takes in a list of user specified colors (len > 1) and returns color map
-    """
-    if len(user_colors) < 2:
-        raise ValueError('The length of user_colors was less than 2')
-
-    if positions is not None:
-        zipped_colors_positions = tuple(zip(positions, user_colors))
-        cmap = LinearSegmentedColormap.from_list("temp", zipped_colors_positions, N=256)
-    else:
-        cmap = LinearSegmentedColormap.from_list("temp", user_colors, N=256)
-
-    return cmap
-
-
 #
 # # test function to preview custom color map with mpl color bar
 # def preview_colorbar(cmap):
@@ -760,8 +772,8 @@ if __name__ == '__main__':
     #
     # sys.exit(app.exec())
 
-    filepath = "/Users/claire/GitHubRepos/pySICM_Analysis/sicm_analyzer/tester1.csv"
+    test_filepath = "/Users/claire/GitHubRepos/pySICM_Analysis/sicm_analyzer/tester1.csv"
 
-    st = extract_filename_test(filepath)
+    st = extract_filename_test(test_filepath)
 
     print(st)
