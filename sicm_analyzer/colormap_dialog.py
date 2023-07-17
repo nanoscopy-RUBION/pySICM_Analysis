@@ -3,7 +3,7 @@ import os
 
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
-from PyQt6.QtGui import QIcon, QColor, QPixmap, QDoubleValidator
+from PyQt6.QtGui import QIcon, QColor, QPixmap
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from PyQt6.QtWidgets import QApplication, QGridLayout, QLineEdit, QLabel, QCheckBox, \
@@ -122,6 +122,8 @@ class ColorMapDialog(QWidget):
             self.cmap_combobox.addItem(self.cmap_window.get_cmap().name)
 
 
+# TODO selecting anything but most recently added cmap from combobox assigns to most recent cmap data
+# TODO need a way of storing cmap data and associating it with options chosen in qcombobox.
 class CustomColorMapDialog(QDialog):
 
     def __init__(self):

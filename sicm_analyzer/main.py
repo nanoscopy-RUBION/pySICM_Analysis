@@ -11,7 +11,7 @@ from os.path import join
 from matplotlib.figure import Figure
 import re
 import numpy as np
-from PyQt6.QtWidgets import QStyleFactory
+from PyQt6.QtWidgets import QStyleFactory, QDialog
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication, QFileDialog, QInputDialog
 
@@ -22,6 +22,8 @@ from sicm_analyzer.crop_tool import CropToolWindow
 from sicm_analyzer.gui_main import MainWindow
 from sicm_analyzer.graph_canvas import GraphCanvas
 from sicm_analyzer.filter_dialog import FilterDialog
+from sicm_analyzer.threshold_dialog import ThresholdDialog
+from sicm_analyzer.manipulate_data import subtract_threshold
 from sicm_analyzer.manipulate_data import transpose_z_data, subtract_z_minimum, crop, invert_z_data
 from sicm_analyzer.manipulate_data import height_diff_to_neighbour
 from sicm_analyzer.manipulate_data import filter_median_temporal, filter_median_spatial
@@ -130,6 +132,7 @@ class Controller:
         self.main_window.action_batch_mode.triggered.connect(self.batch_mode_test)
         self.main_window.action_data_transpose_z.triggered.connect(self.transpose_z_of_current_view)
         self.main_window.action_data_minimum.triggered.connect(self.subtract_minimum_in_current_view)
+        self.main_window.action_data_threshold.triggered.connect(self.subtract_threshold)
         self.main_window.action_data_invert_z.triggered.connect(self.invert_z_in_current_view)
         self.main_window.action_data_flip_x.triggered.connect(self.flip_x)
         self.main_window.action_data_flip_y.triggered.connect(self.flip_y)
@@ -365,6 +368,20 @@ class Controller:
                     action_name=f"{selected_filter} (px-size: {radius})",
                     px_radius=radius
                 )(self.data_manager.get_data(self.current_selection), radius)
+
+    def subtract_threshold(self):
+        if self.current_selection:
+            data = self.data_manager.get_data(self.current_selection)
+            dialog = ThresholdDialog(data.z)
+            threshold = -1.00
+            if dialog.exec() == QDialog.DialogCode.Accepted:
+                threshold = dialog.get_threshold()
+            self.data_manager.execute_func_on_current_data(
+                action_name="Subtract z threshold",
+                func=subtract_threshold,
+                key=self.current_selection,
+                threshold=threshold
+            )(self.data_manager.get_data(self.current_selection), threshold)
 
     def plane_correction(self):
         """TODO: implement more functions"""

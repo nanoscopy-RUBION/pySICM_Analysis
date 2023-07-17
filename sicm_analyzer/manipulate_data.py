@@ -174,6 +174,10 @@ def filter_average_spatial(data: ScanBackstepMode, px_radius=1):
     data.z = z
 
 
+def subtract_threshold(data: ScanBackstepMode, threshold: float):
+    data.z = np.clip(data.z, threshold, None)
+
+
 def filter_single_outlier(data: ScanBackstepMode, point: tuple[int, int]):
     """
     Sets the value of a point to the median of its neighbours.
