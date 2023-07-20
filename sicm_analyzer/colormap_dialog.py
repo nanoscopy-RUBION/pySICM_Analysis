@@ -1,5 +1,6 @@
 import csv
 import os
+import sys
 
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
@@ -145,6 +146,7 @@ class CustomColorMapDialog(QDialog):
         grid_num_colors = QGridLayout()
         self.box_num_colors.setLayout(grid_num_colors)
         self.label_num_colors = QLabel("Number of Colors (2-6):")
+        self.label_num_colors.setStyleSheet("font-weight: bold")
         self.spinbox_num_colors = QSpinBox()
         self.spinbox_num_colors.lineEdit().setReadOnly(True)
         self.spinbox_num_colors.setMinimum(2)
@@ -197,10 +199,10 @@ class CustomColorMapDialog(QDialog):
 
         self.v2_layout.addWidget(self.box_num_colors)
         self.v2_layout.addWidget(self.box_six_colors)
-        self.v2_layout.addItem(QSpacerItem(50, 15, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed))
+        self.v2_layout.addItem(QSpacerItem(50, 25, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed))
         self.v2_layout.addWidget(self.button_preview_cbar)
         self.v2_layout.addWidget(self.figure)
-        self.v2_layout.addItem(QSpacerItem(50, 15, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed))
+        self.v2_layout.addItem(QSpacerItem(50, 25, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed))
         self.v2_layout.addWidget(self.box_save_options)
 
         self.button_apply_num.clicked.connect(self.apply_num_colors_visible)
@@ -404,6 +406,7 @@ class ColorModule(QWidget):
         grid = QGridLayout()
 
         self.label_id = QLabel("COLOR " + str(num_id) + "   ")
+        self.label_id.setStyleSheet("font-weight: bold")
         self.combobox_predefined = QComboBox()
         icon_dict = create_color_icon_dictionary()
         add_icons_to_combobox_items(self.combobox_predefined, icon_dict)
@@ -596,21 +599,9 @@ def extract_filename_test(path):
 
 
 if __name__ == '__main__':
-    # app = QApplication(sys.argv)
-    # # testApp = CustomColorMapDialog()
-    # # testApp.show()
-    #
-    # color_picker = QColorDialog()
-    # color_picker.setOptions(QColorDialog.ColorDialogOption.DontUseNativeDialog)
-    # color_picker.exec()
-    #
-    # color_picker.colorSelected.connect(print_something)
-    # print(color_picker.currentColor().getRgb())
-    #
-    # sys.exit(app.exec())
+    app = QApplication(sys.argv)
+    testApp = CustomColorMapDialog()
+    testApp.show()
 
-    test_filepath = "/Users/claire/GitHubRepos/pySICM_Analysis/sicm_analyzer/tester1.csv"
+    sys.exit(app.exec())
 
-    st = extract_filename_test(test_filepath)
-
-    print(st)

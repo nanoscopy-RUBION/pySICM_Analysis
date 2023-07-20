@@ -5,7 +5,7 @@ import numpy as np
 from symfit.core.minimizers import BFGS
 from symfit import Poly, variables, parameters, Model, Fit
 from symfit.core.objectives import LeastSquares
-from sicm_analyzer.sicm_data import SICMdata
+from sicm_analyzer.sicm_data import SICMdata, get_sicm_data
 from scipy.spatial import Delaunay
 
 
@@ -191,3 +191,129 @@ def measure_distance():
 
 def measure_profile():
     pass
+
+
+# Amplitude parameters
+def get_arithmetic_average_height(data: SICMdata):
+    """ 2.1 arithmetic average height (R_a), AKA centre line average
+
+    n: number of samples along assessment length
+    """
+
+    rtn = np.zeros(len(data.z))
+    counter = 0
+    for curve in data.z:
+        summation = np.sum(curve)
+        n = len(curve)
+        rtn[counter] = summation / n
+        counter += 1
+    return rtn
+
+
+def get_root_mean_sq_roughness(data: SICMdata):
+    """ 2.2 root-mean-square roughness (R_q)
+
+    n: number of samples along the assessment length"""
+
+    rtn = np.zeros(len(data.z))
+    counter = 0
+    for curve in data.z:
+        sum_sqrs = np.sum(np.square(curve))
+        n = len(curve)
+        mean = sum_sqrs / n
+        rtn[counter] = np.sqrt(mean)
+        counter += 1
+    return rtn
+
+
+def get_ten_point_height_ISO(data: SICMdata):
+    """ 2.3 ten point height (R_z(ISO))
+
+    n: number of samples along the assessment length
+    P_i: 5 highest peaks along assessment length
+    V_i: 5 lowest valleys along assessment length
+
+    """
+
+    rtn = np.zeros(len(data.z))
+    counter = 0
+    for curve in data.z:
+        try:
+            if len(curve) < 10:
+                raise ValueError
+        except ValueError:
+            print("Unable to compute parameter: the length of each approach curve must be at least 10.")
+        n = len(curve)
+        height_sorted = np.sort(curve)
+        peaks = height_sorted[-5:]
+        valleys = height_sorted[:5]
+        diff = sum(peaks) - sum(valleys)
+        rtn[counter] = diff / n
+        counter += 1
+    return rtn
+
+
+def get_ten_point_height_DIN(data: SICMdata):
+    """ 2.3 ten point height (R_z(DIN))
+
+    n: number of samples along the assessment length
+    P_i: 5 highest peaks along assessment length
+    V_i: 5 lowest valleys along assessment length
+
+    """
+
+    rtn = np.zeros(len(data.z))
+    counter = 0
+    for curve in data.z:
+        try:
+            if len(curve) < 10:
+                raise ValueError
+        except ValueError:
+            print("Unable to compute parameter: the length of each approach curve must be at least 10.")
+        n = len(curve)
+        height_sorted = np.sort(curve)
+        peaks = height_sorted[-5:]
+        valleys = height_sorted[:5]
+        total = sum(peaks) + sum(valleys)
+        rtn[counter] = total / (2 * n)
+        counter += 1
+    return rtn
+
+
+def get_max_peak_height_from_mean(data: SICMdata):
+    """ 2.4 maximum height of the profile above the mean line (R_p) """
+
+    rtn = np.zeros(len(data.z))
+    means = get_arithmetic_average_height(data)
+    counter = 0
+    for curve in data.z:
+        avg = means[counter]
+        max_peak = np.max(curve)
+        rtn[counter] = max_peak - avg
+        counter += 1
+    return rtn
+
+
+def get_max_valley_depth_from_mean(data: SICMdata):
+    """ 2.5 maximum depth of the profile below the mean line (R_v) """
+
+    rtn = np.zeros(len(data.z))
+    means = get_arithmetic_average_height(data)
+    counter = 0
+    for curve in data.z:
+        avg = means[counter]
+        min_valley = np.min(curve)
+        rtn[counter] = avg - min_valley
+        counter += 1
+    return rtn
+
+
+
+if __name__ == '__main__':
+
+    path2 = "/Users/claire/GitHubRepos/pySICM_Analysis/tests/sample_sicm_files/Zelle2Membran PFA.sicm"
+    test = get_sicm_data(path2)
+
+    # np.savetxt("testSICMdata.csv", test.z, delimiter=",")  # TODO fix this
+    print(len(test.z))
+    print(get_max_peak_height_from_mean(test))

@@ -10,6 +10,9 @@ import matplotlib.pyplot as plt
 
 
 class ThresholdDialog(QDialog):
+    """ Dialog allows user to
+    - view distribution of z values for the selected view
+    - select a threshold value by clicking plot OR entering value """
     def __init__(self, z: np.ndarray):
         super().__init__()
 
@@ -43,6 +46,7 @@ class ThresholdDialog(QDialog):
         self.button_apply.clicked.connect(self.close_window)
 
     def threshold_widget(self):
+        """ QWidget that holds all text/buttons for displaying Z value distribution data and selecting threshold"""
 
         z_min = min(self.z)
         z_max = max(self.z)
@@ -70,6 +74,7 @@ class ThresholdDialog(QDialog):
         return holder
 
     def onclick(self, event):
+        """ stores (x,y) value of click, updates threshold instance variable, line edit, & redraws figure """
         if len(self.ax.lines) > 0:
             self.ax.lines.pop()
         self.cursor = Cursor(self.ax, vertOn=True, horizOn=False)
@@ -97,6 +102,7 @@ class ThresholdDialog(QDialog):
         self.line_thres.setText("{:.4f}".format(self.threshold))
 
     def update_threshold_line(self):
+        """ updates threshold instance variable by taking user input from line edit"""
 
         self.threshold = float(self.line_thres.text())
 
@@ -146,6 +152,8 @@ if __name__ == '__main__':
     path2 = "/Users/claire/GitHubRepos/pySICM_Analysis/tests/sample_sicm_files/Zelle2Membran PFA.sicm"
 
     data = get_sicm_data(path2)
+
+    print(data.y)
 
     test_dialog = ThresholdDialog(data.z)
     test_dialog.show()
