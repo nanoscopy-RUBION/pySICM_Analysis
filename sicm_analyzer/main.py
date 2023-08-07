@@ -11,6 +11,7 @@ from os.path import join
 from matplotlib.figure import Figure
 import re
 import numpy as np
+import json
 from PyQt6.QtWidgets import QStyleFactory, QDialog
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication, QFileDialog, QInputDialog
@@ -39,6 +40,8 @@ from sicm_analyzer.manipulate_data import fit_data
 from sicm_analyzer.height_profile_window import HeightProfileWindow
 from sicm_analyzer.measurements import get_roughness
 from sicm_analyzer.manipulate_data import filter_single_outlier
+from sicm_analyzer.parameters_dialog import ParametersDialog, AMPLITUDE_PARAMS, TEST_PARAMS, SPACING_PARAMS, \
+    HYBRID_PARAMS
 
 # APP CONSTANTS
 APP_NAME = "pySICM Analysis"
@@ -67,6 +70,7 @@ class Controller:
         self.unsaved_changes = False
         self.current_selection: str = ""
         self.cmap_dialog = None
+        self.results_dialog = None
         self.results_window: SingleResultsWindow = None
         self.table_results_window: TableResultsWindow = None
         self.view_manager = ViewManager()
@@ -152,6 +156,7 @@ class Controller:
         self.main_window.action_measure_dist.triggered.connect(self.measure_distance)
         self.main_window.action_get_pixel_values.triggered.connect(self.display_pixel_values)
         self.main_window.action_measure_roughness_batch.triggered.connect(self.show_results_table)
+        self.main_window.action_results_custom.triggered.connect(self.open_results_dialog)
 
         # Other
         self.main_window.imported_files_list.currentItemChanged.connect(self.item_selection_changed_event)
@@ -282,7 +287,6 @@ class Controller:
             parent=self.main_window
         )
         self.cmap_dialog.open_window()
-
 
     def _apply_colormap_to_view(self, view: View, cmap):
         view.color_map = cmap
@@ -851,7 +855,7 @@ class Controller:
         self.update_figures_and_status()
 
     def _select_area(self, point1: tuple[int, int], point2: tuple[int, int]):
-        #TODO ROI selection
+        # TODO ROI selection
         if points_are_not_equal(point1, point2):
             # self.current_selection.rois = (point1, point2)
             self.update_figures_and_status("ROI set")
@@ -946,6 +950,19 @@ class Controller:
         self.roi_dialog = ROIsDialog(controller=self, parent=self.main_window)
         self.roi_dialog.open_window()
 
+    def open_results_dialog(self):
+        """
+        Opens a dialog to select parameters to include in results analysis.
+        """
+        if self.results_dialog:
+            self.results_dialog.destroy()
+
+        self.results_dialog = ParametersDialog(
+            controller=self,
+            parent=self.main_window
+        )
+        self.results_dialog.open_window()
+
     def show_results_of_selection(self):
         """Shows a small window displaying the results
         of roughness calculation and fit functions. Min and max values
@@ -991,6 +1008,100 @@ class Controller:
             self.table_results_window.show()
         except TypeError:
             pass
+
+    def show_results_table_updated(self):
+        """pseudocode:
+    
+        parameters (actual q checkboxes) are stored in dictionary in self.parameters_dialog.amps.parameters,
+        self.parameters_dialog.spaces.parameters, self.parameters_dialog.hybrids.parameters
+        - parameters [QCheckbox1, QCheckbox2, ...] ordered according how they are listed in PARAMS dicts
+    
+        after you've OPENED a json config file
+        - all the checkboxes get set to the truth value contained in the json file
+        - the json file is accurate only to the point that the user does not change any boxes
+        - json file format: {'string name of parameter' : bool}
+    
+        after you've SAVED a json config file
+        - the json file is accurate only to the point that the user does not change any boxes
+    
+        if you DON'T open or save the settings
+        - the only place that the parameters are accurately stored is by getting the state of all the checkboxes
+
+        the name of the parameter is the key to assigning the function
+
+        """
+
+        print("we made it to show_results_table_updated()")
+
+        try:
+            selected_results = self.results_dialog.get_selected_params()
+
+            combined_results = {"scan": [],
+                                "min [µm]": [],
+                                "max [µm]": [],
+                                "roughness [µm]": []
+                                }
+
+            for x in selected_results:
+                combined_results[x] = []
+
+            print("combined_results[] - should contain all of the checked parameters")
+            print(combined_results)
+
+            if self.results_dialog.get_file_selection_option():
+                for key in self.main_window.get_all_checked_items():
+                    data = self.data_manager.get_data(key)
+                    if isinstance(data, ScanBackstepMode):
+                        combined_results["scan"].append(key)
+                        combined_results["min [µm]"].append(np.min(data.z))
+                        combined_results["max [µm]"].append(np.max(data.z))
+                        combined_results["roughness [µm]"].append(get_roughness(data))
+
+                        for par in selected_results:
+                            print("par: " + str(par))
+                            entry = combined_results[par]
+                            print("entry: " + str(entry))
+                            print(str(TEST_PARAMS[par]))
+                            entry.append(TEST_PARAMS[par](data))
+            else:
+                item = self.data_manager.get_data(self.current_selection)
+
+                if isinstance(item, ScanBackstepMode):
+                    combined_results["scan"].append(self.current_selection)
+                    combined_results["min [µm]"].append(np.min(item.z))
+                    combined_results["max [µm]"].append(np.max(item.z))
+                    combined_results["roughness [µm]"].append(get_roughness(item))
+
+                    for par in selected_results:
+                        print("par: " + str(par))
+                        entry = combined_results[par]
+                        print("entry: " + str(entry))
+                        print(str(TEST_PARAMS[par]))
+                        entry.append(TEST_PARAMS[par](item))
+
+            self.table_results_window = TableResultsWindow(
+                data=combined_results,
+                parent=self.main_window
+            )
+            self.table_results_window.show()
+
+            """
+                idea: numpy array where the results are indexed
+                 - need to keep track of how many results are analyzed
+                 - order of parameter lists added to the combined results dict is important
+                 - corresponds with indexing of selected_results
+                 - add automatic/default params - max, min (may have to add 4th dictionary??)
+                 
+                 index 0: name of scan
+                 index 1: min [µm]
+                 index 2: max [µm]
+                 index 3: roughness [µm]
+                 index 4, ... : optional, additional parameters
+                  
+                """
+
+        except TypeError:
+            print("something is horribly wrong with the type")
 
     def rename_selection(self):
         if self.current_selection:

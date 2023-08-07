@@ -350,6 +350,8 @@ class MainWindow(QMainWindow):
         self.action_results = QAction("Results (selected file)")
         self.action_results.setEnabled(False)
         self.action_measure_roughness_batch = QAction("Results (checked files)", self)
+        self.action_results_custom = QAction("Results (custom configuration)")
+        # TODO address when feature becomes enabled vs disabled
         self.action_line_profile_row = QAction("row")
         self.action_line_profile_row.setEnabled(False)
         self.action_line_profile_column = QAction("column")
@@ -370,6 +372,7 @@ class MainWindow(QMainWindow):
         self.measure_menu = menubar.addMenu("&Measurements")
         self.measure_menu.addAction(self.action_results)
         self.measure_menu.addAction(self.action_measure_roughness_batch)
+        self.measure_menu.addAction(self.action_results_custom)
         self.measure_menu.addSeparator()
         self.action_height_profile_tool = QAction("Height profile tool...", self)
         self.measure_menu.addAction(self.action_height_profile_tool)

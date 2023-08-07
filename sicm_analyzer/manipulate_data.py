@@ -80,6 +80,16 @@ def height_diff_to_neighbour(data: ScanBackstepMode):
         z[i, z.shape[1]-1] = 0
 
 
+def subtract_threshold(data: ScanBackstepMode, threshold: float):
+    """
+    Sets all values in 3D data set at or below certain threshold value equal to the threshold
+
+    :param data: The Z data to be manipulated
+    :param threshold: user defined value at which all Z values below will be set to the threshold value
+    """
+    data.z = np.clip(data.z, threshold, None)
+
+
 # Filter Manipulations
 # ______________________________________
 def filter_median_temporal(data: ScanBackstepMode, px_radius=1):
@@ -172,10 +182,6 @@ def filter_average_spatial(data: ScanBackstepMode, px_radius=1):
         for j in np.arange(shape[1]):
             z[i, j] = np.mean(data.z[disk((i, j), px_radius, shape=shape)])
     data.z = z
-
-
-def subtract_threshold(data: ScanBackstepMode, threshold: float):
-    data.z = np.clip(data.z, threshold, None)
 
 
 def filter_single_outlier(data: ScanBackstepMode, point: tuple[int, int]):
