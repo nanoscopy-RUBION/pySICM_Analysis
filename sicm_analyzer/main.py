@@ -1031,8 +1031,6 @@ class Controller:
 
         """
 
-        print("we made it to show_results_table_updated()")
-
         try:
             selected_results = self.results_dialog.get_selected_params()
 
@@ -1044,9 +1042,6 @@ class Controller:
 
             for x in selected_results:
                 combined_results[x] = []
-
-            print("combined_results[] - should contain all of the checked parameters")
-            print(combined_results)
 
             if self.results_dialog.get_file_selection_option():
                 for key in self.main_window.get_all_checked_items():

@@ -1,8 +1,12 @@
 import math
 from typing import Any
 
-import numpy
+
 import numpy as np
+import scipy.signal
+from matplotlib import pyplot as plt
+# from scipy.signal import argrelmax, argrelmin, argrelextrema, find_peaks
+from scipy import signal
 from symfit.core.minimizers import BFGS
 from symfit import Poly, variables, parameters, Model, Fit
 from symfit.core.objectives import LeastSquares
@@ -37,25 +41,23 @@ def polynomial_second_degree(x_data, y_data, z_data: np.array):
     # perform fit
     fit = Fit(model, x=x_data, y=y_data, z=z_data, objective=LeastSquares, minimizer=[BFGS])
     fit_result = fit.execute()
-    #_print_fit_results_to_console(fit_result)
+    # _print_fit_results_to_console(fit_result)
     z_fitted = model(x=x_data, y=y_data, **fit_result.params).z
     return z_fitted
 
 
-
-
 def get_grid(view):
     xlims = view.get_xlims()
-    xpixels = xlims[1]-xlims[0]+1
+    xpixels = xlims[1] - xlims[0] + 1
     ylims = view.get_ylims()
-    ypixels = ylims[1]-ylims[0]+1
-    #origin =
-    #Original counts from bottom left
-    #xsize =
-    #ysize =
+    ypixels = ylims[1] - ylims[0] + 1
+    # origin =
+    # Original counts from bottom left
+    # xsize =
+    # ysize =
 
-    #retGrid =
-    #return retGrid
+    # retGrid =
+    # return retGrid
 
 
 def get_points(window, n=2):
@@ -81,7 +83,7 @@ def root_mean_square_error(data: np.array) -> float:
     """
     mean = np.mean(data)
     diff = data - mean
-    rmse = math.sqrt(np.mean(diff**2))
+    rmse = math.sqrt(np.mean(diff ** 2))
     return rmse
 
 
@@ -151,12 +153,12 @@ def get_roughness(data: SICMdata):  # -> tuple[float, Any]:
     if nargout > 3:
         varargout{3} = go
     '''
-    #fitted_data, fit_results = polynomial_fifth_degree(data.x, data.y, data.z)
-    #corrected_data = data.z - fitted_data
+    # fitted_data, fit_results = polynomial_fifth_degree(data.x, data.y, data.z)
+    # corrected_data = data.z - fitted_data
 
-    #roughness = root_mean_square_error(corrected_data)
+    # roughness = root_mean_square_error(corrected_data)
     roughness = root_mean_square_error(data.z)
-    return roughness#, fit_results
+    return roughness  # , fit_results
 
 
 def get_lower_and_upper_limit_for_outlier_determination(values: np.array):
@@ -201,7 +203,7 @@ def get_arithmetic_average_height(data: SICMdata):
     n: number of samples along assessment length
     """
     values = data.z.flatten()
-    avg = numpy.average(values)
+    avg = np.average(values)
     return avg
 
 
@@ -252,8 +254,8 @@ def get_ten_point_height_DIN(data: SICMdata):
 def get_max_peak_height_from_mean(data: SICMdata):
     """ 2.4 maximum height of the profile above the mean line (R_p) """
     values = data.z.flatten()
-    avg = numpy.average(values)
-    max_peak = numpy.max(values)
+    avg = np.average(values)
+    max_peak = np.max(values)
     return max_peak - avg
 
 
@@ -261,8 +263,8 @@ def get_max_valley_depth_from_mean(data: SICMdata):
     """ 2.5 maximum depth of the profile below the mean line (R_v) """
 
     values = data.z.flatten()
-    avg = numpy.average(values)
-    min_peak = numpy.min(values)
+    avg = np.average(values)
+    min_peak = np.min(values)
     return avg - min_peak
 
 
@@ -340,7 +342,7 @@ def get_third_point_height(data: SICMdata):
         third_valley = ordered[2]
         rtn[counter] = third_peak - third_valley
         counter += 1
-    return numpy.max(rtn)
+    return np.max(rtn)
 
 
 def get_mean_of_third_point_height(data: SICMdata):
@@ -354,7 +356,7 @@ def get_mean_of_third_point_height(data: SICMdata):
         third_valley = ordered[2]
         rtn[counter] = third_peak - third_valley
         counter += 1
-    return numpy.average(rtn)
+    return np.average(rtn)
 
 
 def get_profile_solidarity_factor(data: SICMdata):
@@ -369,7 +371,7 @@ def get_skewness(data: SICMdata):
     values = data.z.flatten()
 
     summation = np.sum(np.power(values, 3))
-    skew = summation / len(values) / get_root_mean_sq_roughness(data)**3
+    skew = summation / len(values) / get_root_mean_sq_roughness(data) ** 3
 
     return skew
 
@@ -380,7 +382,7 @@ def get_kurtosis_coefficient(data: SICMdata):
     values = data.z.flatten()
 
     summation = np.sum(np.power(values, 4))
-    kurtosis = summation / len(values) / get_root_mean_sq_roughness(data)**4
+    kurtosis = summation / len(values) / get_root_mean_sq_roughness(data) ** 4
 
     return kurtosis
 
@@ -404,11 +406,81 @@ def get_power_spectral_density(data: SICMdata):
     """ 2.20 power spectral density (PSD)"""
     return
 
+
 # Spacing parameters
+def get_high_spot_count(data: SICMdata, threshold: float):
+    """ 3.1 high spot count: no of high regions of profile above a line parallel to the mean (HSC)"""
+    # TODO check if scipy.signal.find_peaks() would be more suitable for this
+    values = data.z.flatten()
+    high_spots = 0
+    isHighSpot = False
+
+    for z in values:
+        if z > threshold:
+            if isHighSpot:
+                continue
+            else:
+                high_spots += 1
+                isHighSpot = True
+        else:
+            isHighSpot = False
+
+    return high_spots
+
+
+def get_peak_count(data: SICMdata, margin):
+    """ 3.2 Peak count (P_c) number of local peaks """
+    values = data.z.flatten()
+    reachedLow = False
+    reachedHigh = False
+    count = 0
+
+    high = np.average(values) + margin
+    low = np.average(values) - margin
+
+    for z in values:
+        if z < low and (not reachedLow):
+            reachedLow = True
+        if z > high and reachedLow:
+            reachedHigh = True
+        if z < low and reachedHigh:
+            count += 1
+            reachedLow = False
+            reachedHigh = False
+
+    return count
+
+
+def get_mean_spacing_of_adjacent_local_peaks(data: SICMdata):
+    values = data.z.flatten()
+
+    threshold = get_max_height_of_profile(data) * 0.1
+    # TODO check if this threshold is right
+    indices = scipy.signal.find_peaks(values)[0]
+    # a = indices["peak_heights"]
+    print("indicies: ")
+    print(indices)
+
+    rtn = []
+
+    for i in range(len(indices)):
+        index = indices[i]
+        maxima = values[index]
+        rtn.append(maxima)
+
+    print(rtn)
+
+    # Create a plot
+    plt.plot(values)  # 'o' for regular points
+    plt.scatter(indices, rtn, marker='X', color='red',
+                label='Marked')
+    plt.grid(True)
+    plt.show()
+
+    return np.average(rtn)
 
 
 if __name__ == '__main__':
-
     path2 = "/Users/claire/GitHubRepos/pySICM_Analysis/tests/sample_sicm_files/Zelle2Membran PFA.sicm"
     test = get_sicm_data(path2)
 
@@ -426,4 +498,9 @@ if __name__ == '__main__':
     print(get_max_valley_depth_from_mean(test))
     print("2.15 skewness: ")
     print(get_skewness(test))
+    print("3.1 high spot count: ")
+    print(get_high_spot_count(test, 32.8))
+    print("3.3 get mean spacing of local adjacent peaks")
+    print(get_mean_spacing_of_adjacent_local_peaks(test))
+
 

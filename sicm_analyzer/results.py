@@ -1,6 +1,9 @@
+import csv
+import os
+
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QWidget, QPushButton, QVBoxLayout, QPlainTextEdit, QTableWidget, QTableWidgetItem, \
-     QApplication, QMenu
+    QApplication, QMenu, QFileDialog
 from sicm_analyzer.sicm_data import SICMdata
 from sicm_analyzer.measurements import get_roughness
 import numpy as np
@@ -95,7 +98,10 @@ class TableResultsWindow(QWidget):
 
         self.button_close = QPushButton("Close")
         self.button_close.clicked.connect(self.close)
+        self.button_export = QPushButton("Export Results")
+        self.button_export.clicked.connect(self.export_table_as_csv)
         layout.addWidget(self.button_close)
+        layout.addWidget(self.button_export)
 
         # context menu
         self.context_menu = QMenu(self)
@@ -155,3 +161,38 @@ class TableResultsWindow(QWidget):
 
         QApplication.clipboard().setText("\n".join(c))
 
+    def export_table_as_csv(self):
+        if self.table.rowCount() > 0:
+            rows = self.table.rowCount()
+            columns = self.table.columnCount()
+            lines = []
+            for r in range(rows):
+                line = []
+                for c in range(columns):
+                    line.append(str(self.table.item(r, c).text()))
+                # lines.append(";".join(line))
+                lines.append(line)
+
+            filename = self.open_file_dialog()
+
+            with open(filename, mode='w', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerows(lines)
+
+    def open_file_dialog(self):
+        directories = QFileDialog()
+        directories.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
+        directories.setFileMode(QFileDialog.FileMode.AnyFile)
+        directories.setDefaultSuffix("json")
+        options = directories.Option(QFileDialog.Option.DontUseNativeDialog)
+        filepath = directories.getSaveFileName(
+            caption="Export Results",
+            directory=os.getcwd(),
+            filter="CSV (*.csv)",
+            options=options
+        )
+        string_filepath = filepath[0]
+        if not string_filepath.endswith(".csv"):
+            string_filepath += ".csv"
+
+        return string_filepath
