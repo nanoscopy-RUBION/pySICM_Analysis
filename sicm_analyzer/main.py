@@ -377,15 +377,15 @@ class Controller:
         if self.current_selection:
             data = self.data_manager.get_data(self.current_selection)
             dialog = ThresholdDialog(data.z)
-            threshold = -1.00
+
             if dialog.exec() == QDialog.DialogCode.Accepted:
                 threshold = dialog.get_threshold()
-            self.data_manager.execute_func_on_current_data(
-                action_name="Subtract z threshold",
-                func=subtract_threshold,
-                key=self.current_selection,
-                threshold=threshold
-            )(self.data_manager.get_data(self.current_selection), threshold)
+                self.data_manager.execute_func_on_current_data(
+                    action_name=f"Subtract z threshold ({threshold})",
+                    func=subtract_threshold,
+                    key=self.current_selection,
+                    threshold=threshold
+                )(self.data_manager.get_data(self.current_selection), threshold)
 
     def plane_correction(self):
         """TODO: implement more functions"""

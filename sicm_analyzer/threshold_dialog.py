@@ -1,5 +1,9 @@
 import sys
-from sicm_analyzer.sicm_data import SICMdata, get_sicm_data
+
+from PyQt6.QtGui import QDoubleValidator
+from PyQt6.QtCore import QLocale
+
+from sicm_analyzer.sicm_data import get_sicm_data
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QDialog, QVBoxLayout, QApplication, QLabel, QLineEdit, QGridLayout, QWidget, QPushButton, \
     QSpacerItem, QSizePolicy
@@ -10,9 +14,11 @@ import matplotlib.pyplot as plt
 
 
 class ThresholdDialog(QDialog):
-    """ Dialog allows user to
+    """
+    Dialog allows user to
     - view distribution of z values for the selected view
-    - select a threshold value by clicking plot OR entering value """
+    - select a threshold value by clicking plot OR entering value
+    """
     def __init__(self, z: np.ndarray):
         super().__init__()
 
@@ -42,8 +48,7 @@ class ThresholdDialog(QDialog):
         cid = self.figure.canvas.mpl_connect('button_press_event', self.onclick)
 
         self.button_update.clicked.connect(self.update_threshold_line)
-
-        self.button_apply.clicked.connect(self.close_window)
+        self.button_apply.clicked.connect(self.apply_and_close_window)
 
     def threshold_widget(self):
         """ QWidget that holds all text/buttons for displaying Z value distribution data and selecting threshold"""
@@ -54,7 +59,15 @@ class ThresholdDialog(QDialog):
         self.label_zmin = QLabel('Min Z value: ' + str(z_min))
         self.label_zmax = QLabel('Max Z value: ' + str(z_max))
         self.label_thres = QLabel("Set Threshold: ")
-        self.line_thres = QLineEdit("type value OR click in plot above")
+        self.line_thres = QLineEdit()
+        self.line_thres.setPlaceholderText("type value OR click in plot above")
+        validator = QDoubleValidator()
+        validator.setLocale(QLocale.c())
+        validator.locale().setNumberOptions(QLocale.NumberOption.RejectGroupSeparator)
+        validator.setNotation(QDoubleValidator.Notation.StandardNotation)
+
+        self.line_thres.setValidator(validator)
+        self.line_thres.textChanged.connect(self._update_threshold_value)
         self.button_update = QPushButton("update")
         self.spacer = QSpacerItem(50, 15, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         self.button_apply = QPushButton("Apply Threshold")
@@ -101,11 +114,20 @@ class ThresholdDialog(QDialog):
     def update_threshold_text(self):
         self.line_thres.setText("{:.4f}".format(self.threshold))
 
+    def _update_threshold_value(self):
+        # commas as group seperator will throw an exception
+        try:
+            text = self.line_thres.text()
+            if text:
+                if text.startswith("."):
+                    text = "0" + text
+                self.threshold = float(text)
+        except ValueError:
+            pass
+
+
     def update_threshold_line(self):
-        """ updates threshold instance variable by taking user input from line edit"""
-
-        self.threshold = float(self.line_thres.text())
-
+        """Updates threshold instance variable by taking user input from line edit."""
         if len(self.ax.lines) > -1:
             self.ax.lines.pop()
         self.cursor = Cursor(self.ax, vertOn=True, horizOn=False)
@@ -141,18 +163,17 @@ class ThresholdDialog(QDialog):
 
         return fig, ax
 
-    def close_window(self):
+    def apply_and_close_window(self):
         self.done(QDialog.DialogCode.Accepted)
 
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
 
-    path = "/Users/claire/GitHubRepos/pySICM_Analysis/tests/sample_sicm_files/Zelle2 10x10 PFA.sicm"
-    path2 = "/Users/claire/GitHubRepos/pySICM_Analysis/tests/sample_sicm_files/Zelle2Membran PFA.sicm"
+    path = "../tests/sample_sicm_files/Zelle2 10x10 PFA.sicm"
+    path2 = "../tests/sample_sicm_files/Zelle2Membran PFA.sicm"
 
     data = get_sicm_data(path2)
-
     print(data.y)
 
     test_dialog = ThresholdDialog(data.z)
