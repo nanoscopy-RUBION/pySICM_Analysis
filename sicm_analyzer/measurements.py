@@ -46,6 +46,14 @@ def polynomial_second_degree(x_data, y_data, z_data: np.array):
     return z_fitted
 
 
+def get_minimum_value(data: SICMdata) -> float:
+    return np.min(data.z)
+
+
+def get_maximum_value(data: SICMdata) -> float:
+    return np.max(data.z)
+
+
 def get_grid(view):
     xlims = view.get_xlims()
     xpixels = xlims[1] - xlims[0] + 1
@@ -327,7 +335,7 @@ def get_mean_maximum_peak_valley_heights(data: SICMdata):
 def get_largest_peak_to_valley_height(data: SICMdata):
     """ 2.11 maximum of the array that 2.10 returns"""
 
-    vals = get_maximum_height_single_profile()
+    vals = get_maximum_height_single_profile(data)
     return np.max(vals)
 
 
@@ -337,9 +345,9 @@ def get_third_point_height(data: SICMdata):
     rtn = np.zeros(len(data.z))
     counter = 0
     for curve in data.z:
-        ordered = curve.sort()
-        third_peak = ordered[-3]
-        third_valley = ordered[2]
+        curve.sort()
+        third_peak = curve[-3]
+        third_valley = curve[2]
         rtn[counter] = third_peak - third_valley
         counter += 1
     return np.max(rtn)
@@ -351,9 +359,9 @@ def get_mean_of_third_point_height(data: SICMdata):
     rtn = np.zeros(len(data.z))
     counter = 0
     for curve in data.z:
-        ordered = curve.sort()
-        third_peak = ordered[-3]
-        third_valley = ordered[2]
+        curve.sort()
+        third_peak = curve[-3]
+        third_valley = curve[2]
         rtn[counter] = third_peak - third_valley
         counter += 1
     return np.average(rtn)
@@ -389,22 +397,22 @@ def get_kurtosis_coefficient(data: SICMdata):
 
 def get_amplitude_density_function(data: SICMdata):
     """ 2.17 amplitude density = probably density (ADF)"""
-    return
+    return "not implemented"
 
 
 def get_auto_correlation_function(data: SICMdata):
     """ 2.18 auto correlation function"""
-    return
+    return "not implemented"
 
 
 def get_correlation_length(data: SICMdata):
     """ 2.19  describes correlation characteristics of the ACF (beta)"""
-    return
+    return "not implemented"
 
 
 def get_power_spectral_density(data: SICMdata):
     """ 2.20 power spectral density (PSD)"""
-    return
+    return "not implemented"
 
 
 # Spacing parameters

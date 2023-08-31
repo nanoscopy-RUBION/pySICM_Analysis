@@ -140,7 +140,8 @@ class TableResultsWindow(QWidget):
 
             QApplication.clipboard().setText("\n".join(lines))
         else:
-            self.parent.display_status_bar_message("No data in table.")
+            if self.parent:
+                self.parent.display_status_bar_message("No data in table.")
 
     def copy_selection_to_clipboard(self):
         r = self.table.selectedIndexes()
@@ -170,7 +171,7 @@ class TableResultsWindow(QWidget):
                 line = []
                 for c in range(columns):
                     line.append(str(self.table.item(r, c).text()))
-                # lines.append(";".join(line))
+
                 lines.append(line)
 
             filename = self.open_file_dialog()

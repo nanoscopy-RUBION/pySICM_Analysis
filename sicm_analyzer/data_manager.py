@@ -49,10 +49,7 @@ class DataManager:
         else:
             self.listener_function = self.__empty_function
 
-        self.data_collection: dict[str, tuple[
-                                                list[UndoRedoData],
-                                                list[UndoRedoData]]
-                                   ] = {}
+        self.data_collection: dict[str, tuple[list[UndoRedoData], list[UndoRedoData]]] = {}
         self.current_data_key: str = ""
 
     def __empty_function(self):

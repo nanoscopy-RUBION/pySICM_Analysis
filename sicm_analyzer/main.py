@@ -1,7 +1,7 @@
 import math
 import os
 import sys
-
+from collections.abc import KeysView, Iterable
 sys.path.append("")
 
 import traceback
@@ -40,8 +40,9 @@ from sicm_analyzer.manipulate_data import fit_data
 from sicm_analyzer.height_profile_window import HeightProfileWindow
 from sicm_analyzer.measurements import get_roughness
 from sicm_analyzer.manipulate_data import filter_single_outlier
-from sicm_analyzer.parameters_dialog import ParametersDialog, AMPLITUDE_PARAMS, TEST_PARAMS, SPACING_PARAMS, \
-    HYBRID_PARAMS
+from sicm_analyzer.parameters_dialog import ParametersDialog, FileSelectionOption
+from sicm_analyzer.parameters import IMPLEMENTED_PARAMETERS
+
 
 # APP CONSTANTS
 APP_NAME = "pySICM Analysis"
@@ -1010,93 +1011,68 @@ class Controller:
             pass
 
     def show_results_table_updated(self):
-        """pseudocode:
-    
-        parameters (actual q checkboxes) are stored in dictionary in self.parameters_dialog.amps.parameters,
-        self.parameters_dialog.spaces.parameters, self.parameters_dialog.hybrids.parameters
-        - parameters [QCheckbox1, QCheckbox2, ...] ordered according how they are listed in PARAMS dicts
-    
-        after you've OPENED a json config file
-        - all the checkboxes get set to the truth value contained in the json file
-        - the json file is accurate only to the point that the user does not change any boxes
-        - json file format: {'string name of parameter' : bool}
-    
-        after you've SAVED a json config file
-        - the json file is accurate only to the point that the user does not change any boxes
-    
-        if you DON'T open or save the settings
-        - the only place that the parameters are accurately stored is by getting the state of all the checkboxes
-
-        the name of the parameter is the key to assigning the function
-
+        """Display a TableResultsWindow with data according to selected parameters
+        and file selection option.
         """
+        selected_option = self.results_dialog.get_file_selection_option()
+        data_list = self._get_list_of_file_name(selected_option)
 
-        try:
-            selected_results = self.results_dialog.get_selected_params()
+        selected_parameters = self.results_dialog.get_all_selected_params()
+        results = self._get_results_dict(data_list, selected_parameters)
 
-            combined_results = {"scan": [],
-                                "min [µm]": [],
-                                "max [µm]": [],
-                                "roughness [µm]": []
-                                }
+        self.table_results_window = TableResultsWindow(
+            data=results,
+            parent=self.main_window
+        )
+        self.table_results_window.show()
 
-            for x in selected_results:
-                combined_results[x] = []
+    def _get_list_of_file_name(self, option: FileSelectionOption) -> list[str] | KeysView:
+        """Returns an iterable containing data file names. The number
+        of elements depends on file selection option.
+        """
+        if option == FileSelectionOption.ALL_FILES:
+            data_list = self.data_manager.get_list_of_all_item_keys()
+        elif option == FileSelectionOption.ALL_CHECKED_ITEMS:
+            data_list = self.main_window.get_all_checked_items()
+        elif option == FileSelectionOption.CURRENT_SELECTION:
+            data_list = [self.current_selection]
+        else:
+            data_list = []
+        return data_list
 
-            if self.results_dialog.get_file_selection_option():
-                for key in self.main_window.get_all_checked_items():
-                    data = self.data_manager.get_data(key)
-                    if isinstance(data, ScanBackstepMode):
-                        combined_results["scan"].append(key)
-                        combined_results["min [µm]"].append(np.min(data.z))
-                        combined_results["max [µm]"].append(np.max(data.z))
-                        combined_results["roughness [µm]"].append(get_roughness(data))
+    def _get_results_dict(self, data_list: Iterable, parameters: list[str]) -> dict[str, list[int | str | float]]:
+        """
+        Returns a dictionary containing analysis results.
 
-                        for par in selected_results:
-                            print("par: " + str(par))
-                            entry = combined_results[par]
-                            print("entry: " + str(entry))
-                            print(str(TEST_PARAMS[par]))
-                            entry.append(TEST_PARAMS[par](data))
-            else:
-                item = self.data_manager.get_data(self.current_selection)
+        This dictionary can be passed to TableResultsWindow to display a table representation
+        of the results.
 
-                if isinstance(item, ScanBackstepMode):
-                    combined_results["scan"].append(self.current_selection)
-                    combined_results["min [µm]"].append(np.min(item.z))
-                    combined_results["max [µm]"].append(np.max(item.z))
-                    combined_results["roughness [µm]"].append(get_roughness(item))
+        :param data_list: An iterable. This can be a list or the result of dict.keys()
+        :param parameters: A list of strings
+        """
+        # add some metadata at the beginning of the dict
+        results = {"scan": [], "scan date": []}
+        results.update({parameter_name: [] for parameter_name in parameters})
 
-                    for par in selected_results:
-                        print("par: " + str(par))
-                        entry = combined_results[par]
-                        print("entry: " + str(entry))
-                        print(str(TEST_PARAMS[par]))
-                        entry.append(TEST_PARAMS[par](item))
+        for key in data_list:
+            data = self.data_manager.get_data(key)
 
-            self.table_results_window = TableResultsWindow(
-                data=combined_results,
-                parent=self.main_window
-            )
-            self.table_results_window.show()
+            # at the moment only ScanBackstepMode is supported
+            if isinstance(data, ScanBackstepMode):
+                results["scan"].append(key)
+                results["scan date"].append(data.get_scan_date())
 
-            """
-                idea: numpy array where the results are indexed
-                 - need to keep track of how many results are analyzed
-                 - order of parameter lists added to the combined results dict is important
-                 - corresponds with indexing of selected_results
-                 - add automatic/default params - max, min (may have to add 4th dictionary??)
-                 
-                 index 0: name of scan
-                 index 1: min [µm]
-                 index 2: max [µm]
-                 index 3: roughness [µm]
-                 index 4, ... : optional, additional parameters
-                  
-                """
-
-        except TypeError:
-            print("something is horribly wrong with the type")
+                for par in parameters:
+                    column = results[par]
+                    try:
+                        column.append(IMPLEMENTED_PARAMETERS[par](data))
+                    except Exception as e:
+                        # in case of an error during calculation, we need to
+                        # store some value in the list or else following calculations
+                        # will be assigned to incorrect rows
+                        print(e)
+                        column.append("error")
+        return results
 
     def rename_selection(self):
         if self.current_selection:
