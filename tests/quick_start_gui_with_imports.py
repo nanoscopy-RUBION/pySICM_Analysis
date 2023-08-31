@@ -3,14 +3,14 @@ sys.path.append("")
 import os
 from os import listdir
 from os.path import join
-
 from PyQt6.QtWidgets import QApplication
-
 from sicm_analyzer.gui_main import MainWindow
 from sicm_analyzer.main import Controller
 
+
 APP_PATH = os.getcwd()
 SAMPLE_FILES_DIR = join(APP_PATH, "tests", "sample_sicm_files")
+
 
 if __name__ == "__main__":
     # setup application and gui

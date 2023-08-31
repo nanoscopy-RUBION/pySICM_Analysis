@@ -1,7 +1,7 @@
 import math
 import os
 import sys
-
+from collections.abc import KeysView, Iterable
 sys.path.append("")
 
 import traceback
@@ -11,7 +11,7 @@ from os.path import join
 from matplotlib.figure import Figure
 import re
 import numpy as np
-from PyQt6.QtWidgets import QStyleFactory
+from PyQt6.QtWidgets import QStyleFactory, QDialog
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication, QFileDialog, QInputDialog
 
@@ -22,6 +22,8 @@ from sicm_analyzer.crop_tool import CropToolWindow
 from sicm_analyzer.gui_main import MainWindow
 from sicm_analyzer.graph_canvas import GraphCanvas
 from sicm_analyzer.filter_dialog import FilterDialog
+from sicm_analyzer.threshold_dialog import ThresholdDialog
+from sicm_analyzer.manipulate_data import subtract_threshold
 from sicm_analyzer.manipulate_data import transpose_z_data, subtract_z_minimum, crop, invert_z_data
 from sicm_analyzer.manipulate_data import height_diff_to_neighbour
 from sicm_analyzer.manipulate_data import filter_median_temporal, filter_median_spatial
@@ -37,6 +39,9 @@ from sicm_analyzer.manipulate_data import fit_data
 from sicm_analyzer.height_profile_window import HeightProfileWindow
 from sicm_analyzer.measurements import get_roughness
 from sicm_analyzer.manipulate_data import filter_single_outlier
+from sicm_analyzer.parameters_dialog import ParametersDialog, FileSelectionOption
+from sicm_analyzer.parameters import IMPLEMENTED_PARAMETERS
+
 
 # APP CONSTANTS
 APP_NAME = "pySICM Analysis"
@@ -47,7 +52,7 @@ SAMPLES_DIRECTORY = "samples"
 APP_ICON = "pySICMsplash.png"
 APP_ICON_PATH = join(APP_PATH, RESOURCE_DIRECTORY, ICONS_DIRECTORY, APP_ICON)
 APP_SAMPLES_PATH = join(APP_PATH, RESOURCE_DIRECTORY, SAMPLES_DIRECTORY)
-TITLE = f"{APP_NAME} (ver. 0.1.1)"
+TITLE = f"{APP_NAME} (ver. 0.2.0)"
 DEFAULT_FILE_PATH = os.getcwd()
 
 # FILTERS
@@ -65,6 +70,7 @@ class Controller:
         self.unsaved_changes = False
         self.current_selection: str = ""
         self.cmap_dialog = None
+        self.results_dialog = None
         self.results_window: SingleResultsWindow = None
         self.table_results_window: TableResultsWindow = None
         self.view_manager = ViewManager()
@@ -130,6 +136,7 @@ class Controller:
         self.main_window.action_batch_mode.triggered.connect(self.batch_mode_test)
         self.main_window.action_data_transpose_z.triggered.connect(self.transpose_z_of_current_view)
         self.main_window.action_data_minimum.triggered.connect(self.subtract_minimum_in_current_view)
+        self.main_window.action_data_threshold.triggered.connect(self.subtract_threshold)
         self.main_window.action_data_invert_z.triggered.connect(self.invert_z_in_current_view)
         self.main_window.action_data_flip_x.triggered.connect(self.flip_x)
         self.main_window.action_data_flip_y.triggered.connect(self.flip_y)
@@ -149,6 +156,7 @@ class Controller:
         self.main_window.action_measure_dist.triggered.connect(self.measure_distance)
         self.main_window.action_get_pixel_values.triggered.connect(self.display_pixel_values)
         self.main_window.action_measure_roughness_batch.triggered.connect(self.show_results_table)
+        self.main_window.action_results_custom.triggered.connect(self.open_results_dialog)
 
         # Other
         self.main_window.imported_files_list.currentItemChanged.connect(self.item_selection_changed_event)
@@ -271,6 +279,9 @@ class Controller:
         The selected color map can be applied to the current view
         or to all view objects at once.
         """
+        if self.cmap_dialog:
+            self.cmap_dialog.destroy()
+
         self.cmap_dialog = ColorMapDialog(
             controller=self,
             parent=self.main_window
@@ -361,6 +372,20 @@ class Controller:
                     action_name=f"{selected_filter} (px-size: {radius})",
                     px_radius=radius
                 )(self.data_manager.get_data(self.current_selection), radius)
+
+    def subtract_threshold(self):
+        if self.current_selection:
+            data = self.data_manager.get_data(self.current_selection)
+            dialog = ThresholdDialog(data.z)
+
+            if dialog.exec() == QDialog.DialogCode.Accepted:
+                threshold = dialog.get_threshold()
+                self.data_manager.execute_func_on_current_data(
+                    action_name=f"Subtract z threshold ({threshold})",
+                    func=subtract_threshold,
+                    key=self.current_selection,
+                    threshold=threshold
+                )(self.data_manager.get_data(self.current_selection), threshold)
 
     def plane_correction(self):
         """TODO: implement more functions"""
@@ -830,7 +855,7 @@ class Controller:
         self.update_figures_and_status()
 
     def _select_area(self, point1: tuple[int, int], point2: tuple[int, int]):
-        #TODO ROI selection
+        # TODO ROI selection
         if points_are_not_equal(point1, point2):
             # self.current_selection.rois = (point1, point2)
             self.update_figures_and_status("ROI set")
@@ -925,6 +950,19 @@ class Controller:
         self.roi_dialog = ROIsDialog(controller=self, parent=self.main_window)
         self.roi_dialog.open_window()
 
+    def open_results_dialog(self):
+        """
+        Opens a dialog to select parameters to include in results analysis.
+        """
+        if self.results_dialog:
+            self.results_dialog.destroy()
+
+        self.results_dialog = ParametersDialog(
+            controller=self,
+            parent=self.main_window
+        )
+        self.results_dialog.open_window()
+
     def show_results_of_selection(self):
         """Shows a small window displaying the results
         of roughness calculation and fit functions. Min and max values
@@ -970,6 +1008,70 @@ class Controller:
             self.table_results_window.show()
         except TypeError:
             pass
+
+    def show_results_table_updated(self):
+        """Display a TableResultsWindow with data according to selected parameters
+        and file selection option.
+        """
+        selected_option = self.results_dialog.get_file_selection_option()
+        data_list = self._get_list_of_file_name(selected_option)
+
+        selected_parameters = self.results_dialog.get_all_selected_params()
+        results = self._get_results_dict(data_list, selected_parameters)
+
+        self.table_results_window = TableResultsWindow(
+            data=results,
+            parent=self.main_window
+        )
+        self.table_results_window.show()
+
+    def _get_list_of_file_name(self, option: FileSelectionOption) -> list[str] | KeysView:
+        """Returns an iterable containing data file names. The number
+        of elements depends on file selection option.
+        """
+        if option == FileSelectionOption.ALL_FILES:
+            data_list = self.data_manager.get_list_of_all_item_keys()
+        elif option == FileSelectionOption.ALL_CHECKED_ITEMS:
+            data_list = self.main_window.get_all_checked_items()
+        elif option == FileSelectionOption.CURRENT_SELECTION:
+            data_list = [self.current_selection]
+        else:
+            data_list = []
+        return data_list
+
+    def _get_results_dict(self, data_list: Iterable, parameters: list[str]) -> dict[str, list[int | str | float]]:
+        """
+        Returns a dictionary containing analysis results.
+
+        This dictionary can be passed to TableResultsWindow to display a table representation
+        of the results.
+
+        :param data_list: An iterable. This can be a list or the result of dict.keys()
+        :param parameters: A list of strings
+        """
+        # add some metadata at the beginning of the dict
+        results = {"scan": [], "scan date": []}
+        results.update({parameter_name: [] for parameter_name in parameters})
+
+        for key in data_list:
+            data = self.data_manager.get_data(key)
+
+            # at the moment only ScanBackstepMode is supported
+            if isinstance(data, ScanBackstepMode):
+                results["scan"].append(key)
+                results["scan date"].append(data.get_scan_date())
+
+                for par in parameters:
+                    column = results[par]
+                    try:
+                        column.append(IMPLEMENTED_PARAMETERS[par](data))
+                    except Exception as e:
+                        # in case of an error during calculation, we need to
+                        # store some value in the list or else following calculations
+                        # will be assigned to incorrect rows
+                        print(e)
+                        column.append("error")
+        return results
 
     def rename_selection(self):
         if self.current_selection:
