@@ -11,7 +11,6 @@ from os.path import join
 from matplotlib.figure import Figure
 import re
 import numpy as np
-import json
 from PyQt6.QtWidgets import QStyleFactory, QDialog
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication, QFileDialog, QInputDialog
@@ -53,7 +52,7 @@ SAMPLES_DIRECTORY = "samples"
 APP_ICON = "pySICMsplash.png"
 APP_ICON_PATH = join(APP_PATH, RESOURCE_DIRECTORY, ICONS_DIRECTORY, APP_ICON)
 APP_SAMPLES_PATH = join(APP_PATH, RESOURCE_DIRECTORY, SAMPLES_DIRECTORY)
-TITLE = f"{APP_NAME} (ver. 0.1.1)"
+TITLE = f"{APP_NAME} (ver. 0.2.0)"
 DEFAULT_FILE_PATH = os.getcwd()
 
 # FILTERS

@@ -53,7 +53,7 @@ class ColorMapDialog(QWidget):
         super().__init__()
         self.parent = parent
         self.setWindowTitle("Color Map Chooser")
-        self.setFixedSize(500, 300)
+        self.setFixedSize(350, 220)
         self.setContentsMargins(15, 15, 15, 15)
         self.controller = controller
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
