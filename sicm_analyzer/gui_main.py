@@ -135,6 +135,7 @@ class MainWindow(QMainWindow):
         self.action_export_sicm_data_multi = QAction(icon_export, 'Export sicm data (multi)', self)
         self.action_export_file = QAction(icon_export, 'Export view object', self)
         self.action_export_file.setEnabled(False)
+        self.action_export_approach_csv = QAction(icon_export, 'Export approach curve data (csv)', self)
         self.action_export_3d = QAction("3D graph", self)
         self.action_export_2d = QAction("2D graph", self)
         self.action_exit = QAction('&Exit', self)
@@ -156,6 +157,7 @@ class MainWindow(QMainWindow):
         file_menu.addAction(self.action_export_sicm_data)
         file_menu.addAction(self.action_export_sicm_data_multi)
         file_menu.addAction(self.action_export_file)
+        file_menu.addAction(self.action_export_approach_csv)
         file_menu.addSeparator()
         file_menu.addAction(self.action_exit)
 

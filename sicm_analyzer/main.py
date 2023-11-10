@@ -3,7 +3,7 @@ import os
 import sys
 from collections.abc import KeysView, Iterable
 sys.path.append("")
-
+import csv
 import traceback
 
 from pathlib import Path
@@ -14,7 +14,7 @@ import numpy as np
 from PyQt6.QtWidgets import QStyleFactory, QDialog
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication, QFileDialog, QInputDialog
-
+from sicm_analyzer.sicm_data import APPROACH
 from sicm_analyzer.data_manager import DataManager
 from sicm_analyzer.results import SingleResultsWindow, TableResultsWindow
 from sicm_analyzer.colormap_dialog import ColorMapDialog
@@ -100,6 +100,7 @@ class Controller:
         self.main_window.action_export_3d.triggered.connect(lambda: self.export_figure(self.figure_canvas_3d.figure))
         self.main_window.action_export_sicm_data.triggered.connect(self.export_sicm_data)
         self.main_window.action_export_sicm_data_multi.triggered.connect(self.export_sicm_data_multi)
+        self.main_window.action_export_approach_csv.triggered.connect(self.export_approach_curve_data_as_csv)
         self.main_window.action_exit.triggered.connect(self.quit_application)
 
         # Open samples
@@ -212,6 +213,42 @@ class Controller:
                 if file_path[0]:
                     file, _ = self._get_file_name_with_extension(file_path)
                     export_sicm_file(file, sicm_data=data, manipulations=manipulations)
+            else:
+                self.main_window.display_status_bar_message("No file exported.")
+        except TypeError:
+            self.main_window.display_status_bar_message("No file selected for export.")
+
+    def export_approach_curve_data_as_csv(self):
+        """
+        Exports currently selected approach curve as a .csv file.
+        This function only works with ApproachCurve instances.
+
+        File extension is added when file name does not end with '.csv'.
+        """
+        try:
+            data = self.data_manager.get_data(self.current_selection)
+            print(data.scan_mode)
+            print(APPROACH)
+            print(data.scan_mode != APPROACH)
+
+            if data.scan_mode == APPROACH:
+                name = Path(self.current_selection).name
+                options = QFileDialog.Option(QFileDialog.Option.DontUseNativeDialog)
+                file_path = QFileDialog.getSaveFileName(parent=self.main_window,
+                                                        caption="Export approach curve data as .csv file",
+                                                        filter="csv (*.csv)",
+                                                        directory=os.path.join(DEFAULT_FILE_PATH, name),
+                                                        initialFilter="csv (*.csv)",
+                                                        options=options
+                                                        )
+                if file_path[0]:
+                    file, _ = self._get_file_name_with_extension(file_path)
+                    with open(file, "w", newline="") as csv_file:
+                        writer = csv.writer(csv_file, delimiter=",")
+                        x, y = data.get_data()
+                        for i in range(len(x)):
+                            writer.writerow([x[i], y[i]])
+
             else:
                 self.main_window.display_status_bar_message("No file exported.")
         except TypeError:
