@@ -8,4 +8,4 @@ This program is loosely based on a Matlab program written by Dr. Patrick Happel.
 - PyQt 6
 
 ### Instructions
-Run `python sicm_analysis/main.py` from the project's root folder
+Run `python3 sicm_analyzer/main.py` from the project's root folder
