@@ -6,8 +6,9 @@ Some information on the supported file format (.sicm):
     '.sicm' files are gzipped tar archives containing several files:
         - .mode: Byte file that contains the operation mode of the microscope used
                  to obtain data.
-        - <FILENAME>: the actual measurement data. This is a binary file containing
-                      unsigned 16-bit integers (little endian!).
+        - <FILENAME>: The actual measurement data. This is a binary file containing
+                        - LEGACY: unsigned 16-bit integers (little endian!)
+                        - EXTENDED: unsigned 32-bit integers for scans and 32-bit floats for approach curves
         - <FILENAME>.info: Some information on scan times.
             client_start_time = datetime.datetime.now()
             client_start_timestamp = int(round(time.time() * 1e3))
@@ -15,6 +16,8 @@ Some information on the supported file format (.sicm):
             client_duration = client_end_timestamp - client_start_timestamp
             This means that the scan duration is saved as milliseconds
         - settings.json: A JSON file containing scan settings.
+        - extended: Byte file that acts as a flag to distinguish between files recorded
+                    with the old version of pySICM and the new pySICM2. pySICM2
 
 It is planned to support multiple scanning modes. At this moment (2022-09-05)
 only approach curves and backstep scans are supported. A factory class which takes
@@ -22,6 +25,7 @@ the file path as an argument enables import of .sicm files and returns an object
 of either ApproachCurve or ScanBackstepMode.
 """
 import copy
+import datetime
 import os
 import tarfile
 import tempfile
@@ -37,16 +41,41 @@ BACKSTEP = "backstepScan"
 FLOATING_BACKSTEP = "floatingBackstep"
 SETTINGS = "settings.json"
 MODE = ".mode"
+EXTENDED = ".extended"
 INFO = ".info"
+
+# For legacy support info fields are not renamed.
+SCAN_DATE = "client_start_time"
+START_TIME = "client_start_timestamp"
+END_TIME = "client_end_timestamp"
+DURATION = "client_duration"
+
+# Metadata fields
+BACKSTEP_SIZE = "Backstep"
+BOOST = "Boost"
+THRESHOLD = "Threshold"
+DELAY = "delay_after_retraction_ms"
+FALL_RATE = "FallRate"
+FILTER = "Filter"
+X_OFFSET = "XOffset"
 Xpx = "x-px"
-Ypx = "y-px"
 Xpx_raw = "x-px_raw"
-Ypx_raw = "y-px-raw"
 X_size = "x-Size"
-Y_size = "y-Size"
 X_size_raw = "x-Size-raw"
+Y_OFFSET = "YOffset"
+Ypx = "y-px"
+Ypx_raw = "y-px-raw"
+Y_size = "y-Size"
 Y_size_raw = "y-Size-raw"
+Z_STEP_SIZE = "z_step_size_micrometer"
 Manipulations = "manipulations"
+
+Settings = [
+    BACKSTEP_SIZE, BOOST, THRESHOLD, DELAY, FALL_RATE, FILTER,
+    X_OFFSET, Xpx, Xpx_raw, X_size, X_size_raw,
+    Y_OFFSET, Ypx, Ypx_raw, Y_size, Y_size_raw,
+    Z_STEP_SIZE
+]
 
 
 class SICMdata:
@@ -62,23 +91,34 @@ class SICMdata:
     set_data() and get_data() should be overridden in the subclass to set the correct data fields.
     Data fields in all three dimensions are represented as numpy arrays.
     """
-    def __init__(self):
+
+    def __init__(self, extended: bool = False):
         # data containing fields
         self.x: np.ndarray = np.zeros((1, 1))
         self.y: np.ndarray = np.zeros((1, 1))
         self.z: np.ndarray = np.zeros((1, 1))
         # metadata fields
-        self.x_size: int = 0
-        self.y_size: int = 0
-        self.z_size: int = 0
+        self.x_size: int or float = 0
+        self.y_size: int or float = 0
+        self.z_size: int or float = 0
         self.x_px: int = 0
         self.y_px: int = 0
-        self.z_px: int = 0
+
         self.x_px_raw: int = 0
         self.y_px_raw: int = 0
         self.x_size_raw: int = 0
         self.y_size_raw: int = 0
+        self.threshold: int or float = 0
+        self.backstep: int or float = 0
+        self.x_offset: int or float = 0
+        self.y_offset: int or float = 0
+        self.filter: float = 0.0
+        self.fall_rate: int or float = 0
+        self.delay_after_retraction: float = 0.0
+        self.boost: int = 0
+        self._filter: float = 0.0
         self.scan_mode: str = ""
+
         self.info: dict = {}
         self.settings: dict = {}
         self.previous_manipulations: list[str] = []
@@ -87,10 +127,71 @@ class SICMdata:
         self.fit_results = None
         self.roughness = None
 
+        self.extended = extended
+
     def set_settings(self, settings: dict):
         """Sets metadata obtained from settings.json
         and .mode."""
         self.settings = settings
+
+    def add_and_apply_settings(self,
+                               backstep_size: float = 0,
+                               boost: int = 0,
+                               delay_after_retraction: float = 0.0,
+                               fall_rate: float = 0,
+                               _filter: float = 0,
+                               threshold: float = 0,
+                               x_offset: float = 0,
+                               x_px: int = 0,
+                               x_size: float = 0.0,
+                               y_offset: float = 0,
+                               y_px: int = 0,
+                               y_size: float = 0.0,
+                               z_step_size: float = 0.0
+                               ):
+        self.settings[BACKSTEP_SIZE] = backstep_size
+        self.settings[BOOST] = boost
+        self.settings[DELAY] = delay_after_retraction
+        self.settings[FALL_RATE] = fall_rate
+        self.settings[FILTER] = _filter
+        self.settings[THRESHOLD] = threshold
+        self.settings[X_OFFSET] = x_offset
+        self.settings[Xpx] = x_px
+        self.settings[Xpx_raw] = x_px
+        self.settings[X_size] = x_size
+        self.settings[X_size_raw] = x_size
+        self.settings[Y_OFFSET] = y_offset
+        self.settings[Ypx] = y_px
+        self.settings[Ypx_raw] = y_px
+        self.settings[Y_size] = y_size
+        self.settings[Y_size_raw] = y_size
+        self.settings[Z_STEP_SIZE] = z_step_size
+
+        self.x_px = x_px
+        self.x_px_raw = x_px
+        self.y_px = y_px
+        self.y_px_raw = y_px
+        self.backstep = backstep_size
+        self.boost = boost
+        self.delay_after_retraction = delay_after_retraction
+        self.fall_rate = fall_rate
+        self._filter = _filter
+        self.threshold = threshold
+        self.x_offset = x_offset
+        self.x_size = x_size
+        self.x_size_raw = x_size
+        self.y_offset = y_offset
+        self.y_size = y_size
+        self.y_size_raw = y_size
+        self.z_size = z_step_size
+
+    def add_date_and_time_info(self, scan_date: str, scan_start: float, scan_end: float):
+        self.info[SCAN_DATE] = scan_date
+        _start = int(round(scan_start * 1000))
+        _end = int(round(scan_end * 1000))
+        self.info[START_TIME] = _start
+        self.info[END_TIME] = _end
+        self.info[DURATION] = _end - _start
 
     def get_data(self):
         """Returns a tuple containing x and z data for ApproachCurves and
@@ -153,20 +254,41 @@ class ScanBackstepMode(SICMdata):
         super().set_settings(settings)
         self.x_px = int(settings[Xpx])
         self.y_px = int(settings[Ypx])
+
+        if self.extended:
+            self.__set_extended_settings()
+        else:
+            try:
+                self.x_px_raw = self.get_valid_int_from_field(value=settings.get(Xpx_raw, ""), default_value=self.x_px)
+                self.y_px_raw = self.get_valid_int_from_field(value=settings.get(Ypx_raw, ""), default_value=self.y_px)
+                self.x_size = self.get_valid_int_from_field(value=settings.get(X_size, ""), default_value=self.x_px)
+                self.y_size = self.get_valid_int_from_field(value=settings.get(Y_size, ""), default_value=self.y_px)
+                self.x_size_raw = self.get_valid_int_from_field(value=settings.get(X_size_raw, ""),
+                                                                default_value=self.x_size)
+                self.y_size_raw = self.get_valid_int_from_field(value=settings.get(Y_size_raw, ""),
+                                                                default_value=self.y_size)
+            except ValueError as e:
+                # There might be cases in which the control software
+                # set empty values for x_size or y_size
+                print(e)
         self.previous_manipulations = settings.get(Manipulations, [])
-        try:
-            self.x_px_raw = self.get_valid_int_from_field(value=settings.get(Xpx_raw, ""), default_value=self.x_px)
-            self.y_px_raw = self.get_valid_int_from_field(value=settings.get(Ypx_raw, ""), default_value=self.y_px)
 
-            self.x_size = self.get_valid_int_from_field(value=settings.get(X_size, ""), default_value=self.x_px)
-            self.y_size = self.get_valid_int_from_field(value=settings.get(Y_size, ""), default_value=self.y_px)
-            self.x_size_raw = self.get_valid_int_from_field(value=settings.get(X_size_raw, ""), default_value=self.x_size)
-            self.y_size_raw = self.get_valid_int_from_field(value=settings.get(Y_size_raw, ""), default_value=self.y_size)
-
-        except ValueError as e:
-            # There might be cases in which the control software
-            # set empty values for x_size or y_size
-            print(e)
+    def __set_extended_settings(self):
+        self.backstep = self.settings.get(BACKSTEP_SIZE, 0.0)
+        self.boost = self.settings.get(BOOST, 0)
+        self.delay_after_retraction = self.settings.get(DELAY, 0.0)
+        self.fall_rate = self.settings.get(FALL_RATE, 0)
+        self._filter = self.settings.get(FILTER, 0.0)
+        self.threshold = self.settings.get(THRESHOLD, 0.0)
+        self.x_px_raw = self.x_px
+        self.x_size = self.settings.get(X_size, 0.0)
+        self.x_size_raw = self.settings.get(X_size_raw, 0.0)
+        self.x_offset = self.settings.get(X_OFFSET, 0.0)
+        self.y_px_raw = self.y_px
+        self.y_size = self.settings.get(Y_size, 0.0)
+        self.y_size_raw = self.settings.get(Y_size_raw, 0.0)
+        self.y_offset = self.settings.get(Y_OFFSET, 0.0)
+        self.z_size = self.settings.get(Z_STEP_SIZE, 0.0)
 
     def get_valid_int_from_field(self, value: str, default_value: int = 0) -> int:
         """This function returns an integer converted from a string value.
@@ -179,7 +301,10 @@ class ScanBackstepMode(SICMdata):
 
     def set_data(self, data: list[int]):
         """Rearranges scan data for 3-dimensional plotting."""
-        self.z = np.reshape(data, (self.y_px, self.x_px)) / 1000  # to have z data in µm instead of nm
+        if self.extended:
+            self.z = np.reshape(data, (self.y_px, self.x_px))
+        else:
+            self.z = np.reshape(data, (self.y_px, self.x_px)) / 1000  # to have z data in µm instead of nm
         self.reshape_xy_meshgrids()
 
     def reshape_xy_meshgrids(self):
@@ -251,10 +376,11 @@ def get_sicm_data(file_path: str) -> SICMdata:
     """
     try:
         tar = tarfile.open(file_path, "r:gz")
+        extended = is_extended_format(tar)
         scan_mode = get_sicm_mode(tar)
         info = get_sicm_info(tar)
         settings = get_sicm_settings(tar)
-        data = read_byte_data(tar)
+        data = read_byte_data(tar, extended)
 
         if scan_mode == BACKSTEP or scan_mode == FLOATING_BACKSTEP:
             sicm_data = ScanBackstepMode()
@@ -264,6 +390,7 @@ def get_sicm_data(file_path: str) -> SICMdata:
             sicm_data = SICMdata()
             sicm_data.scan_mode = "unknown scan mode"
 
+        sicm_data.extended = extended
         sicm_data.scan_mode = scan_mode
         sicm_data.set_settings(settings)
         sicm_data.info = info
@@ -277,17 +404,34 @@ def get_sicm_data(file_path: str) -> SICMdata:
     return sicm_data
 
 
-def read_byte_data(tar: TarFile) -> list[int]:
+def read_byte_data(tar: TarFile, extended: bool = False) -> list[int] | list[float]:
     """Return z data from file as list"""
     data = []
     name = get_name_of_tar_member_containing_scan_data(tar)
     if name:
-        data_file = tar.extractfile(tar.getmember(name))
-        two_bytes = data_file.read(2)
-        while two_bytes:
-            pack = struct.unpack('<H', two_bytes)
-            data.append(pack[0])
-            two_bytes = data_file.read(2)
+        byte_reader = tar.extractfile(tar.getmember(name))
+        if extended:
+            data = __unpack_bytes(byte_reader, "f", 4)
+        else:
+            data = __unpack_bytes(byte_reader)
+    return data
+
+
+def __unpack_bytes(byte_reader, byte_format: str = "<H", byte_length: int = 2) -> list[int] | list[float]:
+    """
+
+    :param byte_reader: io.BufferReader instance.
+    :param byte_length:  In legacy sicm files, data is saved as 2 byte (unsigned short) values.
+    :param byte_format: '<H' (little endian, unsigned short) is the byte format in legacy sicm files.
+                        Approach curves are saved in 'f' (float) while scan data is in 'i' (int).
+    :return: A list containing float or integer values
+    """
+    data = []
+    _bytes = byte_reader.read(byte_length)
+    while _bytes:
+        pack = struct.unpack(byte_format, _bytes)  # A one-element tuple is returned
+        data.append(pack[0])
+        _bytes = byte_reader.read(byte_length)
     return data
 
 
@@ -299,11 +443,24 @@ def get_data_as_bytes(data: SICMdata) -> list[bytes]:
     If negative values exist all z_data will be adjusted by the
     largest negative number.
     """
-    z_data = data.z.flatten("C") * 1000
-    z_data = z_data - np.min(z_data)
+    if data.extended:
+        z_data = data.z.flatten("C")
+        byte_data = __pack_bytes(z_data, "f")
+    else:
+        z_data = data.z.flatten("C") * 1000
+        z_data = z_data - np.min(z_data)
+        z_data = z_data.astype(int)
+        byte_data = __pack_bytes(z_data, "<H")
+        # byte_data = []
+        # for pixel in z_data:
+        #     byte_data.append(struct.pack("<H", int(pixel)))
+    return byte_data
+
+
+def __pack_bytes(data, byte_format: str = "<H") -> list[bytes]:
     byte_data = []
-    for pixel in z_data:
-        byte_data.append(struct.pack("<H", int(pixel)))
+    for pixel in data:
+        byte_data.append(struct.pack(byte_format, pixel))
     return byte_data
 
 
@@ -325,6 +482,9 @@ def export_sicm_file(file_path: str, sicm_data: SICMdata, manipulations: list[st
     file_names = []
     try:
         # write files to temp directory
+        if sicm_data.extended:
+            file_name = _write_extended_file(path_temp_dir)
+            file_names.append(file_name)
         file_name = _write_byte_data_file(path_temp_dir, sicm_data)
         file_names.append(file_name)
         file_name = _write_data_info_file(path_temp_dir, sicm_data)
@@ -333,9 +493,23 @@ def export_sicm_file(file_path: str, sicm_data: SICMdata, manipulations: list[st
         file_names.append(file_name)
         file_name = _write_settings_file(path_temp_dir, sicm_data, manipulations)
         file_names.append(file_name)
+
+        create_targz_from_list_of_files(file_path, file_names)
     except FileNotFoundError as e:
-        print("Error during file export as .sicm.")
-    create_targz_from_list_of_files(file_path, file_names)
+        print(f"Error during file export as .sicm: {e}")
+
+
+def _write_extended_file(path: str) -> str:
+    """
+    Creates a file in the given directory path containing the extended file.
+
+    :param path:
+    :return:
+    """
+    with open(os.path.join(path, EXTENDED), "w") as f:
+        f.write("EXTENDED")
+        f.close()
+    return f.name
 
 
 def _write_byte_data_file(path: str, sicm_data: SICMdata) -> str:
@@ -364,7 +538,7 @@ def _write_data_info_file(path: str, sicm_data: SICMdata) -> str:
     :return: full path to the file as a string.
     """
     with open(os.path.join(path, "data.info"), "w") as f:
-        json.dump(sicm_data.info, f)
+        json.dump(sicm_data.info, f, indent=4, sort_keys=True)
         f.close()
     return f.name
 
@@ -395,7 +569,7 @@ def _write_settings_file(path: str, sicm_data: SICMdata, manipulations: list[str
     settings_copy = copy.deepcopy(sicm_data.settings)
     _add_matedata_fields(settings_copy, sicm_data, manipulations)
 
-    sjson = json.dumps(settings_copy, separators=(',', ':'))
+    sjson = json.dumps(settings_copy, separators=(',', ':'), indent=4, sort_keys=True)
     with open(os.path.join(path, "settings.json"), "w") as f:
         f.write(sjson)
         f.close()
@@ -407,14 +581,15 @@ def _add_matedata_fields(settings_copy: dict, sicm_data: SICMdata, manipulations
     Adds metadata fields to a copy of the settings dictionary. If the field exists
     it is updated.
     """
-    settings_copy[Xpx] = str(sicm_data.x_px)
-    settings_copy[Ypx] = str(sicm_data.y_px)
-    settings_copy[Xpx_raw] = str(sicm_data.x_px_raw)
-    settings_copy[Ypx_raw] = str(sicm_data.y_px_raw)
-    settings_copy[X_size] = str(sicm_data.x_size)
-    settings_copy[Y_size] = str(sicm_data.y_size)
-    settings_copy[X_size_raw] = str(sicm_data.x_size_raw)
-    settings_copy[Y_size_raw] = str(sicm_data.y_size_raw)
+    if not sicm_data.extended:
+        settings_copy[Xpx] = str(sicm_data.x_px)
+        settings_copy[Ypx] = str(sicm_data.y_px)
+        settings_copy[Xpx_raw] = str(sicm_data.x_px_raw)
+        settings_copy[Ypx_raw] = str(sicm_data.y_px_raw)
+        settings_copy[X_size] = str(sicm_data.x_size)
+        settings_copy[Y_size] = str(sicm_data.y_size)
+        settings_copy[X_size_raw] = str(sicm_data.x_size_raw)
+        settings_copy[Y_size_raw] = str(sicm_data.y_size_raw)
     settings_copy[Manipulations] = sicm_data.previous_manipulations + manipulations
 
 
@@ -423,13 +598,21 @@ def create_targz_from_list_of_files(export_filename: str, files: list[str]):
      Extension check for the file name should have been handled before calling this method.
 
     :param str export_filename: a string containing the full path including filename for the tar.gz-like .sicm file.
-    :param list[str] files: list of filesto be included in the .sicm file
+    :param list[str] files: list of files to be included in the .sicm file
     """
     with tarfile.open(export_filename, "w:gz") as tar:
         for file in files:
             path = os.path.dirname(file)
             name = os.path.basename(file)
             tar.add(os.path.join(path, name), arcname=name)
+
+
+def is_extended_format(tar: TarFile) -> bool:
+    """Checks if the 'extended' file exists and returns if data is handled in extended format."""
+    try:
+        return str(tar.extractfile(tar.getmember(EXTENDED)).readline(), "utf-8") == "EXTENDED"
+    except:
+        return False
 
 
 def get_sicm_mode(tar: TarFile) -> str:
@@ -450,7 +633,7 @@ def get_name_of_tar_member_containing_scan_data(tar: TarFile) -> str:
     .sicm files contain four files. One of which has no file extension and
     contains the actual measurement as 16bit integer (unsigned, little-endian).
     """
-    file_extensions = (".mode", ".json", ".info")
+    file_extensions = (".mode", ".json", ".info", EXTENDED)
     file_name = None
     for member in tar.getmembers():
         if not member.name.endswith(file_extensions):

@@ -155,6 +155,7 @@ class GraphCanvas(FigureCanvasQTAgg):
 
     def unit_factor(self):
         return 1000.0 if self.current_view.z_in_nm else 1.0
+
     def draw_3d_plot(self):
         """Draws a 3d surface plot for scanning data."""
 
